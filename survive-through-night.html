@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🔥 Fire Survival</title>
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  overflow:hidden;
+  font-family: Arial, sans-serif;
+  background: radial-gradient(circle at center, #1b2735, #090a0f);
+  color:white;
+}
+
+#game {
+  position:relative;
+  width:100vw;
+  height:100vh;
+}
+
+/* FIRE */
+#fire {
+  position:absolute;
+  left:50%;
+  bottom:80px;
+  transform:translateX(-50%);
+  font-size:80px;
+  transition: all 0.2s;
+  filter: drop-shadow(0 0 20px orange);
+  user-select: none;
+}
+
+/* HP BAR */
+#hpBar {
+  position:absolute;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  width:300px;
+  height:14px;
+  background:#333;
+  border-radius:10px;
+}
+#hpFill {
+  height:100%;
+  background:linear-gradient(to right, red, orange, lime);
+  width:100%;
+}
+
+/* TREE */
+.tree {
+  position:absolute;
+  font-size:60px;
+  cursor:pointer;
+  transition: transform 0.1s;
+   user-select: none;
+}
+
+/* WOOD */
+.wood {
+  position:absolute;
+  font-size:35px;
+  cursor:grab;
+   user-select: none;
+}
+
+/* ENEMY */
+.enemy {
+  position:absolute;
+  font-size:40px;
+  cursor:pointer;
+  user-select:none;
+  transition: transform 0.1s;
+}
+
+/* MENU */
+.center-ui {
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  text-align:center;
+  z-index:10;
+}
+
+button {
+  padding:10px 18px;
+  border:none;
+  border-radius:10px;
+  background:#ff7a18;
+  color:white;
+  cursor:pointer;
+  margin-top:10px;
+}
+</style>
+</head>
+<body>
+
+<div id="game">
+
+  <div id="menu" class="center-ui">
+    <h1>🔥 Survive Through Night</h1>
+    <p>Chop 🌲 → Drag 🪵 → Feed 🔥 → Kill 👻</p>
+    <button onclick="startGame()">▶️ Start</button>
+  </div>
+
+  <div id="gameOver" class="center-ui" style="display:none;">
+    <h1>💀 Game Over</h1>
+    <p id="finalScore"></p>
+    <button onclick="restartGame()">🔄 Restart</button>
+  </div>
+
+  <div id="fire">🔥</div>
+  <!-- <div id="hpBar"><div id="hpFill"></div></div> -->
+
+</div>
+
+<script>
+const game = document.getElementById("game");
+const fireEl = document.getElementById("fire");
+//const hpFill = document.getElementById("hpFill");
+
+let running = false;
+let hp = 100;
+let startTime = 0;
+let elapsed = 0;
+
+let trees = [];
+let enemies = [];
+let dragItem = null;
+let offsetX = 0, offsetY = 0;
+
+function startGame() {
+  document.getElementById("menu").style.display = "none";
+  running = true;
+   startTime = Date.now();
+  init();
+  loop();
+}
+
+function restartGame() {
+  location.reload();
+}
+
+function init() {
+  spawnTrees();
+  setInterval(spawnEnemy, 3000);
+}
+
+/* 🌲 TREES IN CIRCLE */
+function spawnTrees() {
+  for (let i = 0; i < 10; i++) {
+    createTree();
+  }
+}
+
+function createTree() {
+  const tree = document.createElement("div");
+  tree.className = "tree";
+  tree.innerText = "🌲";
+
+  const angle = Math.random() * Math.PI * 2;
+  const radius = rand(150, 300);
+
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight - 100;
+
+  const x = cx + Math.cos(angle) * radius;
+  const y = cy - Math.sin(angle) * radius;
+
+  tree.style.left = x + "px";
+  tree.style.top = y + "px";
+
+  let clicks = rand(5,8);
+
+  tree.onclick = () => {
+    clicks--;
+    tree.style.transform = "scale(0.85)";
+    setTimeout(()=>tree.style.transform="scale(1)",100);
+
+    if (clicks <= 0) {
+      tree.remove();
+      spawnWood(x,y);
+      setTimeout(createTree, rand(1000,3000));
+    }
+  };
+
+  game.appendChild(tree);
+}
+
+/* 🪵 WOOD */
+function spawnWood(x,y) {
+  const wood = document.createElement("div");
+  wood.className = "wood";
+  wood.innerText = "🪵";
+
+  wood.style.left = x + "px";
+  wood.style.top = y + "px";
+
+  wood.onmousedown = (e) => {
+    dragItem = wood;
+    offsetX = e.offsetX;
+    offsetY = e.offsetY;
+  };
+
+  game.appendChild(wood);
+}
+
+document.onmousemove = (e) => {
+  if (!dragItem) return;
+  dragItem.style.left = (e.clientX - offsetX) + "px";
+  dragItem.style.top = (e.clientY - offsetY) + "px";
+};
+
+document.onmouseup = () => {
+  if (!dragItem) return;
+
+  if (isCollide(fireEl, dragItem)) {
+    hp = Math.min(100, hp + 15);
+    dragItem.remove();
+  }
+
+  dragItem = null;
+};
+
+/* 👻 ENEMY */
+function spawnEnemy() {
+  if (!running) return;
+
+  const e = document.createElement("div");
+  e.className = "enemy";
+
+  const demon = Math.random() > 0.5;
+  e.innerText = demon ? "😈" : "👻";
+
+  e.hp = rand(3,6);
+  e.damage = demon ? 12 : 6;
+  e.speed = 0.6 + Math.random();
+
+  const side = rand(0,2);
+
+  let x = side === 0 ? 0 : side === 1 ? window.innerWidth : Math.random()*window.innerWidth;
+  let y = 0;
+
+  e.style.left = x + "px";
+  e.style.top = y + "px";
+
+  e.onclick = () => {
+    e.hp--;
+    e.style.transform = "scale(0.8)";
+    setTimeout(()=>e.style.transform="scale(1)",100);
+
+    if (e.hp <= 0) {
+      e.remove();
+    }
+  };
+
+  game.appendChild(e);
+  enemies.push(e);
+}
+
+/* 🎮 LOOP */
+function loop() {
+  if (!running) return;
+
+  hp -= 0.04;
+
+  const fireRect = fireEl.getBoundingClientRect();
+  const fx = fireRect.left + fireRect.width/2;
+  const fy = fireRect.top + fireRect.height/2;
+
+  enemies.forEach((e, i) => {
+    let x = parseFloat(e.style.left);
+    let y = parseFloat(e.style.top);
+
+    const dx = fx - x;
+    const dy = fy - y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    x += (dx/dist) * e.speed;
+    y += (dy/dist) * e.speed;
+
+    e.style.left = x + "px";
+    e.style.top = y + "px";
+
+    if (dist < 40) {
+      hp -= e.damage;
+      e.remove();
+      enemies.splice(i,1);
+    }
+  });
+
+  elapsed = (Date.now() - startTime) / 1000;
+
+  /* 🔥 FIRE VISUAL */
+  const scale = Math.max(0, hp / 100);
+  fireEl.style.transform = `translateX(-50%) scale(${scale})`;
+  fireEl.style.opacity = scale;
+
+  //hpFill.style.width = hp + "%";
+
+  if (hp <= 0) {
+    running = false;
+    fireEl.style.opacity = 0;
+    const score = elapsed.toFixed(1);
+
+  document.getElementById("finalScore").innerText =
+    "🏆 Survived: " + score + " seconds";
+    document.getElementById("gameOver").style.display = "block";
+  }
+
+  requestAnimationFrame(loop);
+}
+
+/* UTIL */
+function isCollide(a,b) {
+  const r1 = a.getBoundingClientRect();
+  const r2 = b.getBoundingClientRect();
+  return !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
+}
+
+function rand(min,max){
+  return Math.floor(Math.random()*(max-min+1))+min;
+}
+</script>
+
+</body>
+</html>

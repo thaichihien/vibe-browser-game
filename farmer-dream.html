@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Emoji Farm Simulator</title>
+<style>
+  body {
+    font-family: sans-serif;
+    background: #e8f5e9;
+    margin: 0;
+    display: flex;
+  }
+
+  .left, .right {
+    padding: 10px;
+  }
+
+  .left {
+    width: 65%;
+  }
+
+  .right {
+    width: 35%;
+    background: #f1f1f1;
+    overflow-y: auto;
+  }
+
+  h3 {
+    margin: 5px 0;
+  }
+
+  .section {
+    border: 2px solid #ccc;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: white;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(5, 60px);
+    gap: 5px;
+  }
+
+  .cell {
+    width: 60px;
+    height: 60px;
+    border: 1px solid #aaa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+
+  .shop-item, .draggable {
+    cursor: grab;
+    padding: 5px;
+    border: 1px solid #aaa;
+    margin: 3px;
+    display: inline-block;
+    font-size: 20px;
+    background: #fff;
+  }
+
+  .sell {
+    min-height: 60px;
+    border: 2px dashed red;
+  }
+
+  .barrier {
+  width: 320px;
+  height: 220px;
+  border: 4px solid #333;
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  background: #c8e6c9;
+}
+
+.cow {
+  position: absolute;
+  font-size: 32px;
+  transition: all 2s linear; /* smooth movement */
+  pointer-events: none;
+}
+
+  .owned {
+    min-height: 100px;
+  }
+
+  .cell {
+  transition: transform 0.2s;
+}
+
+.cell:active {
+  transform: scale(0.95);
+}
+
+.growing {
+  animation: pulse 1s infinite;
+}
+
+.owned-item {
+  font-size: 30px;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+#tutorialBox {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+</style>
+</head>
+<body>
+
+  <div id="tutorialBox" style="background:#fff3cd;padding:10px;border-bottom:2px solid #ccc;">
+  <button onclick="toggleTutorial()">❓ Tutorial</button>
+  
+  <div id="tutorialContent" style="display:none;margin-top:10px;">
+    🌱 <b>HOW TO PLAY</b><br><br>
+
+    - 🛒 Drag seeds (🌾🥕🍅) → drop into farm tiles<br>
+    - 💧 Drag water → drop on planted seeds<br>
+    - ⏳ Wait: 🌱 → 🌿 → 🌾<br>
+    - 💰 Drag crops to SELL<br><br>
+
+    - 🐄 Feed cows with <b>🌾 rice only</b><br>
+    - 🥛 Wait → cows produce milk<br>
+    - 💰 Drag milk to SELL<br><br>
+
+    - 🛍️ Buy items from the right shop<br>
+    - 🏆 Buy ALL items to win<br><br>
+
+    Good luck, farmer! 🌾🚜
+  </div>
+</div>
+
+<div class="left">
+
+  <h2>💰 Money: <span id="money">50</span></h2>
+
+  <!-- Shop seeds -->
+  <div class="section">
+    <h3>🌱 Seed Shop</h3>
+    <div id="seedShop">
+      <!-- <div class="shop-item" draggable="true" data-type="seed">🌾 Seed ($5)</div>
+      <div class="shop-item" draggable="true" data-type="water">💧 Water</div> -->
+
+      <div class="shop-item" draggable="true" data-type="seed" data-plant="rice">🌾 Seed ($5)</div>
+        <div class="shop-item" draggable="true" data-type="seed" data-plant="carrot">🥕 Seed ($8)</div>
+        <div class="shop-item" draggable="true" data-type="seed" data-plant="tomato">🍅 Seed ($12)</div>
+        <div class="shop-item" draggable="true" data-type="water">💧 Water</div>
+    </div>
+  </div>
+
+  <!-- Farm -->
+  <div class="section">
+    <h3>🌾 Farm (3x5)</h3>
+    <div class="grid" id="farm"></div>
+  </div>
+
+  <!-- Sell -->
+  <div class="section">
+    <h3>💸 Sell Area</h3>
+    <div id="sell" class="sell"></div>
+  </div>
+
+  <!-- Cow -->
+  <div class="section">
+    <h3>🐄 Cow Area</h3>
+    <div class="barrier" id="cowArea"></div>
+  </div>
+
+</div>
+
+<div class="right">
+  <h3>🛒 Big Shop (Buy All to Win)</h3>
+  <div id="bigShop"></div>
+
+  <h3>🏠 Owned</h3>
+  <div id="owned" class="owned"></div>
+</div>
+
+<script>
+let money = 50;
+const moneyEl = document.getElementById("money");
+
+const PLANTS = {
+  rice: {
+    stages: ["🌱","🌿","🌾"],
+    growTime: 10000,
+    price: 15,
+    seedCost: 5
+  },
+  carrot: {
+    stages: ["🌱","🥬","🥕"],
+    growTime: 14000,
+    price: 25,
+    seedCost: 8
+  },
+  tomato: {
+    stages: ["🌱","🌿","🍅"],
+    growTime: 18000,
+    price: 40,
+    seedCost: 12
+  }
+};
+
+function updateMoney(v){
+  money += v;
+  moneyEl.innerText = money;
+}
+
+function toggleTutorial(){
+  const el = document.getElementById("tutorialContent");
+  el.style.display = el.style.display === "none" ? "block" : "none";
+}
+//// FARM GRID
+const farm = document.getElementById("farm");
+for(let i=0;i<15;i++){
+  let cell = document.createElement("div");
+  cell.className = "cell";
+  cell.dataset.state = "empty";
+
+  cell.ondragover = e => e.preventDefault();
+
+  cell.ondrop = e => {
+  let type = e.dataTransfer.getData("type");
+
+  // Plant seed
+//   if(type === "seed" && cell.dataset.state === "empty" && money >= 5){
+//     updateMoney(-5);
+//     cell.innerText = "🌱";
+//     cell.dataset.state = "planted";
+//   }
+if(type === "seed" && cell.dataset.state === "empty"){
+  const plantType = e.dataTransfer.getData("plant");
+  const plant = PLANTS[plantType];
+
+  if(money >= plant.seedCost){
+    updateMoney(-plant.seedCost);
+    cell.innerText = plant.stages[0];
+    cell.dataset.state = "planted";
+    cell.dataset.plant = plantType;
+  }
+}
+
+  // Water → turn brown soil first
+//   if(type === "water" && cell.dataset.state === "planted"){
+//   cell.innerText = "";
+//   cell.style.background = "#8d6e63"; // brown soil
+//   cell.dataset.state = "growing";
+
+//   cell.classList.add("growing");
+
+//   // Stage 1: sprout 🌱
+//   setTimeout(()=>{
+//     cell.innerText = "🌱";
+//   },1000);
+
+//   // Stage 2: mid growth 🌿
+//   setTimeout(()=>{
+//     cell.innerText = "🌿";
+//   },5000);
+
+//   // Stage 3: full grown 🌾
+//   setTimeout(()=>{
+//     cell.innerText = "🌾";
+//     cell.style.background = "";
+//     cell.dataset.state = "grown";
+//     cell.draggable = true;
+//  cell.classList.remove("growing");
+//     cell.ondragstart = e=>{
+//       e.dataTransfer.setData("type","rice");
+//       e.dataTransfer.setData("source","farm");
+//       e.dataTransfer.setData("cellIndex", [...farm.children].indexOf(cell));
+//     };
+//   },10000);
+// }
+if(type === "water" && cell.dataset.state === "planted"){
+  const plantType = cell.dataset.plant;
+  const plant = PLANTS[plantType];
+
+  cell.innerText = "";
+  cell.style.background = "#8d6e63";
+  cell.dataset.state = "growing";
+
+  cell.classList.add("growing");
+
+  const stepTime = plant.growTime / plant.stages.length;
+
+  plant.stages.forEach((stage, index)=>{
+    setTimeout(()=>{
+      cell.innerText = stage;
+    }, stepTime * (index + 1));
+  });
+
+  setTimeout(()=>{
+    cell.style.background = "";
+    cell.dataset.state = "grown";
+    cell.draggable = true;
+    cell.classList.remove("growing");
+
+    cell.ondragstart = e=>{
+      e.dataTransfer.setData("type","plant");
+      e.dataTransfer.setData("plant", plantType);
+      e.dataTransfer.setData("source","farm");
+      e.dataTransfer.setData("cellIndex", [...farm.children].indexOf(cell));
+    };
+  }, plant.growTime);
+}
+};
+
+  farm.appendChild(cell);
+}
+
+//// SELL AREA
+const sell = document.getElementById("sell");
+sell.ondragover = e => e.preventDefault();
+
+sell.ondrop = e => {
+  let type = e.dataTransfer.getData("type");
+  let source = e.dataTransfer.getData("source");
+  let index = e.dataTransfer.getData("cellIndex");
+
+//   if(type === "rice"){
+//     updateMoney(15);
+
+//     // remove from farm
+//     if(source === "farm"){
+//       let cell = farm.children[index];
+//       cell.innerText = "";
+//       cell.dataset.state = "empty";
+//       cell.draggable = false;
+//     }
+//   }
+if(type === "plant"){
+  const plantType = e.dataTransfer.getData("plant");
+  const plant = PLANTS[plantType];
+
+  updateMoney(plant.price);
+
+  if(source === "farm"){
+    let cell = farm.children[index];
+    cell.innerText = "";
+    cell.dataset.state = "empty";
+    cell.draggable = false;
+    cell.classList.remove("growing");
+  }
+}
+
+  if(type === "milk"){
+  updateMoney(25);
+
+  let milkEl = document.querySelector(`[data-id="${e.dataTransfer.getData("milkElId")}"]`);
+  if(milkEl) milkEl.remove();
+}
+};
+
+//// DRAG ITEMS
+// document.querySelectorAll(".shop-item").forEach(el=>{
+//   el.ondragstart = e=>{
+//     e.dataTransfer.setData("type", el.dataset.type);
+//   };
+// });
+
+document.querySelectorAll(".shop-item").forEach(el=>{
+  el.ondragstart = e=>{
+    e.dataTransfer.setData("type", el.dataset.type);
+    e.dataTransfer.setData("plant", el.dataset.plant || "");
+  };
+});
+
+//// COWS
+const cowArea = document.getElementById("cowArea");
+
+let cows = [];
+
+function moveCowSmooth(cow){
+  const maxX = cowArea.clientWidth - 40;
+  const maxY = cowArea.clientHeight - 40;
+
+  const newX = Math.random() * maxX;
+  const newY = Math.random() * maxY;
+
+  cow.style.left = newX + "px";
+  cow.style.top = newY + "px";
+}
+
+for(let i=0;i<3;i++){
+  let cow = document.createElement("div");
+  cow.className = "cow";
+  cow.innerText = "🐄";
+
+  cow.style.left = Math.random()*200+"px";
+  cow.style.top = Math.random()*150+"px";
+
+  cowArea.appendChild(cow);
+  cows.push(cow);
+
+  // smooth continuous movement loop
+  setInterval(()=>{
+    moveCowSmooth(cow);
+  },2000);
+}
+
+// cowArea.ondragover = e => e.preventDefault();
+
+// cowArea.ondrop = e=>{
+//   let type = e.dataTransfer.getData("type");
+//   let source = e.dataTransfer.getData("source");
+//   let index = e.dataTransfer.getData("cellIndex");
+
+//   if(type === "rice"){
+
+//     // remove from farm
+//     if(source === "farm"){
+//       let cell = farm.children[index];
+//       cell.innerText = "";
+//       cell.dataset.state = "empty";
+//       cell.draggable = false;
+//     }
+
+//     // produce milk after delay
+//     setTimeout(()=>{
+//       let milk = document.createElement("div");
+//       milk.innerText = "🥛";
+//       milk.className = "draggable";
+//       milk.draggable = true;
+
+//       milk.ondragstart = ev=>{
+//         ev.dataTransfer.setData("type","milk");
+//         ev.dataTransfer.setData("milkElId", milk.dataset.id);
+//         };
+
+//         milk.dataset.id = Date.now();
+
+//       cowArea.appendChild(milk);
+//     },8000);
+//   }
+// };
+cowArea.ondragover = e => e.preventDefault();
+
+cowArea.ondrop = e=>{
+  let type = e.dataTransfer.getData("type");
+  let plantType = e.dataTransfer.getData("plant");
+  let source = e.dataTransfer.getData("source");
+  let index = e.dataTransfer.getData("cellIndex");
+
+  // ✅ ONLY allow rice
+  if(type === "plant" && plantType === "rice"){
+
+    // remove from farm
+    if(source === "farm"){
+      let cell = farm.children[index];
+      cell.innerText = "";
+      cell.dataset.state = "empty";
+      cell.draggable = false;
+      cell.classList.remove("growing");
+    }
+
+    // produce milk
+    setTimeout(()=>{
+      let milk = document.createElement("div");
+      milk.innerText = "🥛";
+      milk.className = "draggable";
+      milk.draggable = true;
+
+      milk.dataset.id = Date.now();
+
+      milk.ondragstart = ev=>{
+        ev.dataTransfer.setData("type","milk");
+        ev.dataTransfer.setData("milkElId", milk.dataset.id);
+      };
+
+      cowArea.appendChild(milk);
+    },8000);
+
+  } else {
+    // ❌ Reject non-rice (optional feedback)
+    cowArea.style.background = "#ffcdd2"; // flash red
+    setTimeout(()=>{
+      cowArea.style.background = "#c8e6c9";
+    },300);
+  }
+};
+
+//// BIG SHOP
+const items = [
+  "🪑","📺","🛏️","🪟","🚪","🛋️","🖼️","🧸","💡","🪞",
+  "🏠","🏡","🏢","🏬","🏭","🚗","🚲","🛵","🛺","✈️"
+];
+
+const bigShop = document.getElementById("bigShop");
+const owned = document.getElementById("owned");
+
+items.forEach((it,i)=>{
+  let div = document.createElement("div");
+  div.className = "shop-item";
+  div.innerText = it + " ($"+(20+i*5)+")";
+
+  div.onclick = ()=>{
+    let price = 20+i*5;
+    if(money >= price){
+      updateMoney(-price);
+         let ownedItem = document.createElement("span");
+        ownedItem.className = "owned-item";
+        ownedItem.innerText = it+" "
+      owned.appendChild(ownedItem);
+      div.remove();
+
+      if(bigShop.children.length === 0){
+        alert("🎉 YOU WIN!");
+      }
+    }
+  };
+
+  bigShop.appendChild(div);
+});
+</script>
+
+</body>
+</html>

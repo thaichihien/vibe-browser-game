@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Animal Catching Game</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+  }
+  canvas {
+    display: block;
+  }
+  #ui {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    font-size: 18px;
+  }
+  #menu, #gameOver {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  button {
+    padding: 10px 20px;
+    font-size: 18px;
+    margin-top: 10px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div id="ui">Score: <span id="score">0</span></div>
+
+<div id="menu">
+  <h1>Animal Catching 🐾</h1>
+
+   <p style="max-width: 400px; line-height: 1.5; font-size: 14px;">
+    🖱️ Click + drag to draw a circle<br>
+    🐾 Trap animals to gain score<br>
+    ⚠️ Avoid catching the 🐺 wolf<br>
+    🎯 Bigger circle = more risk<br><br>
+    Good luck!
+  </p>
+
+  <button onclick="startGame()">Start</button>
+</div>
+
+<div id="gameOver" style="display:none;"></div>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let animals = [];
+let score = 0;
+let gameOver = false;
+let gameStarted = false;
+
+const MAX_RADIUS = 120;
+
+let frozenCircle = null;
+let caughtAnimals = [];
+
+let drawing = false;
+let startX = 0;
+let startY = 0;
+let currentRadius = 0;
+
+const types = [
+  { emoji: "🐰", name: "rabbit" },
+  { emoji: "🐔", name: "chicken" },
+   { emoji: "🐮", name: "cow" },
+    { emoji: "🐷", name: "pig" },
+    { emoji: "🦆", name: "duck" },
+  { emoji: "🐺", name: "wolf" }
+];
+
+// Start game
+function startGame() {
+  document.getElementById("menu").style.display = "none";
+  resetGame();
+  gameStarted = true;
+}
+
+// Reset game
+function resetGame() {
+  animals = [];
+  score = 0;
+  gameOver = false;
+  frozenCircle = null;
+  caughtAnimals = [];
+
+  document.getElementById("score").innerText = score;
+  document.getElementById("gameOver").style.display = "none";
+}
+
+// Restart button
+function restartGame() {
+  resetGame();
+  gameStarted = true;
+}
+
+// Spawn animals
+function spawnAnimal() {
+  const type = types[Math.floor(Math.random() * types.length)];
+  const size = 20 + Math.random() * 30;
+  const speed = 2 + Math.random() * 3;
+
+  animals.push({
+    x: canvas.width + 50,
+    y: Math.random() * canvas.height,
+    size,
+    speed,
+    type
+  });
+}
+
+// Mouse events
+canvas.addEventListener("mousedown", (e) => {
+  if (!gameStarted || gameOver) return;
+  drawing = true;
+  startX = e.clientX;
+  startY = e.clientY;
+});
+
+canvas.addEventListener("mousemove", (e) => {
+  if (!drawing) return;
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+  currentRadius = Math.min(Math.sqrt(dx * dx + dy * dy), MAX_RADIUS);
+});
+
+canvas.addEventListener("mouseup", () => {
+  if (!drawing || gameOver) return;
+  drawing = false;
+  captureAnimals();
+  currentRadius = 0;
+});
+
+// Capture logic
+function captureAnimals() {
+  let newAnimals = [];
+  caughtAnimals = [];
+
+  for (let a of animals) {
+    const dx = a.x - startX;
+    const dy = a.y - startY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < currentRadius) {
+      caughtAnimals.push(a);
+
+      if (a.type.name === "wolf") {
+        // freeze state
+        frozenCircle = {
+          x: startX,
+          y: startY,
+          r: currentRadius
+        };
+        endGame();
+        return;
+      }
+
+      score++;
+    } else {
+      newAnimals.push(a);
+    }
+  }
+
+  animals = newAnimals;
+  document.getElementById("score").innerText = score;
+}
+
+// Game over
+function endGame() {
+  gameOver = true;
+  document.getElementById("gameOver").style.display = "block";
+  document.getElementById("gameOver").innerHTML = `
+    💀 Game Over : You caught a wolf!🐺 <br>
+    Score: ${score} <br>
+    <button onclick="restartGame()">Restart</button>
+  `;
+}
+
+// Update
+function update() {
+  if (!gameStarted || gameOver) return;
+
+  if (Math.random() < 0.03) {
+    spawnAnimal();
+  }
+
+  for (let a of animals) {
+    a.x -= a.speed;
+  }
+
+  animals = animals.filter(a => a.x > -50);
+}
+
+// Draw
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw animals
+  for (let a of animals) {
+    ctx.font = a.size + "px Arial";
+    ctx.fillText(a.type.emoji, a.x, a.y);
+  }
+
+  // Draw frozen result when game over
+  if (gameOver && frozenCircle) {
+    // draw circle
+    ctx.beginPath();
+    ctx.arc(frozenCircle.x, frozenCircle.y, frozenCircle.r, 0, Math.PI * 2);
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // highlight caught animals
+    for (let a of caughtAnimals) {
+      ctx.font = a.size + "px Arial";
+
+      if (a.type.name === "wolf") {
+        ctx.fillStyle = "red"; // wolf highlight
+      } else {
+        ctx.fillStyle = "white";
+      }
+
+      ctx.fillText(a.type.emoji, a.x, a.y);
+    }
+  }
+
+  // Normal drawing circle
+  else if (drawing) {
+    ctx.beginPath();
+    ctx.arc(startX, startY, currentRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = "cyan";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+// Loop
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>

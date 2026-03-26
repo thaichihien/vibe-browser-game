@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Attack On Cursor</title>
+  <style>
+    body { margin:0; overflow:hidden; background:#111; }
+    canvas { display:block; }
+    #ui {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: white;
+      display: none;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    #tutorial {
+  position:absolute;
+  bottom:0%; right:00%;
+  transform:translate(-10%,-10%);
+  background:#222;
+  color:white;
+  padding:20px;
+  text-align:center;
+}
+  </style>
+</head>
+<body>
+<div id="tutorial">
+  <h2>How to Play</h2>
+  <p>Move mouse to control cursor</p>
+  <p>Click = shoot</p>
+  <p>Hold + drag big circle = spawn soldier</p>
+  <p>Destroy barriers → turrets → base</p>
+</div>
+<canvas id="game"></canvas>
+
+<div id="ui">
+  <h1>Victory!</h1>
+  <button onclick="restart()">Restart</button>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let mouse = {x:0,y:0,down:false};
+let dragStart = null;
+
+let bullets, playerUnits, enemyUnits, turrets;
+let base, rings;
+
+let spawnCooldown = 0;
+let gameOver = false;
+
+// ===== INIT =====
+function init(){
+  bullets = [];
+  playerUnits = [];
+  enemyUnits = [];
+  turrets = [];
+
+  base = { x:200, y:canvas.height/2, hp:5000, maxHp:5000 };
+
+  rings = [
+    {r:200,hp:2000,maxHp:2000},
+    {r:150,hp:1500,maxHp:1500},
+    {r:90,hp:1000,maxHp:1000}
+  ];
+
+  createTurrets();
+  spawnCooldown = 0;
+  gameOver = false;
+  document.getElementById("ui").style.display = "none";
+}
+
+// ===== TURRETS =====
+function createTurrets(){
+  const gaps = [
+    (rings[0].r + rings[1].r)/2,
+    (rings[1].r + rings[2].r)/2,
+    rings[2].r - 30
+  ];
+
+  gaps.forEach(radius=>{
+    for(let i=0;i<10;i++){
+      // FOCUS RIGHT SIDE (−45° to +45°)
+      let angle = (-Math.PI/4) + (i/9)*(Math.PI/2);
+
+      turrets.push({
+        x: base.x + Math.cos(angle)*radius,
+        y: base.y + Math.sin(angle)*radius,
+        hp:800, maxHp:800,
+        cooldown: Math.random()*60,
+        range:200
+      });
+    }
+  });
+}
+
+// ===== UTIL =====
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+// ===== INPUT =====
+canvas.addEventListener("mousemove", e=>{
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+});
+
+canvas.addEventListener("mousedown", ()=>{
+  mouse.down = true;
+  dragStart = {x:mouse.x,y:mouse.y};
+});
+
+canvas.addEventListener("mouseup", ()=>{
+  if(gameOver) return;
+
+  mouse.down = false;
+  let d = Math.hypot(mouse.x-dragStart.x, mouse.y-dragStart.y);
+
+  // SHOOT
+  if(d < 10){
+    shoot();
+  } 
+  // SPAWN UNIT (need big circle)
+  else if(d > 50 && spawnCooldown <= 0 && playerUnits.length < 30){
+    spawnUnit();
+    spawnCooldown = 30;
+  }
+});
+
+function shoot(){
+  let dx = base.x - mouse.x;
+  let dy = base.y - mouse.y;
+  let mag = Math.hypot(dx,dy);
+
+  bullets.push({
+    x:mouse.x,y:mouse.y,
+    vx:dx/mag*6, vy:dy/mag*6,
+    damage:1, from:"player",
+      life: 120 // ~2 seconds
+  });
+}
+
+function spawnUnit(){
+  playerUnits.push({
+    x:mouse.x,
+    y:mouse.y,
+    hp:40, maxHp:40,
+    speed:1.2,
+    damage:20
+  });
+}
+
+// ===== UPDATE =====
+function update(){
+  if(gameOver) return;
+
+  spawnCooldown--;
+
+  bullets.forEach(b=>{
+    b.x+=b.vx;
+    b.y+=b.vy;
+    b.life--;
+  });
+
+  // PLAYER MOVE
+  playerUnits.forEach(u=>{
+    let dx = base.x-u.x;
+    let dy = base.y-u.y;
+    let mag = Math.hypot(dx,dy);
+
+    for(let r of rings){
+      if(r.hp>0 && dist(u,base)<r.r){
+        return;
+      }
+    }
+
+    u.x+=dx/mag*u.speed;
+    u.y+=dy/mag*u.speed;
+  });
+
+   // ENEMY UNITS MOVE
+  enemyUnits.forEach(u=>{
+    let target = playerUnits[0];
+    if(target){
+      let dx = target.x - u.x;
+      let dy = target.y - u.y;
+      let mag = Math.hypot(dx,dy);
+      u.x += dx/mag * u.speed;
+      u.y += dy/mag * u.speed;
+    }
+  });
+
+  // TURRETS
+  turrets.forEach(t=>{
+    t.cooldown--;
+
+    let target = playerUnits.find(u=>dist(u,t)<t.range);
+
+    if(target && t.cooldown<=0){
+      let dx=target.x-t.x;
+      let dy=target.y-t.y;
+      let mag=Math.hypot(dx,dy);
+
+      bullets.push({
+        x:t.x,y:t.y,
+        vx:dx/mag*4,vy:dy/mag*4,
+        damage:8,from:"enemy",
+        life: 90 // shorter lifetime
+      });
+
+      t.cooldown=50;
+    }
+  });
+
+  // BULLET COLLISION
+  bullets.forEach(b=>{
+    if(b.from==="player"){
+
+      for(let r of rings){
+        if(r.hp>0 && dist(b,base)<r.r){
+          r.hp-=b.damage;
+          b.dead=true;
+          return;
+        }
+      }
+
+      turrets.forEach(t=>{
+        if(dist(b,t)<10){
+          t.hp-=b.damage;
+          b.dead=true;
+        }
+      });
+
+      if(dist(b,base)<20){
+        base.hp-=b.damage;
+        b.dead=true;
+      }
+
+    } else {
+      playerUnits.forEach(u=>{
+        if(dist(b,u)<10){
+          u.hp-=b.damage;
+          b.dead=true;
+        }
+      });
+    }
+  });
+
+  bullets = bullets.filter(b => !b.dead && b.life > 0);
+
+  // UNIT DAMAGE
+  playerUnits.forEach(u=>{
+    for(let r of rings){
+      if(r.hp>0 && dist(u,base)<r.r){
+        r.hp-=0.2*u.damage;
+        return;
+      }
+    }
+
+    turrets.forEach(t=>{
+      if(dist(u,t)<10){
+        t.hp-=0.2*u.damage;
+      }
+    });
+
+    if(dist(u,base)<20){
+      base.hp-=0.2*u.damage;
+    }
+  });
+
+   // SPAWN ENEMY DEFENDERS
+  playerUnits.forEach(u=>{
+    if(dist(u, base) < 100){
+      if(Math.random() < 0.02){
+        enemyUnits.push({
+          x: base.x,
+          y: base.y,
+          hp: 30,
+          maxHp:30,
+          speed: 1.5
+        });
+      }
+    }
+  });
+
+  // CLEANUP
+  playerUnits = playerUnits.filter(u=>u.hp>0);
+  enemyUnits = enemyUnits.filter(u=>u.hp > 0);
+  turrets = turrets.filter(t=>t.hp>0);
+
+  // GAME OVER
+  if(base.hp<=0){
+    gameOver = true;
+    document.getElementById("ui").style.display = "block";
+  }
+}
+
+// ===== DRAW =====
+function drawHP(x,y,w,hp,max){
+  ctx.fillStyle="red";
+  ctx.fillRect(x-w/2,y-10,w,4);
+  ctx.fillStyle="lime";
+  ctx.fillRect(x-w/2,y-10,w*(hp/max),4);
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  rings.forEach(r=>{
+    ctx.beginPath();
+    ctx.arc(base.x,base.y,r.r,0,Math.PI*2);
+    ctx.strokeStyle="rgba(255,0,0,0.4)";
+    ctx.lineWidth=4;
+    ctx.stroke();
+    drawHP(base.x, base.y-r.r, 60, r.hp, r.maxHp);
+  });
+
+  ctx.beginPath();
+  ctx.arc(base.x,base.y,20,0,Math.PI*2);
+  ctx.fillStyle="red";
+  ctx.fill();
+  drawHP(base.x, base.y+30, 80, base.hp, base.maxHp);
+
+  turrets.forEach(t=>{
+    ctx.beginPath();
+    ctx.arc(t.x,t.y,8,0,Math.PI*2);
+    ctx.fillStyle="orange";
+    ctx.fill();
+    drawHP(t.x,t.y,30,t.hp,t.maxHp);
+  });
+
+  playerUnits.forEach(u=>{
+    ctx.beginPath();
+    ctx.arc(u.x,u.y,6,0,Math.PI*2);
+    ctx.fillStyle="cyan";
+    ctx.fill();
+    drawHP(u.x,u.y,30,u.hp,u.maxHp);
+  });
+
+  // ENEMY
+  enemyUnits.forEach(u=>{
+    ctx.beginPath();
+    ctx.arc(u.x, u.y, 6, 0, Math.PI*2);
+    ctx.fillStyle = "yellow";
+    ctx.fill();
+    drawHP(u.x, u.y, 30, u.hp, u.maxHp);
+  });
+
+  bullets.forEach(b=>{
+    ctx.beginPath();
+    ctx.arc(b.x,b.y,3,0,Math.PI*2);
+    ctx.fillStyle=b.from==="player"?"white":"red";
+    ctx.fill();
+  });
+
+  // CURSOR
+  ctx.beginPath();
+  ctx.arc(mouse.x,mouse.y,5,0,Math.PI*2);
+  ctx.fillStyle="lime";
+  ctx.fill();
+
+  // DRAG
+  if(mouse.down && dragStart){
+    let r = Math.hypot(mouse.x-dragStart.x, mouse.y-dragStart.y);
+    ctx.beginPath();
+    ctx.arc(dragStart.x,dragStart.y,r,0,Math.PI*2);
+    ctx.strokeStyle="cyan";
+    ctx.stroke();
+  }
+}
+
+// ===== LOOP =====
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function restart(){
+  init();
+}
+
+init();
+loop();
+</script>
+</body>
+</html>

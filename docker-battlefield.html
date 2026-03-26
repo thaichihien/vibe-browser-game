@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Docker Defense</title>
+<style>
+  body { margin: 0; font-family: monospace; background: #111; color: #0f0; }
+  #topbar { padding: 5px; border-bottom: 2px solid #0f0; display:flex; gap:10px; }
+  #game { height: 61vh; background: #222; position: relative; overflow: hidden; }
+  #terminal { height: 29vh; padding: 10px; border-top: 2px solid #0f0; }
+  #log { height: 60%; overflow-y: auto; }
+  input { width: 100%; background: black; color: #0f0; border: none; outline: none; }
+
+  .tower { position: absolute; width: 40px; height: 40px; text-align:center; font-size:10px; }
+  .enemy { position: absolute; width: 30px; height: 30px; background: red; }
+  .bullet { position: absolute; width: 6px; height: 6px; background: yellow; border-radius:50%; }
+
+  button { background:black; color:#0f0; border:1px solid #0f0; cursor:pointer; }
+
+  #instructions {
+    display: flex;
+    justify-content: space-between;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #9f9;
+}
+
+.enemy {
+  position: absolute;
+  border-radius: 6px;
+}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <button onclick="startGame()">▶ Start</button>
+  <button onclick="restartGame()">🔄 Restart</button>
+  <div id="stats"></div>
+</div>
+
+<div id="game"></div>
+
+<div id="terminal">
+ <div id="instructions">
+    <div>
+        <b>📖 COMMANDS</b><br/>
+  docker run &lt;service&gt; --name &lt;name&gt;<br/>
+  docker stop &lt;name&gt;<br/>
+  docker rm &lt;name&gt;<br/>
+  docker ps<br/>
+  docker logs &lt;name&gt;<br/>
+  <br/>
+    </div>
+
+<div>
+      <b>🐳 SERVICES (TOWERS)</b><br/>
+  nginx → balanced (medium power, range, speed)<br/>
+  redis → fast shooter (low power, very fast)<br/>
+  postgres → heavy hitter (high power, slow)<br/>
+  minio → sniper (very long range, slow)<br/>
+  mongo → wide range (balanced, good coverage)<br/>
+  <br/>
+</div>
+
+<div>
+    
+  <b>🎮 HOW TO PLAY</b><br/>
+  - Start the game ▶️<br/>
+  - Run containers to defend<br/>
+  - Enemies reduce ❤️ when reaching left<br/>
+  - Stop + rm to reposition towers<br/>
+  - Use docker ps / logs to manage strategy<br/>
+</div>
+
+<div>
+    <b>🌐 NETWORKS</b><br/>
+one, two, three<br/>
+Each network has 3 vertical slots<br/>
+Use:<br/>
+docker run nginx --name t1 --network one<br/>
+<br/>
+</div>
+</div>
+  <hr/>
+  <div id="log"></div>
+  <input id="cmd" placeholder="Type command..." />
+</div>
+
+<script>
+const game = document.getElementById("game");
+const log = document.getElementById("log");
+const input = document.getElementById("cmd");
+const stats = document.getElementById("stats");
+
+let BASE_HP, containers, enemies, bullets, running, gameOver;
+const ENEMY_TYPES = [
+  { type: "normal", hp: 5, speed: 1.5, size: 30, color: "red" },
+  { type: "fast",   hp: 3, speed: 3.0, size: 20, color: "orange" },
+  { type: "tank",   hp: 12, speed: 0.8, size: 40, color: "purple" },
+  { type: "boss",   hp: 25, speed: 0.6, size: 50, color: "black" }
+];
+const SERVICES = {
+  nginx:   { power: 2, range: 120, fireRate: 600, color: "cyan" },
+  redis:   { power: 1, range: 80,  fireRate: 200, color: "orange" },
+  postgres:{ power: 4, range: 110, fireRate: 1000, color: "purple" },
+  minio:   { power: 5, range: 200, fireRate: 1200, color: "white" },
+  mongo:   { power: 2, range: 140, fireRate: 700, color: "green" }
+};
+
+const NETWORKS = {
+  one: [],
+  two: [],
+  three: []
+};
+
+const NETWORK_POS = {
+  one:   { x: 100, y: 40 },
+ two:   { x: 100, y: 220 },
+three: { x: 100, y: 400 }
+};
+
+function init() {
+  BASE_HP = 100;
+  containers = {};
+  enemies = [];
+  bullets = [];
+  running = false;
+  gameOver = false;
+  game.innerHTML = "";
+  log.innerHTML = "";
+
+  renderNetworks();
+}
+init();
+
+function updateStats() {
+  stats.innerText = "❤️ HP: " + BASE_HP;
+}
+
+function print(msg) {
+  log.innerHTML += msg + "<br/>";
+  log.scrollTop = log.scrollHeight;
+}
+
+function startGame() {
+  running = true;
+}
+
+function restartGame() {
+  init();
+  updateStats();
+}
+
+function getSlotPosition(network) {
+  let index = NETWORKS[network].length;
+  let base = NETWORK_POS[network];
+
+  return {
+    x: base.x,
+    y: base.y + index * 50
+  };
+}
+
+function renderNetworks() {
+  Object.keys(NETWORKS).forEach(name => {
+    let base = NETWORK_POS[name];
+
+    for (let i = 0; i < 3; i++) {
+      let slot = document.createElement("div");
+
+      slot.style.position = "absolute";
+      slot.style.width = "40px";   // match tower
+      slot.style.height = "40px";
+      slot.style.border = "1px solid #555";
+
+      slot.style.left = base.x + "px";
+      slot.style.top = (base.y + i * 50) + "px";
+
+      game.appendChild(slot);
+    }
+
+    // label
+    let label = document.createElement("div");
+    label.innerText = name;
+    label.style.position = "absolute";
+    label.style.left = base.x + "px";
+    label.style.top = (base.y - 20) + "px";
+    label.style.color = "#0f0";
+    game.appendChild(label);
+  });
+}
+
+
+function dockerPs() {
+  let list = Object.entries(containers);
+
+  if (list.length === 0) {
+    print("No containers");
+    return;
+  }
+
+  print("CONTAINER   IMAGE     STATUS");
+
+  list.forEach(([name, c]) => {
+    let status = c.running ? "running" : "stopped";
+    print(`${name.padEnd(12)} ${c.service.padEnd(8)} ${status}`);
+  });
+}
+
+function dockerLogs(name) {
+  let c = containers[name];
+
+  if (!c) {
+    print("Container not found");
+    return;
+  }
+
+  print("===== LOGS: " + name + " =====");
+  print("Service : " + c.service);
+  print("Status  : " + (c.running ? "running" : "stopped"));
+  print("Shots   : " + c.shots);
+  print("Kills   : " + c.kills);
+  print("===========================");
+}
+
+function spawnEnemy() {
+  if (!running || gameOver) return;
+
+  let type = ENEMY_TYPES[Math.floor(Math.random() * ENEMY_TYPES.length)];
+
+  let el = document.createElement("div");
+  el.className = "enemy";
+
+  el.style.width = type.size + "px";
+  el.style.height = type.size + "px";
+  el.style.background = type.color;
+
+  let y = Math.random() * (game.clientHeight - type.size);
+  el.style.top = y + "px";
+  el.style.left = game.clientWidth + "px";
+
+  if (type.type === "fast") {
+  el.style.borderRadius = "50%"; // circle
+}
+
+if (type.type === "tank") {
+  el.style.border = "3px solid white"; // armored
+}
+
+if (type.type === "boss") {
+  el.style.borderRadius = "0";
+  el.style.boxShadow = "0 0 15px red"; // glow
+}
+
+let hpBar = document.createElement("div");
+hpBar.style.position = "absolute";
+hpBar.style.height = "4px";
+hpBar.style.background = "lime";
+hpBar.style.top = "-6px";
+hpBar.style.left = "0px";
+
+el.appendChild(hpBar);
+
+  game.appendChild(el);
+
+  enemies.push({
+    el,
+    x: game.clientWidth,
+    y,
+    hp: type.hp,
+    speed: type.speed,
+    size: type.size,
+    type: type.type,
+    hpBar,
+maxHp: type.hp
+  });
+}
+
+setInterval(spawnEnemy, 1500);
+
+function shoot(c, target) {
+  let b = document.createElement("div");
+  b.className = "bullet";
+  game.appendChild(b);
+
+  bullets.push({
+    el: b,
+    x: c.x + 20,
+    y: c.y + 20,
+    target,
+    power: c.power,
+    speed: 4,
+    owner: c
+  });
+}
+
+function gameLoop() {
+  if (!running) return requestAnimationFrame(gameLoop);
+
+  enemies.forEach((e, i) => {
+    e.x -= e.speed;
+    e.el.style.left = e.x + "px";
+
+    if (e.x < 0) {
+      BASE_HP--;
+      e.el.remove();
+      enemies.splice(i, 1);
+
+      if (BASE_HP <= 0) {
+        gameOver = true;
+        running = false;
+        print("💀 GAME OVER");
+      }
+    }
+  });
+
+  Object.values(containers).forEach(c => {
+    if (!c.running) return;
+
+    let now = Date.now();
+    if (now - c.lastShot < c.fireRate) return;
+
+    for (let e of enemies) {
+      let dist = Math.hypot(c.x - e.x, c.y - e.y);
+      if (dist < c.range) {
+        shoot(c, e);
+        c.lastShot = now;
+        c.shots++;
+        break;
+      }
+    }
+  });
+
+  bullets.forEach((b, i) => {
+    if (!b.target) return;
+
+    let dx = b.target.x - b.x;
+    let dy = b.target.y - b.y;
+    let dist = Math.hypot(dx, dy);
+
+    if (dist < 5) {
+      b.target.hp -= b.power;
+
+      let ratio = b.target.hp / b.target.maxHp;
+b.target.hpBar.style.width = (ratio * 100) + "%";
+
+      if (b.target.hp <= 0) {
+        b.target.el.remove();
+        enemies.splice(enemies.indexOf(b.target), 1);
+
+         let owner = b.owner;
+        if (owner) owner.kills++;
+      }
+
+      b.el.remove();
+      bullets.splice(i, 1);
+      return;
+    }
+
+    b.x += dx / dist * b.speed;
+    b.y += dy / dist * b.speed;
+
+    b.el.style.left = b.x + "px";
+    b.el.style.top = b.y + "px";
+  });
+
+  updateStats();
+  requestAnimationFrame(gameLoop);
+}
+gameLoop();
+
+function refreshNetworkLayout(network) {
+  let base = NETWORK_POS[network];
+
+  NETWORKS[network].forEach((name, i) => {
+    let c = containers[name];
+    if (!c) return;
+
+    c.x = base.x;
+    c.y = base.y + i * 50;
+
+    c.el.style.left = c.x + "px";
+    c.el.style.top = c.y + "px";
+  });
+}
+
+function createTower(service, name, network) {
+  let s = SERVICES[service];
+  if (!s) return print("Invalid service");
+
+  if (!NETWORKS[network]) return print("Invalid network");
+
+  if (NETWORKS[network].length >= 3) {
+    return print("Network full ❌");
+  }
+
+  let pos = getSlotPosition(network);
+
+  let el = document.createElement("div");
+  el.className = "tower";
+  el.style.background = s.color;
+  el.innerText = service;
+
+  el.style.left = pos.x + "px";
+  el.style.top = pos.y + "px";
+
+  game.appendChild(el);
+
+  let container = {
+    ...s,
+    service,
+    el,
+    x: pos.x,
+    y: pos.y,
+    running: true,
+    lastShot: 0,
+    shots: 0,
+    kills: 0,
+    network
+  };
+
+  containers[name] = container;
+  NETWORKS[network].push(name);
+
+  print(`Started ${service} in network ${network}`);
+}
+
+function stopContainer(name) {
+  if (!containers[name]) return print("Not found");
+  containers[name].running = false;
+}
+
+function removeContainer(name) {
+  let c = containers[name];
+  if (!c) return print("Not found");
+  if (c.running) return print("Stop first");
+
+  c.el.remove();
+
+  // remove from network
+  let arr = NETWORKS[c.network];
+  NETWORKS[c.network] = arr.filter(n => n !== name);
+  refreshNetworkLayout(c.network);
+
+  delete containers[name];
+}
+
+function parseCommand(cmd) {
+  if (cmd.startsWith("docker run")) {
+  let parts = cmd.split(" ");
+  let service = parts[2];
+
+  let nameMatch = cmd.match(/--name (\w+)/);
+  let netMatch = cmd.match(/--network (\w+)/);
+
+  if (!nameMatch) return print("Missing --name");
+  if (!netMatch) return print("Missing --network");
+
+  createTower(service, nameMatch[1], netMatch[1]);
+}
+  else if (cmd.startsWith("docker stop")) {
+    stopContainer(cmd.split(" ")[2]);
+  }
+  else if (cmd.startsWith("docker rm")) {
+    removeContainer(cmd.split(" ")[2]);
+  } else if (cmd === "docker ps") {
+    dockerPs();
+    }
+    else if (cmd.startsWith("docker logs")) {
+  let name = cmd.split(" ")[2];
+  dockerLogs(name);
+}
+  else {
+    print("Unknown command");
+  }
+}
+
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    let cmd = input.value;
+    print("> " + cmd);
+    parseCommand(cmd);
+    input.value = "";
+  }
+});
+
+updateStats();
+</script>
+
+</body>
+</html>

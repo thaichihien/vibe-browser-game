@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Grid Survival</title>
+
+<style>
+body {
+  margin: 0;
+  background: #111;
+  color: white;
+  font-family: Arial;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#topbar {
+  margin-top: 10px;
+}
+
+#game {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, 60px);
+  grid-template-rows: repeat(6, 60px);
+  gap: 4px;
+  margin-top: 20px;
+}
+
+.cell {
+  width: 60px;
+  height: 60px;
+  background: #222;
+  border-radius: 8px;
+}
+
+#player {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: #4caf50;
+  border-radius: 8px;
+}
+
+.missile {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: red;
+  border-radius: 50%;
+}
+
+#status {
+  margin-top: 10px;
+  font-size: 18px;
+}
+
+#gameover {
+  margin-top: 10px;
+  font-size: 20px;
+  color: #ff5252;
+}
+/* screen shake */
+.shake {
+  animation: shake 0.3s;
+}
+@keyframes shake {
+  0% { transform: translate(2px, 2px); }
+  25% { transform: translate(-2px, 2px); }
+  50% { transform: translate(2px, -2px); }
+  75% { transform: translate(-2px, -2px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* player glow */
+#player {
+  box-shadow: 0 0 10px #4caf50;
+  transition: box-shadow 0.2s;
+}
+#player.glow {
+  box-shadow: 0 0 25px #4caf50;
+}
+
+/* trail */
+.trail {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: rgba(255,0,0,0.4);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: fade 0.5s linear forwards;
+}
+
+@keyframes fade {
+  to {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+/* missile shapes */
+.missile.circle {
+  border-radius: 50%;
+}
+
+.missile.diamond {
+  transform: rotate(45deg);
+}
+
+.missile.bar {
+  width: 30px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.missile.star {
+  clip-path: polygon(
+    50% 0%, 61% 35%, 98% 35%,
+    68% 57%, 79% 91%, 50% 70%,
+    21% 91%, 32% 57%, 2% 35%,
+    39% 35%
+  );
+}
+
+#modes {
+  display: flex;
+  gap: 8px;
+}
+
+.mode {
+  padding: 6px 12px;
+  border: none;
+  background: #333;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.mode:hover {
+  background: #555;
+}
+
+.mode.active {
+  background: #4caf50;
+}
+
+#restart {
+  margin-top: 10px;
+  margin-left: 10px;
+  padding: 6px 14px;
+  background: #2196f3;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#restart:hover {
+  background: #42a5f5;
+}
+
+#powerbar {
+  width: 200px;
+  height: 10px;
+  background: #333;
+  border-radius: 5px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+#powerfill {
+  height: 100%;
+  width: 0%;
+  background: #00e5ff;
+  transition: width 0.1s;
+}
+
+#tutorial {
+  margin-top: 10px;
+  padding: 12px 16px;
+  background: #1e1e1e;
+  border-radius: 10px;
+  max-width: 320px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+#tutorial h3 {
+  margin: 0 0 6px;
+  color: #4caf50;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🔥 Grid Survival</h2>
+
+<div id="tutorial">
+  <h3>🎮 How to Play</h3>
+  <p>Move using <b>W A S D</b> or <b>Arrow Keys</b></p>
+  <p>Avoid incoming missiles 🚀</p>
+  <p>💀 Don’t fall off the grid</p>
+</div>
+
+<div id="topbar">
+  <div id="modes">
+    <button class="mode active" data-mode="normal">Normal</button>
+    <button class="mode" data-mode="easy">Easy</button>
+    <button class="mode" data-mode="hard">Hard</button>
+  </div>
+
+  <button id="restart">▶ Start</button>
+</div>
+
+<div id="game"></div>
+
+<div id="status">Score: 0s</div>
+<!-- <div id="powerbar">
+  <div id="powerfill"></div>
+</div> -->
+<div id="gameover"></div>
+
+<script>
+const SIZE = 6;
+const CELL = 60;
+const GAP = 4;
+
+let player;
+let missiles;
+let alive;
+let score;
+let startTime;
+let power = 0;
+let maxPower = 5000; // 5 seconds
+let lastTime = Date.now();
+
+let config = {
+  easy:   { speed: 0.03, spawn: 1200, count: 1 },
+  normal: { speed: 0.05, spawn: 800,  count: 2 },
+  hard:   { speed: 0.08, spawn: 500,  count: 3 }
+};
+
+let current;
+
+const gameEl = document.getElementById("game");
+const statusEl = document.getElementById("status");
+const gameoverEl = document.getElementById("gameover");
+
+let selectedMode = "normal";
+
+document.querySelectorAll(".mode").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".mode").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    selectedMode = btn.dataset.mode;
+  };
+});
+
+// create grid
+function createGrid() {
+  gameEl.innerHTML = "";
+  for (let i = 0; i < SIZE * SIZE; i++) {
+    const c = document.createElement("div");
+    c.className = "cell";
+    gameEl.appendChild(c);
+  }
+
+  const p = document.createElement("div");
+  p.id = "player";
+  gameEl.appendChild(p);
+}
+
+function toPixel(v) {
+  return v * (CELL + GAP);
+}
+
+// init
+function init() {
+  missiles = [];
+  alive = true;
+  score = 0;
+  startTime = Date.now();
+  gameoverEl.innerText = "";
+
+  const mode = selectedMode;
+  current = config[mode];
+
+  player = {
+    gridX: 2,
+    gridY: 2,
+    x: toPixel(2),
+    y: toPixel(2),
+    targetX: toPixel(2),
+    targetY: toPixel(2)
+  };
+
+  document.querySelectorAll(".missile").forEach(m => m.remove());
+
+  spawnLoop();
+  loop();
+}
+
+// movement
+function move(dx, dy) {
+  if (!alive) return;
+
+  player.gridX += dx;
+  player.gridY += dy;
+
+  if (
+    player.gridX < 0 ||
+    player.gridY < 0 ||
+    player.gridX >= SIZE ||
+    player.gridY >= SIZE
+  ) {
+    die("💀 Fell off");
+    return;
+  }
+
+  player.targetX = toPixel(player.gridX);
+  player.targetY = toPixel(player.gridY);
+}
+
+function updatePowerUI() {
+  const percent = (power / maxPower) * 100;
+  document.getElementById("powerfill").style.width = percent + "%";
+}
+
+function randomShape(el) {
+  const types = ["circle", "diamond", "bar", "star"];
+  const type = types[Math.floor(Math.random() * types.length)];
+
+  el.classList.add(type);
+
+  // tweak size per type
+  if (type === "bar") {
+    el.style.width = "30px";
+    el.style.height = "10px";
+  } else {
+    el.style.width = "20px";
+    el.style.height = "20px";
+  }
+}
+
+function updatePower() {
+  const now = Date.now();
+  const delta = now - lastTime;
+  lastTime = now;
+
+  if (!alive) return;
+
+  power += delta;
+  if (power > maxPower) power = maxPower;
+}
+
+function spawnMissiles() {
+  for (let i = 0; i < current.count; i++) {
+
+    const dir = Math.floor(Math.random() * 4);
+    const lane = Math.floor(Math.random() * SIZE);
+
+    let m = {
+      x: 0,
+      y: 0,
+      dx: 0,
+      dy: 0,
+      el: document.createElement("div"),
+      color: randomColor() // 🔥 store color
+    };
+
+    m.el.className = "missile";
+    randomShape(m.el);
+
+    // 🎨 apply color + glow
+    m.el.style.background = m.color;
+    m.el.style.boxShadow = `0 0 10px ${m.color}`;
+
+    if (dir === 0) { m.x = lane; m.y = -1; m.dy = current.speed; }
+    if (dir === 1) { m.x = lane; m.y = SIZE; m.dy = -current.speed; }
+    if (dir === 2) { m.x = -1; m.y = lane; m.dx = current.speed; }
+    if (dir === 3) { m.x = SIZE; m.y = lane; m.dx = -current.speed; }
+
+    gameEl.appendChild(m.el);
+    missiles.push(m);
+  }
+}
+
+function createExplosion(x, y, color) {
+  const count = 12;
+
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement("div");
+
+    p.style.position = "absolute";
+    p.style.width = "6px";
+    p.style.height = "6px";
+    p.style.background = color;
+    p.style.borderRadius = "50%";
+    p.style.left = x + "px";
+    p.style.top = y + "px";
+    p.style.pointerEvents = "none";
+
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 3 + 2;
+
+    const dx = Math.cos(angle) * speed;
+    const dy = Math.sin(angle) * speed;
+
+    gameEl.appendChild(p);
+
+    let life = 30;
+
+    function animate() {
+      if (life-- <= 0) {
+        p.remove();
+        return;
+      }
+
+      const nx = p.offsetLeft + dx;
+      const ny = p.offsetTop + dy;
+
+      p.style.left = nx + "px";
+      p.style.top = ny + "px";
+      p.style.opacity = life / 30;
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  }
+}
+
+function createTrail(x, y, color) {
+  const t = document.createElement("div");
+  t.className = "trail";
+
+  t.style.left = x + "px";
+  t.style.top = y + "px";
+  t.style.background = color; // 🔥 match missile
+
+  gameEl.appendChild(t);
+  setTimeout(() => t.remove(), 500);
+}
+// update missiles + REMOVE DOM when out
+function updateMissiles() {
+  missiles = missiles.filter(m => {
+    m.x += m.dx;
+    m.y += m.dy;
+
+    const px = toPixel(m.x);
+    const py = toPixel(m.y);
+
+    createTrail(px, py, m.color); // 🔥 trail
+
+    const angle = Math.atan2(m.dy, m.dx);
+
+    m.el.style.transform =
+      `translate(${px}px, ${py}px) rotate(${angle}rad)`;
+
+    const inside =
+      m.x >= -1 && m.y >= -1 &&
+      m.x <= SIZE && m.y <= SIZE;
+
+    if (!inside) {
+      m.el.remove(); // 🔥 clean DOM
+    }
+
+    return inside;
+  });
+}
+
+// player smooth
+function updatePlayer() {
+  player.x += (player.targetX - player.x) * 0.2;
+  player.y += (player.targetY - player.y) * 0.2;
+
+  const el = document.getElementById("player");
+  el.style.transform = `translate(${player.x}px, ${player.y}px)`;
+
+  // ⚡ glow intensity based on power
+  const ratio = power / maxPower;
+  const glowSize = 10 + ratio * 30;
+
+  el.style.boxShadow = `0 0 ${glowSize}px rgba(76,175,80,${0.5 + ratio})`;
+}
+
+function usePower() {
+  if (power < maxPower || !alive) return;
+
+  power = 0;
+
+  // 💥 explode all missiles
+  missiles.forEach(m => {
+    const px = toPixel(m.x);
+    const py = toPixel(m.y);
+
+    createExplosion(px, py, m.color);
+    m.el.remove();
+  });
+
+  missiles = [];
+
+  // 💥 big center explosion
+  createExplosion(player.x + CELL/2, player.y + CELL/2, "#00e5ff");
+}
+
+// collision
+function checkHit() {
+  const playerSize = CELL;
+
+  const px = player.x;
+  const py = player.y;
+
+  missiles.forEach(m => {
+    const mx = toPixel(m.x);
+    const my = toPixel(m.y);
+
+    const missileSize = 20;
+
+    // 🔥 AABB collision
+    const hit =
+      px < mx + missileSize &&
+      px + playerSize > mx &&
+      py < my + missileSize &&
+      py + playerSize > my;
+
+    if (hit) {
+      die("💥 Hit");
+    }
+  });
+}
+
+// score
+function updateScore() {
+  score = Math.floor((Date.now() - startTime) / 1000);
+  statusEl.innerText = `Score: ${score}s`;
+}
+
+// death UI
+function die(msg) {
+  alive = false;
+
+  statusEl.innerText = `Score: ${score}s`;
+  gameoverEl.innerText = `GAME OVER (${msg})`;
+
+  // 💥 explosion at player center
+  const centerX = player.x + CELL / 2;
+  const centerY = player.y + CELL / 2;
+
+  createExplosion(centerX, centerY, "#ff5252");
+
+  // shake
+  gameEl.classList.add("shake");
+  setTimeout(() => gameEl.classList.remove("shake"), 300);
+}
+
+function randomColor() {
+  const colors = [
+    "#ff5252", // red
+    "#ff9800", // orange
+    "#ffeb3b", // yellow
+    "#4caf50", // green
+    "#00bcd4", // cyan
+    "#2196f3", // blue
+    "#9c27b0", // purple
+    "#e91e63"  // pink
+  ];
+
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
+// loops
+function loop() {
+  if (!alive) return;
+
+  updatePlayer();
+  updateMissiles();
+  checkHit();
+  updateScore();
+//   updatePower();
+// updatePowerUI();
+
+  requestAnimationFrame(loop);
+}
+
+function spawnLoop() {
+  if (!alive) return;
+
+  spawnMissiles();
+  setTimeout(spawnLoop, current.spawn);
+}
+
+// controls
+document.addEventListener("keydown", e => {
+  switch (e.key) {
+    case "w":
+    case "ArrowUp": move(0,-1); break;
+    case "s":
+    case "ArrowDown": move(0,1); break;
+    case "a":
+    case "ArrowLeft": move(-1,0); break;
+    case "d":
+    case "ArrowRight": move(1,0); break;
+
+    case " ":
+      break;
+  }
+});
+
+// restart
+document.getElementById("restart").onclick = init;
+
+// init grid
+createGrid();
+</script>
+
+</body>
+</html>

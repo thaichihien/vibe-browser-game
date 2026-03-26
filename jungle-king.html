@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Jungle Frenzy 🐾</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #1a2a1a;
+    font-family: Arial;
+  }
+
+  #viewport {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+    /* cursor: none; */
+  }
+
+  #world {
+    position: absolute;
+    width: 3000px;
+    height: 3000px;
+    background: radial-gradient(circle, #2e4d2e, #162616);
+  }
+
+  .animal {
+    position: absolute;
+    user-select: none;
+    transition: transform 0.1s;
+  }
+
+  #ui {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    z-index: 10;
+  }
+
+  #startScreen, #gameOver {
+    position: absolute;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.7);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction: column;
+    color:white;
+    z-index: 20;
+  }
+
+  button {
+    padding: 12px 20px;
+    font-size: 18px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+  }
+
+  .invincible {
+    filter: drop-shadow(0 0 10px yellow);
+  }
+
+  .hide-cursor {
+    cursor: none;
+  }
+</style>
+</head>
+<body>
+
+<div id="viewport">
+  <div id="world"></div>
+
+  <div id="ui">
+  Size: <span id="size">1</span><br/>
+  Level: <span id="level">1</span><br/>
+  XP: <span id="xp">0</span>
+  <div style="width:200px;height:10px;background:#555;margin-top:5px;border-radius:5px;">
+    <div id="xpBar" style="height:100%;width:0%;background:lime;border-radius:5px;"></div>
+  </div>
+</div>
+
+  <div id="startScreen">
+    <h1>🐾 Jungle King</h1>
+
+     <div style="max-width:400px;text-align:left;font-size:14px;line-height:1.6;">
+    <b>🎮 How to play:</b><br/><br/>
+    🐭 Move with your mouse<br/>
+    🍖 Eat smaller or equal-sized animals to gain XP<br/>
+    🧬 Level up to evolve<br/>
+    🐅 Bigger animals will chase you<br/>
+    🏃 Escape to survive!<br/>
+  </div>
+
+
+    <button style="margin-top: 2rem;" onclick="startGame()">Start</button>
+  </div>
+
+  <div id="gameOver" style="display:none;">
+    <h1>💀 Game Over</h1>
+    <button onclick="restart()">Restart</button>
+  </div>
+</div>
+
+<script>
+const world = document.getElementById("world");
+const sizeText = document.getElementById("size");
+const viewport = document.getElementById("viewport");
+let xp = 0;
+let level = 1;
+
+const animalsData = [
+  "🐭","🐹","🐰","🐸","🐔","🦆","🐮","🐷","🐱","🐶","🐗","🦊","🐺",
+  "🐯","🦁","🐻","🐼","🐻‍❄️","🐘","🦣"
+].map((emoji,i)=>({emoji,size:i+1}));
+
+let player, animals=[];
+let mouseX=0, mouseY=0;
+let running=false;
+let invincible=false;
+
+const WORLD_SIZE = 3000;
+
+document.addEventListener("mousemove", e=>{
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+
+function createAnimal(data, isPlayer=false){
+  const el = document.createElement("div");
+  el.className = "animal";
+  el.innerText = data.emoji;
+
+  let obj = {
+    el,
+    size:data.size,
+    x:Math.random()*WORLD_SIZE,
+    y:Math.random()*WORLD_SIZE,
+    speed:1+Math.random()*1.5,
+    isPlayer,
+    vx:(Math.random()-0.5)*2,
+    vy:(Math.random()-0.5)*2
+  };
+
+  const debug = document.createElement("div");
+    debug.style.position = "absolute";
+    debug.style.border = "1px solid red";
+    debug.style.borderRadius = "50%";
+    debug.style.pointerEvents = "none";
+    debug.style.display = "none"; // toggle later
+
+    world.appendChild(debug);
+
+    obj.debug = debug;
+
+  world.appendChild(el);
+  animals.push(obj);
+  return obj;
+}
+
+function spawnAnimals(){
+  for(let i=0;i<60;i++){
+    let data = animalsData[Math.floor(Math.random()*animalsData.length)];
+    createAnimal(data);
+  }
+}
+
+function spawnAnimalsWithQuantity(data, quantity){
+  for(let i=0;i<quantity;i++){
+    createAnimal(data);
+  }
+}
+
+function startGame(){
+  document.getElementById("startScreen").style.display="none";
+  running=true;
+  animals=[];
+
+  player = createAnimal(animalsData[level - 1], true);
+
+  // spawn away from center for fairness
+  player.x = WORLD_SIZE/2;
+  player.y = WORLD_SIZE/2;
+
+  spawnAnimals();
+
+  for(let i=0;i<8;i++){
+    spawnAnimalsWithQuantity(animalsData[0], Math.max(10 - i*2,2)); // more small animals at start
+  }
+
+  // 🛡️ INVINCIBLE 3s
+  invincible = true;
+  player.el.classList.add("invincible");
+
+  setTimeout(()=>{
+    invincible = false;
+    player.el.classList.remove("invincible");
+  },3000);
+
+  viewport.classList.add("hide-cursor");
+
+  gameLoop();
+}
+
+function restart(){
+  location.reload();
+}
+
+function evolve(){
+  let next = animalsData.find(a=>a.size===player.size+1);
+  if(next){
+    player.size++;
+    player.el.innerText = next.emoji;
+  }
+}
+
+function getXPNeeded(level){
+  return 5 + level * 3; // scalable difficulty
+}
+
+function gainXP(amount){
+  xp += amount;
+
+  while(xp >= getXPNeeded(level)){
+    xp -= getXPNeeded(level);
+    level++;
+    evolveByLevel();
+  }
+}
+
+function evolveByLevel(){
+  let next = animalsData.find(a => a.size === level);
+  if(next){
+    player.size = next.size;
+    player.el.innerText = next.emoji;
+
+    // ✨ small visual feedback
+    player.el.style.transform = "scale(1.5)";
+    setTimeout(()=>{
+      player.el.style.transform = "scale(1)";
+    },200);
+  }
+}
+
+function updateCamera(){
+  let offsetX = window.innerWidth/2 - player.x;
+  let offsetY = window.innerHeight/2 - player.y;
+
+  world.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+}
+
+function gameLoop(){
+  if(!running) return;
+
+  animals.forEach(a=>{
+    const rect = a.el.getBoundingClientRect();
+  let radius = rect.width * 0.4;
+
+  a.debug.style.width = radius * 2 + "px";
+a.debug.style.height = radius * 2 + "px";
+  a.debug.style.left = (a.x - radius) + "px";
+  a.debug.style.top = (a.y - radius) + "px";
+    if(a.isPlayer){
+      let worldMouseX = player.x + (mouseX - window.innerWidth/2);
+      let worldMouseY = player.y + (mouseY - window.innerHeight/2);
+
+    //   a.x += (worldMouseX - a.x)*0.1;
+    //   a.y += (worldMouseY - a.y)*0.1;
+    const maxSpeed = 6;
+
+    let dx = worldMouseX - a.x;
+    let dy = worldMouseY - a.y;
+
+    let dist = Math.hypot(dx, dy);
+
+    if(dist > 1){
+        a.x += (dx / dist) * Math.min(maxSpeed, dist * 0.1);
+        a.y += (dy / dist) * Math.min(maxSpeed, dist * 0.1);
+        }
+    } else {
+      let dx = player.x - a.x;
+      let dy = player.y - a.y;
+      let dist = Math.hypot(dx,dy);
+
+      if(a.size > player.size && dist < 200){
+        // chase
+        a.x += dx/dist * a.speed * 2;
+        a.y += dy/dist * a.speed * 2;
+      } else {
+        a.x += a.vx * a.speed;
+        a.y += a.vy * a.speed;
+
+        if(Math.random()<0.02){
+          a.vx = (Math.random()-0.5)*2;
+          a.vy = (Math.random()-0.5)*2;
+        }
+      }
+    }
+
+    a.x = Math.max(0, Math.min(WORLD_SIZE, a.x));
+    a.y = Math.max(0, Math.min(WORLD_SIZE, a.y));
+
+    //const rect = a.el.getBoundingClientRect();
+    let halfW = rect.width / 2;
+    let halfH = rect.height / 2;
+
+    a.el.style.left = (a.x - halfW) + "px";
+    a.el.style.top = (a.y - halfH) + "px";
+    a.el.style.fontSize = (10 + a.size*5)+"px";
+  });
+
+  // collision
+  animals.forEach(a=>{
+    if(a===player) return;
+
+    let dx = player.x - a.x;
+    let dy = player.y - a.y;
+    let dist = Math.hypot(dx,dy);
+
+    const rectA = player.el.getBoundingClientRect();
+    const rectB = a.el.getBoundingClientRect();
+
+    let playerRadius = rectA.width * 0.4;
+    let targetRadius = rectB.width * 0.4;
+
+    if(dist < playerRadius + targetRadius){
+      if(player.size >= a.size){
+         a.el.remove();
+        animals = animals.filter(x=>x!==a);
+
+        // 🍖 XP based on prey size
+        gainXP(a.size);
+      } else if(!invincible){
+        running=false;
+        document.getElementById("gameOver").style.display="flex";
+        viewport.classList.remove("hide-cursor");
+
+      }
+    }
+  });
+
+  updateCamera();
+  sizeText.innerText = player.size;
+
+  document.getElementById("xp").innerText = xp;
+document.getElementById("level").innerText = level;
+
+let percent = (xp / getXPNeeded(level)) * 100;
+document.getElementById("xpBar").style.width = percent + "%";
+
+let debugMode = false;
+
+document.addEventListener("keydown", e=>{
+  if(e.key === "d"){
+    debugMode = !debugMode;
+
+    animals.forEach(a=>{
+      a.debug.style.display = debugMode ? "block" : "none";
+    });
+  }
+});
+
+  requestAnimationFrame(gameLoop);
+}
+</script>
+
+</body>
+</html>

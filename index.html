@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Game Hub 🎮</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      height: 100vh;
+      background: linear-gradient(135deg, #1e1e2f, #2a2a40);
+      color: white;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 20px 40px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 25px;
+      padding: 30px 40px;
+    }
+
+    .card {
+      border-radius: 20px;
+      padding: 25px;
+      transition: 0.3s;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: white;
+      cursor: pointer;
+    }
+
+    .card:hover {
+      transform: translateY(-8px) scale(1.03);
+      box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+    }
+
+    .card h2 {
+      margin-bottom: 10px;
+      font-size: 20px;
+    }
+
+    .card p {
+      font-size: 14px;
+      opacity: 0.9;
+      margin-bottom: 20px;
+    }
+
+    .play-btn {
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.2);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .play-btn:hover {
+      background: rgba(0,0,0,0.35);
+    }
+
+    footer {
+      text-align: center;
+      padding: 10px;
+      font-size: 12px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>🎮 My Game Hub</header>
+
+<div class="container" id="gameContainer"></div>
+
+<footer>thaichihien @ 2026</footer>
+
+<script>
+  // 🔥 DATA SOURCE
+  const games = [
+    {
+      title: "❇️ Grid Survival",
+      description: "Moving and escaping missiles on the grid!",
+      color: "linear-gradient(135deg, #000000, #34f005)",
+      path: "/grid-survival.html"
+    },
+    {
+      title: "🌾 Farmer Dream",
+      description: "Grow crops and feed your animals.",
+      color: "linear-gradient(135deg,#ffd000, #43ff82)",
+      path: "/farmer-dream.html"
+    },
+     {
+      title: "🐮 Animal Catching",
+      description: "Catch animals and avoid the wolf!",
+      color: "linear-gradient(135deg, #64031a, #ff2600)",
+      path: "/animal-catching.html"
+    },
+      {
+      title: "🦁 Jungle King",
+      description: "Eat and evolve to become the king!",
+      color: "linear-gradient(135deg, #0b6421, #16e042)",
+      path: "/jungle-king.html"
+    },
+    {
+      title: "💣 Attack On Cursor",
+      description: "Become titan cursor and attack the enemy base!",
+      color: "linear-gradient(135deg, #4b1083, #3c4ff5)",
+      path: "/attack-on-cursor.html"
+    },
+    {
+      title: "🐳 Docker Battlefield",
+      description: "Place your docker containers strategically to defend!",
+      color: "linear-gradient(135deg, #000000, #0099ff)",
+      path: "/docker-battlefield.html"
+    },
+    {
+      title: "🌃 Survive through night",
+      description: "Survive the night and keep your fire burning!",
+      color: "linear-gradient(135deg, #000000, #ff9100)",
+      path: "/survive-through-night.html"
+    },
+  ];
+
+  const container = document.getElementById("gameContainer");
+
+  function renderGames() {
+    container.innerHTML = "";
+
+    games.forEach(game => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.style.background = game.color;
+
+      card.innerHTML = `
+        <div>
+          <h2>${game.title}</h2>
+          <p>${game.description}</p>
+        </div>
+        <button class="play-btn">▶ Play</button>
+      `;
+
+      // whole card clickable (better UX)
+      card.addEventListener("click", () => openGame(game.path));
+
+      container.appendChild(card);
+    });
+  }
+
+  function openGame(path) {
+    window.location.href = path;
+    // or: window.open(path, '_blank');
+  }
+
+  renderGames();
+</script>
+
+</body>
+</html>
