@@ -37,20 +37,6 @@ Sau đó mở:
 - Mở project trong VS Code/Cursor
 - Chạy extension Live Server tại `index.html`
 
-## Cấu trúc thư mục
-
-```text
-.
-├── index.html
-├── grid-survival.html
-├── farmer-dream.html
-├── animal-catching.html
-├── jungle-king.html
-├── attack-on-cursor.html
-├── docker-battlefield.html
-└── survive-through-night.html
-```
-
 ## Tác giả
 
 - `thaichihien`
