@@ -1,6 +1,6 @@
 # Browser Games
 
-Một bộ sưu tập mini game viết bằng HTML/CSS/JavaScript thuần và vibe coding, chạy trực tiếp trên trình duyệt.
+Một bộ sưu tập mini game viết bằng HTML/CSS/JavaScript thuần và vibe coding, chạy trực tiếp trên trình duyệt. Chơi trực tiếp [tại đây](https://thaichihien.github.io/vibe-browser-game/)
 
 ## Tổng quan
 
