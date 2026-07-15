@@ -35,13 +35,65 @@
   #health-bar { position: absolute; left: 24px; bottom: 96px; }
   #wave-info { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); text-align: center; }
   #hotbar { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
+
+  #hit-marker {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    font-size: 26px; font-weight: bold; color: #fff; opacity: 0;
+    text-shadow: 0 0 6px #fff; transition: opacity 0.15s;
+  }
+  #streak-text {
+    position: absolute; left: 50%; top: 34%; transform: translate(-50%, -50%) scale(1);
+    font-size: 34px; font-weight: 900; letter-spacing: 4px; color: #ffd23c;
+    text-shadow: 0 0 18px #ff6a2a, 0 2px 0 #000; opacity: 0; pointer-events: none;
+  }
+  #streak-text.show { animation: streakPop 1.2s ease-out; }
+  @keyframes streakPop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    15% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+    30% { transform: translate(-50%, -50%) scale(1); }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  #vignette {
+    position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(255, 20, 40, 0.55) 100%);
+  }
+  #muzzle-flash {
+    position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%);
+    width: 120px; height: 120px; border-radius: 50%; opacity: 0;
+    background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 65%);
+  }
+  #damage-flash {
+    position: absolute; inset: 0; opacity: 0;
+    background: radial-gradient(ellipse at center, rgba(255,30,50,0.12) 0%, rgba(255,30,50,0.4) 100%);
+  }
+  #wave-banner {
+    position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+    font-size: 52px; font-weight: 900; letter-spacing: 12px; color: var(--magic);
+    text-shadow: 0 0 24px var(--magic), 0 2px 0 #000; opacity: 0; pointer-events: none;
+  }
+  #wave-banner.show { animation: wavePop 2s ease-out; }
+  @keyframes wavePop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+    12% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+    25% { transform: translate(-50%, -50%) scale(1); }
+    75% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
+  }
 </style>
 </head>
 <body>
 <div id="hud">
+  <div id="vignette"></div>
+  <div id="damage-flash"></div>
+  <div id="muzzle-flash"></div>
   <div id="crosshair"></div>
+  <div id="hit-marker">✕</div>
+  <div id="streak-text"></div>
+  <div id="wave-banner"></div>
   <div id="health-bar"></div>
   <div id="wave-info"></div>
+  <div id="active-spell"></div>
   <div id="hotbar"></div>
 </div>
 
@@ -287,6 +339,7 @@ function updatePlayer(dt) {
 function damagePlayer(amount) {
   if (G.state !== 'playing') return;
   player.hp = Math.max(0, player.hp - amount);
+  onPlayerDamagedFeedback();
   if (player.hp <= 0) gameOver();
 }
 
@@ -633,6 +686,13 @@ function updateProjectiles(dt) {
     behaviorTick(p, dt);
     if (!p.alive) continue;
     p.mesh.position.addScaledVector(p.vel, dt);
+
+    // particle trail
+    p.trailT = (p.trailT || 0) - dt;
+    if (p.trailT <= 0 && !p.hostile) {
+      p.trailT = 0.05;
+      burst(p.mesh.position, p.def.color, 1, 0.4, 0.3);
+    }
 
     const hit = projectileWallHit(p.mesh.position);
     if (hit) { onProjectileHitWall(p, hit); continue; }
@@ -1289,13 +1349,137 @@ function impactFX(pos, color, size) {
   burst(pos, color, Math.round(10 * size * 2), 5 * size, 0.3);
 }
 
-// placeholder hooks — implemented in the VFX section
-function burst(pos, color, count, speed, life) {}
-function muzzleFlash(color) {}
-function shake(intensity) {}
+// ===== Particle system (single pooled THREE.Points) =====
+const PART_MAX = 1500;
+let particles = null;
+function buildParticles() {
+  const positions = new Float32Array(PART_MAX * 3);
+  const colors = new Float32Array(PART_MAX * 3);
+  positions.fill(-999);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const mat = new THREE.PointsMaterial({ size: 0.22, vertexColors: true,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const points = new THREE.Points(geo, mat);
+  points.frustumCulled = false;
+  scene.add(points);
+  particles = {
+    geo, points, positions, colors,
+    vel: new Float32Array(PART_MAX * 3),
+    life: new Float32Array(PART_MAX),
+    maxLife: new Float32Array(PART_MAX),
+    baseColor: new Float32Array(PART_MAX * 3),
+    cursor: 0,
+  };
+}
+
+function burst(pos, colorHex, count, speed, life) {
+  if (!particles) return;
+  const c = new THREE.Color(colorHex);
+  for (let n = 0; n < count; n++) {
+    const i = particles.cursor;
+    particles.cursor = (particles.cursor + 1) % PART_MAX;
+    particles.positions[i * 3] = pos.x;
+    particles.positions[i * 3 + 1] = pos.y;
+    particles.positions[i * 3 + 2] = pos.z;
+    const theta = Math.random() * Math.PI * 2, phi = Math.acos(2 * Math.random() - 1);
+    const s = speed * (0.4 + Math.random() * 0.6);
+    particles.vel[i * 3]     = Math.sin(phi) * Math.cos(theta) * s;
+    particles.vel[i * 3 + 1] = Math.cos(phi) * s;
+    particles.vel[i * 3 + 2] = Math.sin(phi) * Math.sin(theta) * s;
+    const l = life * (0.6 + Math.random() * 0.8);
+    particles.life[i] = l; particles.maxLife[i] = l;
+    particles.baseColor[i * 3] = c.r; particles.baseColor[i * 3 + 1] = c.g; particles.baseColor[i * 3 + 2] = c.b;
+  }
+}
+
+function updateParticles(dt) {
+  if (!particles) return;
+  const { positions, colors, vel, life, maxLife, baseColor } = particles;
+  for (let i = 0; i < PART_MAX; i++) {
+    if (life[i] <= 0) continue;
+    life[i] -= dt;
+    if (life[i] <= 0) {
+      positions[i * 3 + 1] = -999;
+      colors[i * 3] = colors[i * 3 + 1] = colors[i * 3 + 2] = 0;
+      continue;
+    }
+    positions[i * 3]     += vel[i * 3] * dt;
+    positions[i * 3 + 1] += vel[i * 3 + 1] * dt;
+    positions[i * 3 + 2] += vel[i * 3 + 2] * dt;
+    vel[i * 3 + 1] -= 9 * dt;
+    const f = life[i] / maxLife[i]; // additive blending: fading color = fading alpha
+    colors[i * 3] = baseColor[i * 3] * f;
+    colors[i * 3 + 1] = baseColor[i * 3 + 1] * f;
+    colors[i * 3 + 2] = baseColor[i * 3 + 2] * f;
+  }
+  particles.geo.attributes.position.needsUpdate = true;
+  particles.geo.attributes.color.needsUpdate = true;
+}
+
+// ===== Screen shake + DOM feedback =====
+let shakeAmt = 0;
+function shake(intensity) { shakeAmt = Math.min(1, shakeAmt + intensity); }
+
+function applyShake(dt) {
+  if (shakeAmt <= 0) return;
+  shakeAmt = Math.max(0, shakeAmt - dt * 2.5);
+  camera.position.x += (Math.random() - 0.5) * shakeAmt * 0.4;
+  camera.position.y += (Math.random() - 0.5) * shakeAmt * 0.4;
+}
+
+let muzzleTimer = null;
+function muzzleFlash(colorHex) {
+  const el = document.getElementById('muzzle-flash');
+  const css = '#' + colorHex.toString(16).padStart(6, '0');
+  el.style.background = `radial-gradient(circle, ${css}66 0%, transparent 65%)`;
+  el.style.opacity = 1;
+  clearTimeout(muzzleTimer);
+  muzzleTimer = setTimeout(() => { el.style.opacity = 0; }, 60);
+}
+
+let hitTimer = null;
+function onEnemyHitFeedback() {
+  const el = document.getElementById('hit-marker');
+  el.style.opacity = 1;
+  clearTimeout(hitTimer);
+  hitTimer = setTimeout(() => { el.style.opacity = 0; }, 90);
+}
+
+const STREAK_NAMES = { 2: 'DOUBLE KILL', 3: 'TRIPLE KILL', 4: 'MEGA KILL', 5: 'RAMPAGE' };
+const recentKills = [];
+function onEnemyDeathFeedback(e, source) {
+  const color = source && source.color !== undefined ? source.color : e.def.color;
+  burst(e.pos.clone().add(new THREE.Vector3(0, 1, 0)), color, 26, 8, 0.6);
+  burst(e.pos.clone().add(new THREE.Vector3(0, 1, 0)), e.def.color, 14, 5, 0.5);
+  shake(0.12);
+
+  const now = performance.now();
+  recentKills.push(now);
+  while (recentKills.length && now - recentKills[0] > 1500) recentKills.shift();
+  const streak = recentKills.length;
+  if (streak >= 2) {
+    const el = document.getElementById('streak-text');
+    el.textContent = STREAK_NAMES[Math.min(5, streak)];
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show');
+  }
+}
+
+let dmgFlashTimer = null;
+function onPlayerDamagedFeedback() {
+  const el = document.getElementById('damage-flash');
+  el.style.opacity = 1;
+  shake(0.3);
+  clearTimeout(dmgFlashTimer);
+  dmgFlashTimer = setTimeout(() => { el.style.opacity = 0; }, 140);
+}
 
 function update(dt) {
   updatePlayer(dt);
+  applyShake(dt);
   tryShoot(dt);
   updateProjectiles(dt);
   updateEnemies(dt);
@@ -1304,6 +1488,7 @@ function update(dt) {
   updateTurrets(dt);
   updateLightning(dt);
   updateExplosionFX(dt);
+  updateParticles(dt);
   updateDamageNumbers(dt);
   updateHUD();
 }
@@ -1315,6 +1500,8 @@ function updateHUD() {
   if (hpText) hpText.textContent = Math.ceil(player.hp);
   const wi = document.getElementById('wave-info');
   wi.innerHTML = `<b>WAVE ${G.wave}</b> &nbsp;·&nbsp; ☠ ${G.kills} &nbsp;·&nbsp; ★ ${G.score}`;
+  document.getElementById('vignette').style.opacity =
+    player.hp < player.maxHp * 0.35 ? (1 - player.hp / (player.maxHp * 0.35)) * 0.9 + 0.1 : 0;
 }
 
 function render() {
@@ -1338,6 +1525,7 @@ function boot() {
   buildArena();
   buildLights();
   buildPortals();
+  buildParticles();
 
   document.body.addEventListener('click', () => {
     if (G.state === 'menu' || G.state === 'paused') requestPlay();
