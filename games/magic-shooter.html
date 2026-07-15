@@ -447,14 +447,182 @@ function projectileWallHit(pos) {
   return null;
 }
 
-// Behavior hooks — extended with the full dispatch in the behaviors section.
 function onProjectileHitWall(p, hit) {
-  killProjectile(p);
+  const b = p.def.behavior;
+  const pos = p.mesh.position;
+  if (p.hostile) { impactFX(pos, p.def.color, 0.5); killProjectile(p); return; }
+
+  switch (b) {
+    case 'explode':
+    case 'bomblet':
+      hitscanExplosion(pos.clone(), p.def.radius, p.def.splash, p.def.color);
+      killProjectile(p); break;
+    case 'arc':
+      hitscanExplosion(pos.clone(), p.def.radius, p.damage, p.def.color);
+      shake(0.5);
+      killProjectile(p); break;
+    case 'cluster':
+      spawnBomblets(p);
+      killProjectile(p); break;
+    case 'bounce':
+      p.bounces++;
+      if (p.bounces > p.def.maxBounces) { impactFX(pos, p.def.color, 0.5); killProjectile(p); }
+      else {
+        p.vel.reflect(hit.normal);
+        pos.addScaledVector(hit.normal, 0.4);
+        impactFX(pos, p.def.color, 0.35);
+      }
+      break;
+    case 'cloud':
+      spawnZone(pos.clone(), 'poison', p.def);
+      killProjectile(p); break;
+    case 'zone':
+      spawnZone(pos.clone(), 'slow', p.def);
+      killProjectile(p); break;
+    case 'vortex':
+      p.vel.set(0, 0, 0); // lodges in place, keeps pulling until implosion
+      pos.addScaledVector(hit.normal, 0.5);
+      break;
+    case 'blink':
+      blinkPlayer(pos, hit.normal);
+      killProjectile(p); break;
+    case 'turret':
+      plantTurret(pos.clone().addScaledVector(hit.normal, 0.6));
+      killProjectile(p); break;
+    case 'boomerang':
+      startReturn(p); break;
+    default:
+      impactFX(pos, p.def.color, 0.5);
+      killProjectile(p);
+  }
 }
 
-function onProjectileHitEnemy(p, enemy) {
-  damageEnemy(enemy, p.damage, p.def);
-  killProjectile(p);
+function onProjectileHitEnemy(p, e) {
+  const b = p.def.behavior;
+  const pos = p.mesh.position;
+
+  switch (b) {
+    case 'explode':
+      damageEnemy(e, p.damage, p.def);
+      hitscanExplosion(pos.clone(), p.def.radius, p.def.splash, p.def.color);
+      killProjectile(p); break;
+    case 'bomblet':
+      hitscanExplosion(pos.clone(), p.def.radius, p.def.splash, p.def.color);
+      killProjectile(p); break;
+    case 'arc':
+      hitscanExplosion(pos.clone(), p.def.radius, p.damage, p.def.color);
+      shake(0.5);
+      killProjectile(p); break;
+    case 'burn':
+      damageEnemy(e, p.damage, p.def);
+      applyStatus(e, 'burn', { dps: p.def.dot, time: p.def.dotTime });
+      killProjectile(p); break;
+    case 'freeze':
+      damageEnemy(e, p.damage, p.def);
+      applyStatus(e, 'freeze', { time: p.def.freezeTime });
+      killProjectile(p); break;
+    case 'vampire':
+      damageEnemy(e, p.damage, p.def);
+      player.hp = Math.min(player.maxHp, player.hp + p.damage * p.def.lifesteal);
+      killProjectile(p); break;
+    case 'pierce':
+      damageEnemy(e, p.damage, p.def);
+      p.pierced.add(e);
+      break; // keeps flying
+    case 'chain':
+      damageEnemy(e, p.damage, p.def);
+      chainLightning(e, p.damage, p.def);
+      killProjectile(p); break;
+    case 'cluster':
+      damageEnemy(e, p.damage, p.def);
+      spawnBomblets(p);
+      killProjectile(p); break;
+    case 'boomerang':
+      damageEnemy(e, p.damage, p.def);
+      p.pierced.add(e); // one hit per pass; cleared when it turns around
+      break;
+    case 'cloud':
+      damageEnemy(e, p.damage, p.def);
+      spawnZone(pos.clone(), 'poison', p.def);
+      killProjectile(p); break;
+    case 'zone':
+      damageEnemy(e, p.damage, p.def);
+      spawnZone(pos.clone(), 'slow', p.def);
+      killProjectile(p); break;
+    case 'vortex':
+      break; // passes through, only pulls
+    case 'blink':
+      damageEnemy(e, p.damage, p.def);
+      blinkPlayer(pos, new THREE.Vector3(0, 1, 0));
+      killProjectile(p); break;
+    case 'turret':
+      plantTurret(pos.clone());
+      killProjectile(p); break;
+    case 'launch':
+      damageEnemy(e, p.damage, p.def);
+      applyStatus(e, 'launch', { vy: p.def.upVel, fallDmgMult: p.def.fallDmgMult });
+      killProjectile(p); break;
+    default:
+      damageEnemy(e, p.damage, p.def);
+      impactFX(pos, p.def.color, 0.4);
+      killProjectile(p);
+  }
+}
+
+function behaviorTick(p, dt) {
+  const b = p.def.behavior;
+  if (p.hostile) return;
+
+  if (b === 'homing') {
+    let best = null, bestD = Infinity;
+    for (const e of enemies) {
+      if (!e.alive) continue;
+      const d = p.mesh.position.distanceToSquared(e.pos);
+      if (d < bestD) { bestD = d; best = e; }
+    }
+    if (best) {
+      const target = best.pos.clone().add(new THREE.Vector3(0, 1, 0)).sub(p.mesh.position).normalize();
+      const speed = p.vel.length();
+      const cur = p.vel.clone().normalize();
+      cur.lerp(target, Math.min(1, p.def.turnRate * dt)).normalize();
+      p.vel.copy(cur).multiplyScalar(speed);
+    }
+  } else if (b === 'arc' || b === 'bomblet') {
+    p.vel.y += (p.def.gravity !== undefined ? p.def.gravity : -22) * dt;
+  } else if (b === 'vortex') {
+    p.vel.multiplyScalar(1 - dt * 0.6);
+    for (const e of enemies) {
+      if (!e.alive || e.status.freeze > 0) continue;
+      const pull = p.mesh.position.clone().sub(e.pos);
+      pull.y = 0;
+      const d = pull.length();
+      if (d < p.def.pullRadius && d > 0.5) {
+        e.pos.addScaledVector(pull.normalize(), dt * (14 * (1 - d / p.def.pullRadius)));
+      }
+    }
+    p.mesh.rotation.y += dt * 8;
+    if (p.age >= p.def.lifetime) {
+      hitscanExplosion(p.mesh.position.clone(), p.def.implodeRadius, p.def.implodeDamage, p.def.color);
+      shake(0.6);
+      killProjectile(p);
+    }
+  } else if (b === 'boomerang') {
+    p.mesh.rotation.y += dt * 15;
+    if (!p.returning && p.age >= p.def.outTime) startReturn(p);
+    if (p.returning) {
+      const target = camera.position.clone();
+      const dir = target.sub(p.mesh.position);
+      const d = dir.length();
+      if (d < 1.2) { killProjectile(p); return; }
+      p.vel.copy(dir.normalize()).multiplyScalar(p.def.speed);
+    }
+  }
+}
+
+function startReturn(p) {
+  if (p.returning) return;
+  p.returning = true;
+  p.pierced.clear(); // second pass can hit the same enemies again
 }
 
 function updateProjectiles(dt) {
@@ -462,6 +630,8 @@ function updateProjectiles(dt) {
     if (!p.alive) continue;
     p.age += dt;
     if (p.age > 6) { killProjectile(p); continue; }
+    behaviorTick(p, dt);
+    if (!p.alive) continue;
     p.mesh.position.addScaledVector(p.vel, dt);
 
     const hit = projectileWallHit(p.mesh.position);
@@ -509,9 +679,47 @@ function tryShoot(dt) {
   fireSpell(def);
 }
 
-// Overridden by the behaviors section for scatter/chaos/arc special firing.
-function fireSpell(def) {
-  spawnProjectile(def, muzzleOrigin(), shootDirection());
+function fireSpell(def, opts = {}) {
+  const origin = muzzleOrigin();
+  const dir = shootDirection();
+
+  if (def.behavior === 'chaos') {
+    let other;
+    do { other = SPELLS[Math.floor(Math.random() * SPELLS.length)]; } while (other.behavior === 'chaos');
+    fireSpell(other, { damage: Math.round(other.damage * def.dmgMult), scale: 1.3 });
+    return;
+  }
+  if (def.behavior === 'scatter') {
+    for (let i = 0; i < def.shards; i++) {
+      const d = dir.clone();
+      d.x += (Math.random() - 0.5) * 2 * def.spread;
+      d.y += (Math.random() - 0.5) * 2 * def.spread;
+      d.z += (Math.random() - 0.5) * 2 * def.spread;
+      spawnProjectile(def, origin, d.normalize(), { ...opts, scale: 0.7 * (opts.scale || 1) });
+    }
+    return;
+  }
+  if (def.behavior === 'arc') {
+    const d = dir.clone();
+    d.y += 0.35; // lob upward
+    spawnProjectile(def, origin, d.normalize(), { ...opts, scale: 1.8 * (opts.scale || 1) });
+    return;
+  }
+  spawnProjectile(def, origin, dir, opts);
+  muzzleFlash(def.color);
+}
+
+// spawn 6 bomblets from a cluster impact
+function spawnBomblets(p) {
+  const def = p.def;
+  impactFX(p.mesh.position, def.color, 0.7);
+  const bombletDef = { ...def, behavior: 'bomblet', gravity: -22, speed: 12,
+    radius: def.miniRadius, splash: def.miniDamage };
+  for (let i = 0; i < def.bomblets; i++) {
+    const a = (i / def.bomblets) * Math.PI * 2;
+    const dir = new THREE.Vector3(Math.cos(a) * 0.6, 1.1 + Math.random() * 0.4, Math.sin(a) * 0.6).normalize();
+    const b = spawnProjectile(bombletDef, p.mesh.position.clone().add(new THREE.Vector3(0, 0.3, 0)), dir, { scale: 0.6 });
+  }
 }
 
 // ===== Enemies =====
@@ -727,6 +935,247 @@ function updateDamageNumbers(dt) {
   }
 }
 
+// ===== Status effects =====
+function applyStatus(e, kind, params) {
+  if (!e.alive) return;
+  const s = e.status;
+  if (kind === 'burn')   { s.burn = params.time; s.burnDps = params.dps; }
+  if (kind === 'poison') { s.poison = params.time; s.poisonDps = params.dps; }
+  if (kind === 'freeze') {
+    s.freeze = params.time;
+    setEnemyTint(e, 0x9fdcff);
+  }
+  if (kind === 'slow')   { s.slow = params.time; s.slowFactor = params.factor; }
+  if (kind === 'launch') {
+    s.launched = true;
+    s.launchVy = params.vy;
+    s.fallDmgMult = params.fallDmgMult;
+  }
+}
+
+function setEnemyTint(e, color) {
+  const body = e.mesh.userData.body;
+  if (!body.userData.origColor) body.userData.origColor = body.material.color.getHex();
+  body.material.color.setHex(color);
+  body.material.emissive.setHex(color);
+}
+
+function clearEnemyTint(e) {
+  const body = e.mesh.userData.body;
+  if (body.userData.origColor) {
+    body.material.color.setHex(body.userData.origColor);
+    body.material.emissive.setHex(body.userData.origColor);
+  }
+}
+
+let dotFlash = 0; // shared flash phase for DoT tints
+function updateEnemyStatus(e, dt) {
+  const s = e.status;
+
+  if (s.burn > 0)   { s.burn -= dt;   damageOverTime(e, s.burnDps * dt, 0xff6a2a); }
+  if (s.poison > 0) { s.poison -= dt; damageOverTime(e, s.poisonDps * dt, 0x8aff4a); }
+  if (s.slow > 0)   s.slow -= dt;
+  if (s.freeze > 0) {
+    s.freeze -= dt;
+    if (s.freeze <= 0) clearEnemyTint(e);
+  } else if (s.burn > 0 || s.poison > 0) {
+    // flicker between damage tint and original
+    setEnemyTint(e, Math.sin(dotFlash * 20) > 0 ? (s.burn > 0 ? 0xff6a2a : 0x8aff4a) : e.mesh.userData.body.userData.origColor || e.def.color);
+  } else if (e.mesh.userData.body.userData.origColor) {
+    clearEnemyTint(e);
+  }
+
+  if (s.launched) {
+    s.launchVy += GRAVITY * dt;
+    e.pos.y += s.launchVy * dt;
+    if (e.pos.y <= 0) {
+      e.pos.y = 0;
+      const impact = Math.abs(s.launchVy);
+      s.launched = false;
+      if (impact > 4) damageEnemy(e, Math.round(impact * s.fallDmgMult), { color: 0xc06aff });
+    }
+  }
+}
+
+// DoT accumulates fractional damage; shows a number roughly once per second
+function damageOverTime(e, amount, color) {
+  if (!e.alive) return;
+  e.dotAcc = (e.dotAcc || 0) + amount;
+  e.hp -= amount;
+  if (e.dotAcc >= 4) {
+    spawnDamageNumber(e.pos.clone().add(new THREE.Vector3(0, 2, 0)), Math.round(e.dotAcc), color);
+    e.dotAcc = 0;
+    drawHpBar(e);
+  }
+  if (e.hp <= 0) killEnemy(e, { color });
+}
+
+// ===== AoE explosion =====
+function hitscanExplosion(center, radius, damage, color) {
+  explosionFX(center, radius, color);
+  for (const e of enemies) {
+    if (!e.alive) continue;
+    const d = e.pos.distanceTo(center);
+    if (d < radius + e.radius) {
+      const falloff = 1 - Math.max(0, d - e.radius) / radius;
+      damageEnemy(e, Math.max(1, Math.round(damage * falloff)), { color });
+    }
+  }
+  shake(Math.min(0.5, radius * 0.06));
+}
+
+// ===== Zones (poison cloud / time warp) =====
+const zones = [];
+function spawnZone(pos, kind, def) {
+  pos.y = Math.max(0.1, pos.y);
+  const color = def.color;
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.16, side: THREE.DoubleSide });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(def.radius, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), mat);
+  dome.position.set(pos.x, 0, pos.z);
+  scene.add(dome);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(def.radius, 0.1, 8, 32),
+    new THREE.MeshBasicMaterial({ color }));
+  ring.rotation.x = Math.PI / 2;
+  ring.position.set(pos.x, 0.1, pos.z);
+  scene.add(ring);
+  zones.push({ pos: new THREE.Vector3(pos.x, 0, pos.z), kind, def, time: def.zoneTime, dome, ring });
+}
+
+function updateZones(dt) {
+  for (let i = zones.length - 1; i >= 0; i--) {
+    const z = zones[i];
+    z.time -= dt;
+    z.ring.rotation.z += dt;
+    z.dome.material.opacity = 0.16 * Math.min(1, z.time);
+    if (z.time <= 0) {
+      scene.remove(z.dome); scene.remove(z.ring);
+      zones.splice(i, 1);
+      continue;
+    }
+    for (const e of enemies) {
+      if (!e.alive) continue;
+      const d = Math.hypot(e.pos.x - z.pos.x, e.pos.z - z.pos.z);
+      if (d < z.def.radius && e.pos.y < 4) {
+        if (z.kind === 'poison') applyStatus(e, 'poison', { dps: z.def.dot, time: 0.3 });
+        else applyStatus(e, 'slow', { factor: z.def.slowFactor, time: 0.3 });
+      }
+    }
+  }
+}
+
+// ===== Turrets =====
+const turrets = [];
+function plantTurret(pos) {
+  const def = SPELLS.find(s => s.id === 'turret');
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffd23c, emissive: 0xaa7700, flatShading: true });
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 0.5, 6), mat);
+  const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.45), mat);
+  crystal.position.y = 0.9;
+  g.add(base); g.add(crystal);
+  pos.y = Math.max(0, pos.y - 0.3);
+  g.position.copy(pos);
+  scene.add(g);
+  turrets.push({ pos: pos.clone().add(new THREE.Vector3(0, 1, 0)), mesh: g, crystal, life: def.turretLife, cd: 0, def });
+}
+
+function updateTurrets(dt) {
+  for (let i = turrets.length - 1; i >= 0; i--) {
+    const t = turrets[i];
+    t.life -= dt; t.cd -= dt;
+    t.crystal.rotation.y += dt * 3;
+    if (t.life <= 0) {
+      impactFX(t.mesh.position, 0xffd23c, 0.6);
+      scene.remove(t.mesh);
+      turrets.splice(i, 1);
+      continue;
+    }
+    if (t.cd <= 0) {
+      let best = null, bestD = t.def.turretRange * t.def.turretRange;
+      for (const e of enemies) {
+        if (!e.alive) continue;
+        const d = t.pos.distanceToSquared(e.pos);
+        if (d < bestD) { bestD = d; best = e; }
+      }
+      if (best) {
+        t.cd = 1 / t.def.turretRate;
+        const dir = best.pos.clone().add(new THREE.Vector3(0, 1, 0)).sub(t.pos).normalize();
+        const boltDef = { ...SPELLS[0], damage: t.def.turretDamage, color: 0xffd23c };
+        spawnProjectile(boltDef, t.pos.clone(), dir, { scale: 0.7 });
+      }
+    }
+  }
+}
+
+// ===== Chain lightning =====
+const lightningBolts = [];
+function chainLightning(firstEnemy, damage, def) {
+  let from = firstEnemy;
+  let dmg = damage;
+  const hitSet = new Set([firstEnemy]);
+  for (let j = 0; j < def.jumps; j++) {
+    let best = null, bestD = def.chainRange * def.chainRange;
+    for (const e of enemies) {
+      if (!e.alive || hitSet.has(e)) continue;
+      const d = from.pos.distanceToSquared(e.pos);
+      if (d < bestD) { bestD = d; best = e; }
+    }
+    if (!best) break;
+    dmg = Math.max(1, Math.round(dmg * def.falloff));
+    drawLightning(from.pos.clone().add(new THREE.Vector3(0, 1.2, 0)),
+                  best.pos.clone().add(new THREE.Vector3(0, 1.2, 0)), def.color);
+    damageEnemy(best, dmg, def);
+    hitSet.add(best);
+    from = best;
+  }
+}
+
+function drawLightning(a, b, color) {
+  const pts = [];
+  const segs = 6;
+  for (let i = 0; i <= segs; i++) {
+    const p = a.clone().lerp(b, i / segs);
+    if (i > 0 && i < segs) {
+      p.x += (Math.random() - 0.5) * 0.8;
+      p.y += (Math.random() - 0.5) * 0.8;
+      p.z += (Math.random() - 0.5) * 0.8;
+    }
+    pts.push(p);
+  }
+  const line = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color, transparent: true, opacity: 1 }));
+  scene.add(line);
+  lightningBolts.push({ line, age: 0 });
+}
+
+function updateLightning(dt) {
+  for (let i = lightningBolts.length - 1; i >= 0; i--) {
+    const l = lightningBolts[i];
+    l.age += dt;
+    l.line.material.opacity = 1 - l.age / 0.18;
+    if (l.age > 0.18) {
+      scene.remove(l.line);
+      l.line.geometry.dispose();
+      lightningBolts.splice(i, 1);
+    }
+  }
+}
+
+// ===== Blink =====
+function blinkPlayer(hitPos, normal) {
+  const dest = hitPos.clone().addScaledVector(normal, 1.2);
+  dest.y = Math.max(0, dest.y - player.height); // land feet-first
+  const half = arena.size / 2 - 1;
+  dest.x = Math.max(-half, Math.min(half, dest.x));
+  dest.z = Math.max(-half, Math.min(half, dest.z));
+  impactFX(camera.position, 0x5affff, 0.8);
+  player.pos.copy(dest);
+  player.vel.set(0, 0, 0);
+  impactFX(dest.clone().add(new THREE.Vector3(0, 1, 0)), 0x5affff, 0.8);
+  shake(0.25);
+}
+
 // ===== Wave director =====
 const portals = [];
 const spawnQueue = [];
@@ -801,12 +1250,49 @@ function updateWaves(dt) {
 }
 
 function updateEnemies(dt) {
+  dotFlash += dt;
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
+    if (!e.alive) { enemies.splice(i, 1); continue; }
+    updateEnemyStatus(e, dt);
     if (!e.alive) { enemies.splice(i, 1); continue; }
     updateEnemy(e, dt);
   }
 }
+
+// ===== FX primitives (enhanced by the VFX section) =====
+const explosionRings = [];
+function explosionFX(center, radius, color) {
+  const ring = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 10),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7, wireframe: true }));
+  ring.position.copy(center);
+  scene.add(ring);
+  explosionRings.push({ ring, age: 0, radius });
+  burst(center, color, Math.min(40, radius * 8), radius * 2.2, 0.5);
+}
+
+function updateExplosionFX(dt) {
+  for (let i = explosionRings.length - 1; i >= 0; i--) {
+    const r = explosionRings[i];
+    r.age += dt;
+    const t = r.age / 0.35;
+    r.ring.scale.setScalar(0.2 + r.radius * t);
+    r.ring.material.opacity = 0.7 * (1 - t);
+    if (t >= 1) {
+      scene.remove(r.ring);
+      explosionRings.splice(i, 1);
+    }
+  }
+}
+
+function impactFX(pos, color, size) {
+  burst(pos, color, Math.round(10 * size * 2), 5 * size, 0.3);
+}
+
+// placeholder hooks — implemented in the VFX section
+function burst(pos, color, count, speed, life) {}
+function muzzleFlash(color) {}
+function shake(intensity) {}
 
 function update(dt) {
   updatePlayer(dt);
@@ -814,6 +1300,10 @@ function update(dt) {
   updateProjectiles(dt);
   updateEnemies(dt);
   updateWaves(dt);
+  updateZones(dt);
+  updateTurrets(dt);
+  updateLightning(dt);
+  updateExplosionFX(dt);
   updateDamageNumbers(dt);
   updateHUD();
 }
