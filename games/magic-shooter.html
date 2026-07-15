@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Magic Shooter</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔮</text></svg>">
 <style>
   :root {
     --magic: #a06bff;
@@ -234,7 +235,17 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
+// Runs before the game script, which references THREE at top level and would
+// throw before it could register any fallback itself.
+if (typeof THREE === 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('no-internet').style.display = 'flex';
+  });
+}
+</script>
+<script>
 'use strict';
+if (typeof THREE === 'undefined') throw new Error('Three.js not loaded');
 
 // ===== Game namespace & globals =====
 const G = {
@@ -971,7 +982,7 @@ function buildEnemyMesh(type) {
   // Health bar sprite
   const cv = document.createElement('canvas'); cv.width = 64; cv.height = 8;
   const tex = new THREE.CanvasTexture(cv);
-  const bar = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
+  const bar = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
   bar.scale.set(1.6, 0.2, 1);
   bar.position.y = type === 'tank' ? 3.0 : 2.3;
   g.add(bar);
@@ -1785,13 +1796,7 @@ function boot() {
   })(performance.now());
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  if (typeof THREE === 'undefined') {
-    document.getElementById('no-internet').style.display = 'flex';
-    return;
-  }
-  boot();
-});
+window.addEventListener('DOMContentLoaded', boot);
 </script>
 </body>
 </html>

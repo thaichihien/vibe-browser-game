@@ -17,6 +17,7 @@ Một bộ sưu tập mini game viết bằng HTML/CSS/JavaScript thuần và vi
 - `attack-on-cursor.html` - Điều khiển con trỏ để tấn công căn cứ địch.
 - `docker-battlefield.html` - Đặt container chiến thuật để phòng thủ.
 - `survive-through-night.html` - Sinh tồn qua đêm và giữ lửa luôn cháy.
+- `magic-shooter.html` - Bắn súng 3D góc nhìn thứ nhất với 20 loại đạn phép thuật.
 
 ## Chạy local
 
