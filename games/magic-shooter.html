@@ -67,6 +67,99 @@ const G = {
 let scene, camera, renderer;
 const arena = { size: 80, wallHeight: 12, colliders: [] };
 
+// ===== Arena =====
+const MATS = {};
+function buildMaterials() {
+  MATS.floor  = new THREE.MeshStandardMaterial({ color: 0x14101f, roughness: 0.9, metalness: 0.15 });
+  MATS.wall   = new THREE.MeshStandardMaterial({ color: 0x1c1430, roughness: 0.85 });
+  MATS.pillar = new THREE.MeshStandardMaterial({ color: 0x241a3e, roughness: 0.7, emissive: 0x150a30 });
+  MATS.block  = new THREE.MeshStandardMaterial({ color: 0x2a1f4a, roughness: 0.75, emissive: 0x0c0620 });
+  MATS.trimCyan    = new THREE.MeshBasicMaterial({ color: 0x2ee6ff });
+  MATS.trimMagenta = new THREE.MeshBasicMaterial({ color: 0xff2ee6 });
+}
+
+// Adds a box mesh centered at (x, y+h/2, z) and registers its AABB collider.
+function addBox(x, y, z, w, h, d, mat, noCollide) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  mesh.position.set(x, y + h / 2, z);
+  scene.add(mesh);
+  if (!noCollide) {
+    arena.colliders.push({
+      min: new THREE.Vector3(x - w / 2, y, z - d / 2),
+      max: new THREE.Vector3(x + w / 2, y + h, z + d / 2),
+    });
+  }
+  return mesh;
+}
+
+function buildArena() {
+  buildMaterials();
+  const S = arena.size, H = arena.wallHeight, half = S / 2;
+
+  // Floor + grid
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(S, S), MATS.floor);
+  floor.rotation.x = -Math.PI / 2;
+  scene.add(floor);
+  const grid = new THREE.GridHelper(S, 40, 0x4a2a8a, 0x2a1a4a);
+  grid.position.y = 0.02;
+  scene.add(grid);
+
+  // Outer walls (thickness 2, just outside the play area)
+  addBox(0, 0, -half - 1, S + 4, H, 2, MATS.wall);
+  addBox(0, 0,  half + 1, S + 4, H, 2, MATS.wall);
+  addBox(-half - 1, 0, 0, 2, H, S + 4, MATS.wall);
+  addBox( half + 1, 0, 0, 2, H, S + 4, MATS.wall);
+
+  // Neon trim strips along wall bases
+  const trims = [
+    [0, -half + 0.05, S, 0.25, 0.3, MATS.trimCyan],
+    [0,  half - 0.05, S, 0.25, 0.3, MATS.trimMagenta],
+  ];
+  for (const [x, z, w, h, d, m] of trims) {
+    addBox(x, 0, z, w, h, d, m, true);
+    addBox(z, 0, x, d, h, w, m === MATS.trimCyan ? MATS.trimMagenta : MATS.trimCyan, true);
+  }
+
+  // Pillars (6)
+  const pillarSpots = [[-24, -24], [24, -24], [-24, 24], [24, 24], [0, -30], [0, 30]];
+  for (const [x, z] of pillarSpots) {
+    addBox(x, 0, z, 3, H - 2, 3, MATS.pillar);
+    addBox(x, H - 2, z, 3.6, 0.4, 3.6, MATS.trimCyan, true);
+  }
+
+  // Jumpable blocks (heights 1.5 -> 4, chained near center-east)
+  const blocks = [
+    [10, 4, 1.5], [15, 8, 2.2], [20, 12, 3.0], [25, 16, 4.0],
+    [-12, -8, 1.5], [-18, -14, 2.5], [-8, 14, 2.0], [14, -18, 3.2],
+  ];
+  for (const [x, z, h] of blocks) addBox(x, 0, z, 4, h, 4, MATS.block);
+
+  // Ramps: stepped thin boxes rising to height 3 (AABB-friendly stairs)
+  buildRamp(-30, 0, 1, 0);   // rises east
+  buildRamp(30, 8, -1, 0);   // rises west
+}
+
+function buildRamp(x, z, dirX, dirZ) {
+  const steps = 5, stepH = 0.6, stepLen = 1.6;
+  for (let i = 0; i < steps; i++) {
+    addBox(x + dirX * i * stepLen, 0, z + dirZ * i * stepLen,
+      dirX ? stepLen : 4, stepH * (i + 1), dirZ ? stepLen : 4, MATS.block);
+  }
+}
+
+function buildLights() {
+  scene.add(new THREE.AmbientLight(0x332244, 1.2));
+  scene.add(new THREE.HemisphereLight(0x5a3aa0, 0x120a24, 0.8));
+  const lightSpots = [
+    [-24, -24, 0x2ee6ff], [24, 24, 0xff2ee6], [0, 0, 0xa06bff],
+  ];
+  for (const [x, z, c] of lightSpots) {
+    const l = new THREE.PointLight(c, 0.9, 55);
+    l.position.set(x, arena.wallHeight - 2, z);
+    scene.add(l);
+  }
+}
+
 function update(dt) {
   // populated by later systems
 }
@@ -88,6 +181,9 @@ function boot() {
   camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 300);
   camera.rotation.order = 'YXZ';
   camera.position.set(0, 1.7, 0);
+
+  buildArena();
+  buildLights();
 
   addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
