@@ -160,8 +160,143 @@ function buildLights() {
   }
 }
 
+// ===== Input =====
+const keys = {};
+addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Tab') e.preventDefault();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+
+// ===== Player =====
+const player = {
+  pos: new THREE.Vector3(0, 0, 20),
+  vel: new THREE.Vector3(),
+  yaw: Math.PI, pitch: 0,
+  onGround: false,
+  hp: 100, maxHp: 100,
+  radius: 0.5, height: 1.7,
+};
+
+const LOOK_SENS = 0.0022;
+addEventListener('mousemove', e => {
+  if (document.pointerLockElement !== renderer.domElement) return;
+  player.yaw -= e.movementX * LOOK_SENS;
+  player.pitch -= e.movementY * LOOK_SENS;
+  const lim = Math.PI / 2 - 0.02;
+  player.pitch = Math.max(-lim, Math.min(lim, player.pitch));
+});
+
+document.addEventListener('pointerlockchange', () => {
+  if (document.pointerLockElement === renderer.domElement) {
+    G.state = 'playing';
+    for (const id of ['start-screen', 'pause-screen', 'spell-grid'])
+      document.getElementById(id).style.display = 'none';
+    document.getElementById('hud').style.display = 'block';
+  } else if (G.state === 'playing') {
+    pauseGame();
+  }
+});
+
+function requestPlay() {
+  if (G.state === 'gameover') return; // restart handled by UI
+  renderer.domElement.requestPointerLock();
+}
+
+function pauseGame() {
+  G.state = 'paused';
+  document.getElementById('pause-screen').style.display = 'flex';
+}
+
+// Resolves movement against arena colliders one axis at a time.
+// Shared by the player and ground enemies. Returns { onGround }.
+function moveWithCollision(pos, vel, radius, height, dt) {
+  let onGround = false;
+  const half = arena.size / 2 - radius;
+
+  // X axis
+  pos.x += vel.x * dt;
+  pos.x = Math.max(-half, Math.min(half, pos.x));
+  for (const c of arena.colliders) {
+    if (overlaps(pos, radius, height, c)) {
+      pos.x = vel.x > 0 ? c.min.x - radius : c.max.x + radius;
+    }
+  }
+  // Z axis
+  pos.z += vel.z * dt;
+  pos.z = Math.max(-half, Math.min(half, pos.z));
+  for (const c of arena.colliders) {
+    if (overlaps(pos, radius, height, c)) {
+      pos.z = vel.z > 0 ? c.min.z - radius : c.max.z + radius;
+    }
+  }
+  // Y axis
+  pos.y += vel.y * dt;
+  if (pos.y <= 0) { pos.y = 0; vel.y = 0; onGround = true; }
+  for (const c of arena.colliders) {
+    if (overlaps(pos, radius, height, c)) {
+      if (vel.y <= 0 && pos.y >= c.max.y - 1.0) {
+        pos.y = c.max.y; vel.y = 0; onGround = true;   // land on top
+      } else if (vel.y > 0) {
+        pos.y = c.min.y - height; vel.y = 0;           // bump head
+      } else {
+        // walked into a side while falling: push out along shallowest axis
+        const pushX = pos.x < (c.min.x + c.max.x) / 2 ? c.min.x - radius : c.max.x + radius;
+        const pushZ = pos.z < (c.min.z + c.max.z) / 2 ? c.min.z - radius : c.max.z + radius;
+        if (Math.abs(pushX - pos.x) < Math.abs(pushZ - pos.z)) pos.x = pushX; else pos.z = pushZ;
+      }
+    }
+  }
+  return { onGround };
+}
+
+function overlaps(pos, radius, height, c) {
+  return pos.x + radius > c.min.x && pos.x - radius < c.max.x &&
+         pos.z + radius > c.min.z && pos.z - radius < c.max.z &&
+         pos.y < c.max.y && pos.y + height > c.min.y;
+}
+
+const GRAVITY = -28, WALK = 8, SPRINT = 12, JUMP_V = 10.5, AIR_CONTROL = 0.35;
+
+function updatePlayer(dt) {
+  const fwd = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0);
+  const strafe = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
+  const speed = keys.ShiftLeft ? SPRINT : WALK;
+
+  const sin = Math.sin(player.yaw), cos = Math.cos(player.yaw);
+  let wx = (-sin * fwd + cos * strafe);
+  let wz = (-cos * fwd - sin * strafe);
+  const len = Math.hypot(wx, wz) || 1;
+  wx = wx / len * speed; wz = wz / len * speed;
+
+  const ctrl = player.onGround ? 1 : AIR_CONTROL;
+  player.vel.x += (wx - player.vel.x) * Math.min(1, dt * 14 * ctrl);
+  player.vel.z += (wz - player.vel.z) * Math.min(1, dt * 14 * ctrl);
+
+  if (keys.Space && player.onGround) { player.vel.y = JUMP_V; player.onGround = false; }
+  player.vel.y += GRAVITY * dt;
+
+  const res = moveWithCollision(player.pos, player.vel, player.radius, player.height, dt);
+  player.onGround = res.onGround;
+
+  camera.position.set(player.pos.x, player.pos.y + player.height, player.pos.z);
+  camera.rotation.set(player.pitch, player.yaw, 0);
+}
+
+function damagePlayer(amount) {
+  if (G.state !== 'playing') return;
+  player.hp = Math.max(0, player.hp - amount);
+  if (player.hp <= 0) gameOver();
+}
+
+function gameOver() {
+  G.state = 'gameover';
+  document.exitPointerLock();
+  console.log('GAME OVER — wave', G.wave, 'kills', G.kills, 'score', G.score);
+}
+
 function update(dt) {
-  // populated by later systems
+  updatePlayer(dt);
 }
 
 function render() {
@@ -184,6 +319,10 @@ function boot() {
 
   buildArena();
   buildLights();
+
+  document.body.addEventListener('click', () => {
+    if (G.state === 'menu' || G.state === 'paused') requestPlay();
+  });
 
   addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
