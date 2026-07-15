@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magic Shooter</title>
+<style>
+  :root {
+    --magic: #a06bff;
+    --hp: #ff3b5c;
+    --ui-bg: rgba(10, 8, 20, 0.72);
+    --ui-border: rgba(160, 107, 255, 0.35);
+    --text: #e8e2ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0b0716; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; color: var(--text); user-select: none; }
+  canvas { display: block; }
+
+  .overlay {
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center; flex-direction: column;
+    background: radial-gradient(ellipse at center, rgba(20,12,40,0.88) 0%, rgba(5,3,12,0.96) 100%);
+    z-index: 20;
+  }
+  #no-internet { z-index: 30; text-align: center; }
+  #no-internet h2 { color: var(--magic); margin-bottom: 12px; }
+
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; display: none; }
+  #crosshair {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 14px; height: 14px; border: 2px solid var(--magic); border-radius: 50%;
+    box-shadow: 0 0 8px var(--magic);
+  }
+  #health-bar { position: absolute; left: 24px; bottom: 96px; }
+  #wave-info { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); text-align: center; }
+  #hotbar { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="crosshair"></div>
+  <div id="health-bar"></div>
+  <div id="wave-info"></div>
+  <div id="hotbar"></div>
+</div>
+
+<div id="start-screen" class="overlay"></div>
+<div id="pause-screen" class="overlay"></div>
+<div id="gameover-screen" class="overlay"></div>
+<div id="spell-grid" class="overlay"></div>
+<div id="no-internet" class="overlay">
+  <h2>⚡ Magic Shooter needs an internet connection</h2>
+  <p>The 3D engine (Three.js) could not be loaded. Check your connection and reload the page.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+
+// ===== Game namespace & globals =====
+const G = {
+  state: 'menu', // 'menu' | 'playing' | 'paused' | 'gameover'
+  wave: 0, kills: 0, score: 0,
+  spellIndex: 0,
+};
+let scene, camera, renderer;
+const arena = { size: 80, wallHeight: 12, colliders: [] };
+
+function update(dt) {
+  // populated by later systems
+}
+
+function render() {
+  renderer.render(scene, camera);
+}
+
+function boot() {
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  document.body.appendChild(renderer.domElement);
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b0716);
+  scene.fog = new THREE.Fog(0x0b0716, 60, 140);
+
+  camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 300);
+  camera.rotation.order = 'YXZ';
+  camera.position.set(0, 1.7, 0);
+
+  addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+
+  let last = performance.now();
+  (function loop(now) {
+    requestAnimationFrame(loop);
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    if (G.state === 'playing') update(dt);
+    render();
+  })(performance.now());
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof THREE === 'undefined') {
+    document.getElementById('no-internet').style.display = 'flex';
+    return;
+  }
+  boot();
+});
+</script>
+</body>
+</html>
