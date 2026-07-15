@@ -190,6 +190,7 @@ addEventListener('mousemove', e => {
 document.addEventListener('pointerlockchange', () => {
   if (document.pointerLockElement === renderer.domElement) {
     G.state = 'playing';
+    if (G.wave === 0) spawnWave(1);
     for (const id of ['start-screen', 'pause-screen', 'spell-grid'])
       document.getElementById(id).style.display = 'none';
     document.getElementById('hud').style.display = 'block';
@@ -452,6 +453,7 @@ function onProjectileHitWall(p, hit) {
 }
 
 function onProjectileHitEnemy(p, enemy) {
+  damageEnemy(enemy, p.damage, p.def);
   killProjectile(p);
 }
 
@@ -464,6 +466,23 @@ function updateProjectiles(dt) {
 
     const hit = projectileWallHit(p.mesh.position);
     if (hit) { onProjectileHitWall(p, hit); continue; }
+
+    if (p.hostile) {
+      const target = new THREE.Vector3(player.pos.x, player.pos.y + 1, player.pos.z);
+      if (p.mesh.position.distanceTo(target) < player.radius + 0.8) {
+        damagePlayer(p.damage);
+        killProjectile(p);
+      }
+    } else {
+      for (const e of enemies) {
+        if (!e.alive || p.pierced.has(e)) continue;
+        const center = e.pos.clone().add(new THREE.Vector3(0, e.type === 'flyer' ? 0 : 1, 0));
+        if (p.mesh.position.distanceTo(center) < e.radius + 0.3) {
+          onProjectileHitEnemy(p, e);
+          break;
+        }
+      }
+    }
   }
 }
 
@@ -495,10 +514,317 @@ function fireSpell(def) {
   spawnProjectile(def, muzzleOrigin(), shootDirection());
 }
 
+// ===== Enemies =====
+const ENEMY_TYPES = {
+  grunt:   { hp: 30,  speed: 5,   radius: 0.9, score: 10, firstWave: 1,
+             melee: 10, meleeRate: 0.8, meleeRange: 1.8, color: 0xff3b5c },
+  spitter: { hp: 22,  speed: 3.5, radius: 0.9, score: 20, firstWave: 2,
+             shot: 8, shotRate: 2, keepMin: 12, keepMax: 18, color: 0x6aff4a },
+  flyer:   { hp: 14,  speed: 8,   radius: 0.7, score: 30, firstWave: 3,
+             ram: 6, ramRate: 1.0, color: 0x2ee6ff },
+  tank:    { hp: 120, speed: 2,   radius: 1.6, score: 40, firstWave: 4,
+             melee: 22, meleeRate: 1.2, meleeRange: 2.6, color: 0xff9a3c },
+};
+
+function buildEnemyMesh(type) {
+  const t = ENEMY_TYPES[type];
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: t.color, emissive: t.color,
+    emissiveIntensity: 0.45, roughness: 0.5, flatShading: true });
+  let body;
+  if (type === 'grunt') {
+    body = new THREE.Mesh(new THREE.IcosahedronGeometry(0.9, 0), mat);
+    body.position.y = 0.9;
+    const hornGeo = new THREE.ConeGeometry(0.15, 0.6, 4);
+    for (const s of [-1, 1]) {
+      const horn = new THREE.Mesh(hornGeo, mat);
+      horn.position.set(s * 0.45, 1.7, 0);
+      g.add(horn);
+    }
+  } else if (type === 'spitter') {
+    body = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.8, 6), mat);
+    body.position.y = 0.9;
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    eye.position.set(0, 1.3, 0.55);
+    g.add(eye);
+  } else if (type === 'flyer') {
+    body = new THREE.Mesh(new THREE.TetrahedronGeometry(0.8), mat);
+    body.position.y = 0.7;
+  } else { // tank
+    body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.4, 1.8), mat);
+    body.position.y = 0.7;
+    const top = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 1.2), mat);
+    top.position.y = 1.9;
+    g.add(top);
+  }
+  g.add(body);
+  g.userData.body = body;
+
+  // Health bar sprite
+  const cv = document.createElement('canvas'); cv.width = 64; cv.height = 8;
+  const tex = new THREE.CanvasTexture(cv);
+  const bar = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
+  bar.scale.set(1.6, 0.2, 1);
+  bar.position.y = type === 'tank' ? 3.0 : 2.3;
+  g.add(bar);
+  g.userData.hpBar = { cv, tex, bar };
+  return g;
+}
+
+function drawHpBar(enemy) {
+  const { cv, tex } = enemy.mesh.userData.hpBar;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, 64, 8);
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, 64, 8);
+  ctx.fillStyle = enemy.hp / enemy.maxHp > 0.4 ? '#5aff7a' : '#ff3b5c';
+  ctx.fillRect(1, 1, 62 * Math.max(0, enemy.hp / enemy.maxHp), 6);
+  tex.needsUpdate = true;
+}
+
+const enemies = [];
+
+function spawnEnemy(type, pos) {
+  const t = ENEMY_TYPES[type];
+  const scale = 1 + 0.08 * (G.wave - 1);
+  const e = {
+    type, def: t,
+    mesh: buildEnemyMesh(type),
+    pos: pos.clone(), vel: new THREE.Vector3(),
+    hp: Math.round(t.hp * scale), maxHp: Math.round(t.hp * scale),
+    speed: t.speed * Math.min(1.6, 1 + 0.03 * (G.wave - 1)),
+    radius: t.radius,
+    attackTimer: 0, flyPhase: Math.random() * Math.PI * 2,
+    status: { burn: 0, burnDps: 0, freeze: 0, slow: 0, slowFactor: 1, poison: 0, poisonDps: 0, launched: false },
+    alive: true,
+  };
+  e.mesh.position.copy(pos);
+  scene.add(e.mesh);
+  enemies.push(e);
+  drawHpBar(e);
+  return e;
+}
+
+// speedFactor: statuses (freeze/slow) computed fully in the effects section
+function enemySpeedFactor(e) {
+  if (e.status.freeze > 0) return 0;
+  let f = 1;
+  if (e.status.slow > 0) f *= e.status.slowFactor;
+  return f;
+}
+
+function updateEnemy(e, dt) {
+  const toPlayer = new THREE.Vector3().subVectors(player.pos, e.pos);
+  toPlayer.y = 0;
+  const dist = toPlayer.length();
+  toPlayer.normalize();
+  const sf = enemySpeedFactor(e);
+  e.attackTimer -= dt;
+
+  if (e.status.freeze > 0 || e.status.launched) {
+    // frozen: no AI. launched: vertical physics handled by effects section
+  } else if (e.type === 'flyer') {
+    e.flyPhase += dt * 3;
+    const strafe = new THREE.Vector3(-toPlayer.z, 0, toPlayer.x).multiplyScalar(Math.sin(e.flyPhase) * 0.7);
+    e.vel.copy(toPlayer).add(strafe).normalize().multiplyScalar(e.speed * sf);
+    e.pos.addScaledVector(e.vel, dt);
+    e.pos.y = 2 + Math.sin(e.flyPhase * 0.7 + e.flyPhase) * 1.2 + 1.5;
+    const trueDist = e.pos.distanceTo(new THREE.Vector3(player.pos.x, player.pos.y + 1, player.pos.z));
+    if (trueDist < e.radius + player.radius + 0.6 && e.attackTimer <= 0) {
+      damagePlayer(e.def.ram);
+      e.attackTimer = e.def.ramRate;
+    }
+  } else if (e.type === 'spitter') {
+    let move = 0;
+    if (dist < e.def.keepMin) move = -1;
+    else if (dist > e.def.keepMax) move = 1;
+    e.vel.x = toPlayer.x * move * e.speed * sf;
+    e.vel.z = toPlayer.z * move * e.speed * sf;
+    e.vel.y += GRAVITY * dt;
+    moveWithCollision(e.pos, e.vel, e.radius, 1.8, dt);
+    if (e.attackTimer <= 0 && dist < 40) {
+      e.attackTimer = e.def.shotRate;
+      const origin = e.pos.clone().add(new THREE.Vector3(0, 1.3, 0));
+      const aim = new THREE.Vector3(player.pos.x, player.pos.y + 1.2, player.pos.z).sub(origin).normalize();
+      spawnProjectile(SPELLS[0], origin, aim, { hostile: true, damage: e.def.shot, speed: 22, color: 0x6aff4a, scale: 1.4 });
+    }
+  } else { // grunt, tank — melee chase
+    e.vel.x = toPlayer.x * e.speed * sf;
+    e.vel.z = toPlayer.z * e.speed * sf;
+    e.vel.y += GRAVITY * dt;
+    moveWithCollision(e.pos, e.vel, e.radius, e.type === 'tank' ? 2.4 : 1.8, dt);
+    if (dist < e.def.meleeRange && e.attackTimer <= 0 && Math.abs(e.pos.y - player.pos.y) < 2) {
+      damagePlayer(e.def.melee);
+      e.attackTimer = e.def.meleeRate;
+    }
+  }
+
+  e.mesh.position.copy(e.pos);
+  e.mesh.userData.body.rotation.y += dt * (e.type === 'flyer' ? 4 : 1.2);
+  e.mesh.userData.hpBar.bar.material.opacity = e.hp < e.maxHp ? 1 : 0;
+}
+
+function damageEnemy(e, amount, source) {
+  if (!e.alive) return;
+  e.hp -= amount;
+  drawHpBar(e);
+  spawnDamageNumber(e.pos.clone().add(new THREE.Vector3(0, e.type === 'tank' ? 2.6 : 2, 0)),
+    Math.round(amount), source && source.color !== undefined ? source.color : 0xffffff);
+  onEnemyHitFeedback();
+  if (e.hp <= 0) killEnemy(e, source);
+}
+
+function killEnemy(e, source) {
+  if (!e.alive) return;
+  e.alive = false;
+  G.kills++;
+  G.score += e.def.score * G.wave;
+  onEnemyDeathFeedback(e, source);
+  scene.remove(e.mesh);
+}
+
+// VFX hooks — replaced with real effects in the VFX section
+function onEnemyHitFeedback() {}
+function onEnemyDeathFeedback(e, source) {}
+
+// ===== Floating damage numbers =====
+const dmgNumbers = [];
+function spawnDamageNumber(pos, amount, color) {
+  let n = dmgNumbers.find(n => !n.alive);
+  if (!n) {
+    if (dmgNumbers.length > 40) return;
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 48;
+    const tex = new THREE.CanvasTexture(cv);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    sprite.scale.set(1.8, 0.68, 1);
+    scene.add(sprite);
+    n = { sprite, cv, tex, age: 0, alive: false };
+    dmgNumbers.push(n);
+  }
+  const ctx = n.cv.getContext('2d');
+  ctx.clearRect(0, 0, 128, 48);
+  ctx.font = 'bold 30px "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+  ctx.strokeText(amount, 64, 34);
+  ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+  ctx.fillText(amount, 64, 34);
+  n.tex.needsUpdate = true;
+  n.sprite.position.copy(pos);
+  n.sprite.position.x += (Math.random() - 0.5) * 0.6;
+  n.sprite.visible = true;
+  n.sprite.material.opacity = 1;
+  n.age = 0; n.alive = true;
+}
+
+function updateDamageNumbers(dt) {
+  for (const n of dmgNumbers) {
+    if (!n.alive) continue;
+    n.age += dt;
+    n.sprite.position.y += dt * 1.7;
+    n.sprite.material.opacity = 1 - n.age / 0.7;
+    if (n.age > 0.7) { n.alive = false; n.sprite.visible = false; }
+  }
+}
+
+// ===== Wave director =====
+const portals = [];
+const spawnQueue = [];
+let waveClearTimer = 0;
+
+function buildPortals() {
+  const half = arena.size / 2;
+  const spots = [[0, -half + 2], [0, half - 2], [-half + 2, 0], [half - 2, 0]];
+  for (const [x, z] of spots) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.14, 8, 24),
+      new THREE.MeshBasicMaterial({ color: 0xa06bff }));
+    ring.position.set(x, 2, z);
+    ring.lookAt(0, 2, 0);
+    scene.add(ring);
+    portals.push({ x, z, ring });
+  }
+}
+
+function waveComposition(n) {
+  const total = 4 + 2 * n;
+  const list = [];
+  for (let i = 0; i < total; i++) {
+    const pool = Object.keys(ENEMY_TYPES).filter(t => ENEMY_TYPES[t].firstWave <= n);
+    // weight later waves toward tougher picks
+    const pick = pool[Math.min(pool.length - 1, Math.floor(Math.random() * pool.length + (n >= 6 ? 0.4 : 0)))];
+    list.push(pick);
+  }
+  return list;
+}
+
+function spawnWave(n) {
+  G.wave = n;
+  showWaveBanner(n);
+  const comp = waveComposition(n);
+  comp.forEach((type, i) => {
+    spawnQueue.push({ type, at: i * 0.5 });
+  });
+}
+
+function showWaveBanner(n) {
+  const el = document.getElementById('wave-banner');
+  if (!el) { console.log('WAVE', n); return; }
+  el.textContent = `WAVE ${n}`;
+  el.classList.remove('show');
+  void el.offsetWidth; // restart animation
+  el.classList.add('show');
+}
+
+function updateWaves(dt) {
+  for (const p of portals) p.ring.rotation.z += dt * 1.5;
+
+  for (let i = spawnQueue.length - 1; i >= 0; i--) {
+    spawnQueue[i].at -= dt;
+    if (spawnQueue[i].at <= 0) {
+      if (enemies.filter(e => e.alive).length < 30) {
+        const portal = portals[Math.floor(Math.random() * portals.length)];
+        spawnEnemy(spawnQueue[i].type, new THREE.Vector3(portal.x, 0, portal.z));
+      }
+      spawnQueue.splice(i, 1);
+    }
+  }
+
+  if (spawnQueue.length === 0 && !enemies.some(e => e.alive)) {
+    waveClearTimer += dt;
+    if (waveClearTimer >= 3) {
+      waveClearTimer = 0;
+      spawnWave(G.wave + 1);
+    }
+  } else {
+    waveClearTimer = 0;
+  }
+}
+
+function updateEnemies(dt) {
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    if (!e.alive) { enemies.splice(i, 1); continue; }
+    updateEnemy(e, dt);
+  }
+}
+
 function update(dt) {
   updatePlayer(dt);
   tryShoot(dt);
   updateProjectiles(dt);
+  updateEnemies(dt);
+  updateWaves(dt);
+  updateDamageNumbers(dt);
+  updateHUD();
+}
+
+function updateHUD() {
+  const hp = document.getElementById('hp-fill');
+  if (hp) hp.style.width = (player.hp / player.maxHp * 100) + '%';
+  const hpText = document.getElementById('hp-text');
+  if (hpText) hpText.textContent = Math.ceil(player.hp);
+  const wi = document.getElementById('wave-info');
+  wi.innerHTML = `<b>WAVE ${G.wave}</b> &nbsp;·&nbsp; ☠ ${G.kills} &nbsp;·&nbsp; ★ ${G.score}`;
 }
 
 function render() {
@@ -521,6 +847,7 @@ function boot() {
 
   buildArena();
   buildLights();
+  buildPortals();
 
   document.body.addEventListener('click', () => {
     if (G.state === 'menu' || G.state === 'paused') requestPlay();
