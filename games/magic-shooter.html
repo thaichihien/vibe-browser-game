@@ -26,6 +26,95 @@
   #no-internet { z-index: 30; text-align: center; }
   #no-internet h2 { color: var(--magic); margin-bottom: 12px; }
 
+  .game-title {
+    font-size: clamp(40px, 8vw, 76px); font-weight: 900; letter-spacing: 10px;
+    background: linear-gradient(90deg, #5affff, #a06bff, #ff2ee6, #a06bff, #5affff);
+    background-size: 300% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: titleShift 5s linear infinite;
+    text-align: center;
+  }
+  @keyframes titleShift { to { background-position: 300% 0; } }
+  .subtitle { color: #b8a8e8; margin: 10px 0 28px; letter-spacing: 3px; font-size: 15px; }
+
+  .controls-box {
+    display: grid; grid-template-columns: auto auto; gap: 7px 20px;
+    background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 12px;
+    padding: 20px 30px; margin-bottom: 30px; font-size: 14px;
+  }
+  .controls-box .key { color: var(--magic); font-weight: bold; text-align: right; }
+
+  .btn {
+    pointer-events: auto; cursor: pointer;
+    background: linear-gradient(180deg, rgba(160,107,255,0.25), rgba(160,107,255,0.08));
+    border: 1px solid var(--magic); color: var(--text);
+    font-size: 18px; font-weight: bold; letter-spacing: 3px;
+    padding: 14px 44px; border-radius: 10px; margin-top: 8px;
+    text-shadow: 0 0 10px var(--magic);
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .btn:hover { transform: scale(1.05); box-shadow: 0 0 24px rgba(160,107,255,0.5); }
+  .btn.secondary { border-color: #665a8a; text-shadow: none; opacity: 0.85; font-size: 14px; padding: 10px 28px; }
+
+  .pulse-hint { animation: pulseHint 1.6s ease-in-out infinite; color: #cbbcf5; margin-top: 18px; letter-spacing: 2px; }
+  @keyframes pulseHint { 50% { opacity: 0.35; } }
+
+  .overlay h2 { font-size: 40px; letter-spacing: 8px; color: var(--magic); text-shadow: 0 0 18px var(--magic); margin-bottom: 18px; }
+  #gameover-screen h2 { color: var(--hp); text-shadow: 0 0 18px var(--hp); }
+  .stats-box {
+    display: grid; grid-template-columns: auto auto; gap: 8px 26px; font-size: 17px;
+    background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 12px;
+    padding: 22px 34px; margin-bottom: 22px;
+  }
+  .stats-box .stat-label { color: #b8a8e8; }
+  .stats-box .stat-value { font-weight: bold; text-align: right; }
+
+  /* Health bar */
+  #health-bar { width: 240px; }
+  #health-bar .hp-label { font-size: 11px; letter-spacing: 2px; color: #b8a8e8; margin-bottom: 3px; }
+  #hp-track {
+    height: 16px; border-radius: 8px; overflow: hidden;
+    background: rgba(0,0,0,0.55); border: 1px solid rgba(255,59,92,0.5);
+  }
+  #hp-fill {
+    height: 100%; width: 100%; border-radius: 8px;
+    background: linear-gradient(90deg, #ff3b5c, #ff7a4a);
+    box-shadow: 0 0 10px rgba(255,59,92,0.7);
+    transition: width 0.15s;
+  }
+  #hp-text { position: relative; top: -16px; text-align: center; font-size: 11px; font-weight: bold; text-shadow: 0 1px 2px #000; }
+
+  #wave-info { font-size: 15px; letter-spacing: 1px; background: var(--ui-bg); padding: 6px 18px; border-radius: 20px; border: 1px solid var(--ui-border); }
+  #active-spell {
+    position: absolute; bottom: 62px; left: 50%; transform: translateX(-50%);
+    font-size: 16px; font-weight: bold; letter-spacing: 2px; text-shadow: 0 0 10px currentColor, 0 1px 2px #000;
+  }
+
+  /* Hotbar */
+  .hotbar-cell {
+    width: 36px; height: 40px; border-radius: 7px; position: relative;
+    background: var(--ui-bg); border: 1px solid rgba(160,107,255,0.25);
+    display: flex; align-items: center; justify-content: center; font-size: 17px;
+    transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s;
+  }
+  .hotbar-cell .keyhint { position: absolute; top: 1px; left: 3px; font-size: 8px; color: #9a8ac0; }
+  .hotbar-cell.active { transform: translateY(-6px) scale(1.12); border-color: currentColor; box-shadow: 0 0 12px currentColor; background: rgba(30,20,55,0.9); }
+
+  /* Spell grid */
+  #spell-grid h2 { margin-bottom: 24px; }
+  .grid-wrap {
+    display: grid; grid-template-columns: repeat(5, 168px); gap: 10px;
+    max-width: 92vw; max-height: 70vh; overflow-y: auto; padding: 4px;
+  }
+  .spell-card {
+    pointer-events: auto; cursor: pointer;
+    background: var(--ui-bg); border: 1px solid rgba(160,107,255,0.3); border-radius: 10px;
+    padding: 10px 12px; transition: transform 0.1s, box-shadow 0.1s, border-color 0.1s;
+  }
+  .spell-card:hover, .spell-card.selected { transform: scale(1.05); border-color: currentColor; box-shadow: 0 0 14px currentColor; }
+  .spell-card .sc-head { font-weight: bold; font-size: 13px; margin-bottom: 4px; }
+  .spell-card .sc-desc { font-size: 11px; color: #b8a8e8; line-height: 1.35; }
+
   #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; display: none; }
   #crosshair {
     position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
@@ -91,16 +180,53 @@
   <div id="hit-marker">✕</div>
   <div id="streak-text"></div>
   <div id="wave-banner"></div>
-  <div id="health-bar"></div>
+  <div id="health-bar">
+    <div class="hp-label">♥ HEALTH</div>
+    <div id="hp-track"><div id="hp-fill"></div></div>
+    <div id="hp-text">100</div>
+  </div>
   <div id="wave-info"></div>
   <div id="active-spell"></div>
   <div id="hotbar"></div>
 </div>
 
-<div id="start-screen" class="overlay"></div>
-<div id="pause-screen" class="overlay"></div>
-<div id="gameover-screen" class="overlay"></div>
-<div id="spell-grid" class="overlay"></div>
+<div id="start-screen" class="overlay">
+  <div class="game-title">MAGIC SHOOTER</div>
+  <div class="subtitle">20 SPELLS · ENDLESS WAVES · ONE ARENA</div>
+  <div class="controls-box">
+    <span class="key">Mouse</span><span>Look · Left click to shoot</span>
+    <span class="key">W A S D</span><span>Move</span>
+    <span class="key">Space</span><span>Jump</span>
+    <span class="key">Shift</span><span>Sprint</span>
+    <span class="key">1–0 / Q E / Wheel</span><span>Switch spell</span>
+    <span class="key">Tab</span><span>Spell book</span>
+    <span class="key">Esc</span><span>Pause</span>
+  </div>
+  <div class="pulse-hint">— CLICK ANYWHERE TO PLAY —</div>
+</div>
+
+<div id="pause-screen" class="overlay">
+  <h2>PAUSED</h2>
+  <button class="btn" id="btn-resume">RESUME</button>
+  <button class="btn secondary" id="btn-restart-pause">RESTART RUN</button>
+</div>
+
+<div id="gameover-screen" class="overlay">
+  <h2>YOU DIED</h2>
+  <div class="stats-box">
+    <span class="stat-label">Wave reached</span><span class="stat-value" id="go-wave">1</span>
+    <span class="stat-label">Kills</span><span class="stat-value" id="go-kills">0</span>
+    <span class="stat-label">Score</span><span class="stat-value" id="go-score">0</span>
+    <span class="stat-label">Favorite spell</span><span class="stat-value" id="go-spell">—</span>
+  </div>
+  <button class="btn" id="btn-play-again">PLAY AGAIN</button>
+</div>
+
+<div id="spell-grid" class="overlay">
+  <h2>SPELL BOOK</h2>
+  <div class="grid-wrap" id="grid-wrap"></div>
+  <div class="pulse-hint">CLICK A SPELL — OR PRESS TAB TO CLOSE</div>
+</div>
 <div id="no-internet" class="overlay">
   <h2>⚡ Magic Shooter needs an internet connection</h2>
   <p>The 3D engine (Three.js) could not be loaded. Check your connection and reload the page.</p>
@@ -247,13 +373,15 @@ document.addEventListener('pointerlockchange', () => {
       document.getElementById(id).style.display = 'none';
     document.getElementById('hud').style.display = 'block';
   } else if (G.state === 'playing') {
-    pauseGame();
+    if (gridOpen) G.state = 'paused'; // spell grid is its own overlay
+    else pauseGame();
   }
 });
 
 function requestPlay() {
   if (G.state === 'gameover') return; // restart handled by UI
-  renderer.domElement.requestPointerLock();
+  const r = renderer.domElement.requestPointerLock();
+  if (r && r.catch) r.catch(() => {});
 }
 
 function pauseGame() {
@@ -346,7 +474,16 @@ function damagePlayer(amount) {
 function gameOver() {
   G.state = 'gameover';
   document.exitPointerLock();
-  console.log('GAME OVER — wave', G.wave, 'kills', G.kills, 'score', G.score);
+  document.getElementById('hud').style.display = 'none';
+  document.getElementById('go-wave').textContent = G.wave;
+  document.getElementById('go-kills').textContent = G.kills;
+  document.getElementById('go-score').textContent = G.score;
+  let fav = null, favN = 0;
+  for (const k in (G.spellUse || {})) {
+    if (G.spellUse[k] > favN) { favN = G.spellUse[k]; fav = SPELLS[k]; }
+  }
+  document.getElementById('go-spell').textContent = fav ? `${fav.icon} ${fav.name}` : '—';
+  document.getElementById('gameover-screen').style.display = 'flex';
 }
 
 // ===== Spells =====
@@ -736,6 +873,8 @@ function tryShoot(dt) {
   if (!mouseDown || fireCooldown > 0) return;
   const def = SPELLS[G.spellIndex];
   fireCooldown = 1 / def.fireRate;
+  G.spellUse = G.spellUse || {};
+  G.spellUse[G.spellIndex] = (G.spellUse[G.spellIndex] || 0) + 1;
   fireSpell(def);
 }
 
@@ -1477,6 +1616,98 @@ function onPlayerDamagedFeedback() {
   dmgFlashTimer = setTimeout(() => { el.style.opacity = 0; }, 140);
 }
 
+// ===== UI: hotbar, spell grid, screens =====
+function spellCss(def) { return '#' + def.color.toString(16).padStart(6, '0'); }
+
+function buildHotbar() {
+  const bar = document.getElementById('hotbar');
+  SPELLS.forEach((def, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'hotbar-cell';
+    cell.style.color = spellCss(def);
+    cell.innerHTML = (i < 10 ? `<span class="keyhint">${(i + 1) % 10}</span>` : '') + def.icon;
+    bar.appendChild(cell);
+  });
+}
+
+function buildSpellGrid() {
+  const wrap = document.getElementById('grid-wrap');
+  SPELLS.forEach((def, i) => {
+    const card = document.createElement('div');
+    card.className = 'spell-card';
+    card.style.color = spellCss(def);
+    card.innerHTML = `<div class="sc-head">${def.icon} ${def.name}</div><div class="sc-desc">${def.desc}</div>`;
+    card.addEventListener('click', ev => {
+      ev.stopPropagation();
+      selectSpell(i);
+      closeSpellGrid();
+    });
+    wrap.appendChild(card);
+  });
+}
+
+let gridOpen = false;
+function openSpellGrid() {
+  gridOpen = true;
+  const cards = document.querySelectorAll('.spell-card');
+  cards.forEach((c, i) => c.classList.toggle('selected', i === G.spellIndex));
+  document.exitPointerLock();
+  document.getElementById('pause-screen').style.display = 'none';
+  document.getElementById('spell-grid').style.display = 'flex';
+}
+function closeSpellGrid() {
+  gridOpen = false;
+  document.getElementById('spell-grid').style.display = 'none';
+  requestPlay();
+}
+
+addEventListener('keydown', e => {
+  if (e.code !== 'Tab') return;
+  if (G.state === 'playing' && !gridOpen) openSpellGrid();
+  else if (gridOpen) closeSpellGrid();
+});
+
+function resetGame() {
+  for (const e of enemies) scene.remove(e.mesh);
+  enemies.length = 0;
+  for (const p of projectiles) killProjectile(p);
+  for (const z of zones) { scene.remove(z.dome); scene.remove(z.ring); }
+  zones.length = 0;
+  for (const t of turrets) scene.remove(t.mesh);
+  turrets.length = 0;
+  for (const l of lightningBolts) scene.remove(l.line);
+  lightningBolts.length = 0;
+  for (const r of explosionRings) scene.remove(r.ring);
+  explosionRings.length = 0;
+  for (const n of dmgNumbers) { n.alive = false; n.sprite.visible = false; }
+  spawnQueue.length = 0;
+  recentKills.length = 0;
+  waveClearTimer = 0;
+  shakeAmt = 0;
+  G.wave = 0; G.kills = 0; G.score = 0;
+  G.spellUse = {};
+  player.pos.set(0, 0, 20);
+  player.vel.set(0, 0, 0);
+  player.hp = player.maxHp;
+  player.yaw = Math.PI; player.pitch = 0;
+  document.getElementById('gameover-screen').style.display = 'none';
+  document.getElementById('pause-screen').style.display = 'none';
+  G.state = 'menu';
+  requestPlay();
+}
+
+function wireButtons() {
+  document.getElementById('btn-resume').addEventListener('click', ev => {
+    ev.stopPropagation(); requestPlay();
+  });
+  document.getElementById('btn-restart-pause').addEventListener('click', ev => {
+    ev.stopPropagation(); resetGame();
+  });
+  document.getElementById('btn-play-again').addEventListener('click', ev => {
+    ev.stopPropagation(); resetGame();
+  });
+}
+
 function update(dt) {
   updatePlayer(dt);
   applyShake(dt);
@@ -1528,10 +1759,15 @@ function boot() {
   buildParticles();
 
   document.body.addEventListener('click', () => {
+    if (gridOpen) { closeSpellGrid(); return; }
     if (G.state === 'menu' || G.state === 'paused') requestPlay();
   });
 
+  buildHotbar();
+  buildSpellGrid();
+  wireButtons();
   selectSpell(0);
+  document.getElementById('start-screen').style.display = 'flex';
 
   addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
