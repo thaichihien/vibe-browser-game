@@ -97,6 +97,205 @@ const G = {}; // G.state: 'menu' | 'playing' | 'shop' | 'paused' | 'downed' | 'l
 let scene, camera, renderer;
 const PLANET_R = 20;
 
+// ===== World: planet, decorations, house, launch pad, lighting, starfield =====
+let world, sunLight, moonLight, ambient, houseLamp, houseWindowMat, starfield;
+
+const _Y = new THREE.Vector3(0, 1, 0);
+function placeOnSurface(obj, dir, yaw = 0, height = 0) {
+  const d = dir.clone().normalize();
+  obj.position.copy(d).multiplyScalar(PLANET_R + height);
+  obj.quaternion.setFromUnitVectors(_Y, d);
+  obj.rotateY(yaw);
+}
+
+function randomSurfaceDir() {
+  const v = new THREE.Vector3(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
+  if (v.lengthSq() < 1e-6) v.set(0, 1, 0);
+  return v.normalize();
+}
+
+// Shared geometries/materials for scattered decorations (rocks/trees).
+const rockGeo = new THREE.DodecahedronGeometry(1, 0);
+const rockMat = new THREE.MeshLambertMaterial({ color: 0x8c8c8c });
+const trunkGeo = new THREE.CylinderGeometry(0.15, 0.2, 1, 6);
+const trunkMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2f });
+const leafGeo = new THREE.ConeGeometry(0.7, 1.2, 8);
+const leafMat = new THREE.MeshLambertMaterial({ color: 0x2f7a3f });
+
+function buildPlanet() {
+  const geo = new THREE.IcosahedronGeometry(PLANET_R, 4);
+  const posAttr = geo.attributes.position;
+  const count = posAttr.count;
+  const colors = new Float32Array(count * 3);
+  const grass = new THREE.Color(0x4a9e5c);
+  const dirt = new THREE.Color(0x8a6a4a);
+  const v = new THREE.Vector3();
+  const c = new THREE.Color();
+  for (let i = 0; i < count; i++) {
+    v.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)).normalize();
+    c.copy(v.dot(world.houseDir) > 0.92 ? dirt : grass);
+    c.offsetHSL(0, 0, (Math.random() - 0.5) * 0.12);
+    colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const mesh = new THREE.Mesh(geo, mat);
+  scene.add(mesh);
+  return mesh;
+}
+
+function inExclusionZone(dir) {
+  // Keep decorations off the farm patch around the house and off the landing pad.
+  return dir.dot(world.houseDir) > 0.9 || dir.dot(world.padDir) > 0.95;
+}
+
+function buildDecorations() {
+  for (let i = 0; i < 14; i++) {
+    let dir;
+    do { dir = randomSurfaceDir(); } while (inExclusionZone(dir));
+    const rock = new THREE.Mesh(rockGeo, rockMat);
+    const s = 0.3 + Math.random() * 0.6;
+    rock.scale.setScalar(s);
+    placeOnSurface(rock, dir, Math.random() * Math.PI * 2, s * 0.35);
+    scene.add(rock);
+  }
+  for (let i = 0; i < 10; i++) {
+    let dir;
+    do { dir = randomSurfaceDir(); } while (inExclusionZone(dir));
+    const tree = new THREE.Group();
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+    trunk.position.y = 0.5;
+    tree.add(trunk);
+    const leaf1 = new THREE.Mesh(leafGeo, leafMat);
+    leaf1.position.y = 1.3;
+    tree.add(leaf1);
+    const leaf2 = new THREE.Mesh(leafGeo, leafMat);
+    leaf2.position.y = 1.85;
+    leaf2.scale.setScalar(0.7);
+    tree.add(leaf2);
+    placeOnSurface(tree, dir, Math.random() * Math.PI * 2);
+    scene.add(tree);
+  }
+}
+
+function buildHouse() {
+  const houseGroup = new THREE.Group();
+  placeOnSurface(houseGroup, world.houseDir, 0, 0);
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(3, 2.5, 3),
+    new THREE.MeshLambertMaterial({ color: 0xd2b48c }) // warm tan
+  );
+  body.position.y = 1.25;
+  houseGroup.add(body);
+
+  const roof = new THREE.Mesh(
+    new THREE.ConeGeometry(2.5, 1.4, 4), // 4-sided cone = pyramid roof
+    new THREE.MeshLambertMaterial({ color: 0xb33f32 }) // rust red
+  );
+  roof.position.y = 2.5 + 0.7;
+  roof.rotation.y = Math.PI / 4; // align pyramid faces to the box sides
+  houseGroup.add(roof);
+
+  // Door on the local +Z face (the side facing the farm region).
+  const door = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.8, 1.6),
+    new THREE.MeshLambertMaterial({ color: 0x3a2a1a })
+  );
+  door.position.set(0, 0.8, 1.51);
+  door.userData.pick = { kind: 'door' };
+  houseGroup.add(door);
+
+  houseWindowMat = new THREE.MeshLambertMaterial({ color: 0xfff2b0, emissive: 0xffdd66, emissiveIntensity: 0 });
+  const windowGeo = new THREE.PlaneGeometry(0.7, 0.7);
+  const win1 = new THREE.Mesh(windowGeo, houseWindowMat);
+  win1.position.set(1.51, 1.5, 0.6);
+  win1.rotation.y = Math.PI / 2;
+  houseGroup.add(win1);
+  const win2 = new THREE.Mesh(windowGeo, houseWindowMat);
+  win2.position.set(-1.51, 1.5, 0.6);
+  win2.rotation.y = -Math.PI / 2;
+  houseGroup.add(win2);
+
+  scene.add(houseGroup);
+
+  // Door dir: house dir nudged toward the farm center (the tangent the door opens onto).
+  const doorTangent = new THREE.Vector3(0, 0, 1).applyQuaternion(houseGroup.quaternion).normalize();
+  world.houseDoorDir = world.houseDir.clone().addScaledVector(doorTangent, 0.12).normalize();
+}
+
+function buildPad() {
+  const padGroup = new THREE.Group();
+  const pad = new THREE.Mesh(
+    new THREE.CylinderGeometry(3.5, 3.5, 0.3, 24),
+    new THREE.MeshLambertMaterial({ color: 0x565c63 })
+  );
+  pad.position.y = 0.15;
+  padGroup.add(pad);
+
+  const lightGeo = new THREE.SphereGeometry(0.15, 8, 8);
+  const lightMat = new THREE.MeshBasicMaterial({ color: 0xffaa33 });
+  [[2.3, 2.3], [2.3, -2.3], [-2.3, 2.3], [-2.3, -2.3]].forEach(([x, z]) => {
+    const l = new THREE.Mesh(lightGeo, lightMat);
+    l.position.set(x, 0.35, z);
+    padGroup.add(l);
+  });
+
+  placeOnSurface(padGroup, world.padDir, 0, 0);
+  scene.add(padGroup);
+}
+
+function buildLighting() {
+  sunLight = new THREE.DirectionalLight(0xfff2d8, 1.1);
+  sunLight.position.set(60, 40, 30);
+  sunLight.target.position.set(0, 0, 0);
+  scene.add(sunLight, sunLight.target);
+
+  moonLight = new THREE.DirectionalLight(0x8899ff, 0.25);
+  moonLight.position.set(-60, 40, -30);
+  moonLight.target.position.set(0, 0, 0);
+  moonLight.intensity = 0; // off during the day; Task 9 fades it in at night
+  scene.add(moonLight, moonLight.target);
+
+  ambient = new THREE.AmbientLight(0x445566, 0.7);
+  scene.add(ambient);
+
+  houseLamp = new THREE.PointLight(0xffc76a, 0, 8);
+  houseLamp.position.copy(world.houseDoorDir).multiplyScalar(PLANET_R + 1.2);
+  scene.add(houseLamp);
+}
+
+function buildStarfield() {
+  const starCount = 800;
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(starCount * 3);
+  const R = 300;
+  for (let i = 0; i < starCount; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(Math.random() * 2 - 1);
+    positions[i * 3] = R * Math.sin(phi) * Math.cos(theta);
+    positions[i * 3 + 1] = R * Math.sin(phi) * Math.sin(theta);
+    positions[i * 3 + 2] = R * Math.cos(phi);
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.4, sizeAttenuation: true, transparent: true, opacity: 1 });
+  starfield = new THREE.Points(geo, mat);
+  scene.add(starfield);
+}
+
+function buildWorld() {
+  world = {
+    houseDir: new THREE.Vector3(0, 0.35, 1).normalize(),
+    padDir: new THREE.Vector3(0, 0.2, -1).normalize(),
+  };
+  world.planet = buildPlanet();
+  buildDecorations();
+  buildHouse();
+  buildPad();
+  buildLighting();
+  buildStarfield();
+}
+
 function boot() {
   G.state = 'menu';
   renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -108,6 +307,7 @@ function boot() {
   camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 500);
   camera.position.set(0, PLANET_R + 8, PLANET_R + 14);
   camera.lookAt(0, PLANET_R, 0);
+  buildWorld();
   let last = performance.now();
   (function loop(now) {
     requestAnimationFrame(loop);
