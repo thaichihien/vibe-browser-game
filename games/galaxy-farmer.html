@@ -112,6 +112,20 @@
     padding: 6px 14px; border-radius: 8px; background: var(--ui-bg); border: 1px solid var(--ui-border);
     opacity: 0; transition: opacity 0.3s ease; font-size: 14px;
   }
+
+  /* ===== Launch cinematic: fullscreen white fade before the victory reveal ===== */
+  #launch-fade {
+    position: fixed; inset: 0; background: #ffffff; opacity: 0;
+    pointer-events: none; z-index: 25;
+  }
+
+  /* ===== Victory screen ===== */
+  .victory-stats { font-size: 16px; line-height: 1.8; margin-bottom: 22px; }
+  .victory-btn {
+    background: rgba(110, 231, 160, 0.15); border: 1px solid var(--ui-border); color: var(--accent);
+    padding: 10px 26px; border-radius: 8px; cursor: pointer; font-size: 15px; pointer-events: auto;
+  }
+  .victory-btn:hover { background: rgba(110, 231, 160, 0.3); }
 </style>
 </head>
 <body>
@@ -126,7 +140,9 @@
   <h2>HELP</h2>
 </div>
 <div id="victory-screen" class="overlay">
-  <h2>VICTORY</h2>
+  <h2>YOU BUILT THE SPACESHIP!</h2>
+  <div id="victory-stats" class="victory-stats"></div>
+  <button id="victory-replay-btn" class="victory-btn" type="button">Play Again</button>
 </div>
 <div id="downed-screen" class="overlay">
   <h2>DOWNED</h2>
@@ -159,6 +175,7 @@
   <div id="toast"></div>
   <div id="banner"></div>
 </div>
+<div id="launch-fade"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -1045,20 +1062,236 @@ function buyPart() {
   }
 }
 
-// Task 6
-function updateShipVisual() {
-  // Task 6
+// ===== Spaceship: parts, ghost preview, launch cinematic, victory =====
+// Shared ghost-preview material for the "next part to buy" (per brief); one instance,
+// swapped onto meshes and swapped back rather than allocated per call.
+const GHOST_MAT = new THREE.MeshBasicMaterial({ wireframe: true, transparent: true, opacity: 0.35, color: 0x6ee7a0 });
+let shipGroup;
+let shipParts = [];       // Group per SHIP_PARTS index, built once at boot
+let engineRingMat;        // shared emissive material on the 5 engine rings (ramped during launch)
+let exhaustMesh;          // single scaling exhaust cone, not part of the owned/ghost progression
+let navLightMesh;         // nav module's blinking light (toggled by elapsed launch time)
+// Launch-only temps (assigned once in startLaunchSequence, read every frame in updateLaunch —
+// no per-frame allocation).
+const _launchTangentA = new THREE.Vector3();
+const _launchTangentB = new THREE.Vector3();
+const _launchCamTarget = new THREE.Vector3();
+const LAUNCH_DURATION = 8; // seconds, per brief's "~8s scripted"
+
+function addPartMesh(group, mesh) {
+  mesh.userData.origMat = mesh.material; // remembered so ghost mode can be swapped back to 'solid'
+  group.add(mesh);
+  return mesh;
 }
 
-// Task 6
+function buildFrame() {
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x999999 });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 2, 8, 1, true), bodyMat);
+  body.position.y = 1;
+  addPartMesh(g, body);
+  const strutMat = new THREE.MeshLambertMaterial({ color: 0x777777 });
+  const strutGeo = new THREE.CylinderGeometry(0.05, 0.05, 2, 4);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const strut = new THREE.Mesh(strutGeo, strutMat);
+    strut.position.set(Math.cos(a) * 1.2, 1, Math.sin(a) * 1.2);
+    addPartMesh(g, strut);
+  }
+  const ringGeo = new THREE.TorusGeometry(1.2, 0.04, 6, 16);
+  [0.4, 1.6].forEach((y) => {
+    const ring = new THREE.Mesh(ringGeo, strutMat);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = y;
+    addPartMesh(g, ring);
+  });
+  return g; // lattice-look gray cylinder, 1.2r x 2h, base at local y=0.7 once added to shipGroup
+}
+
+function buildEngine() {
+  const g = new THREE.Group();
+  const coneMat = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
+  const coneGeo = new THREE.ConeGeometry(0.32, 0.8, 10);
+  const offsets = [[0, 0], [0.6, 0.6], [0.6, -0.6], [-0.6, 0.6], [-0.6, -0.6]];
+  offsets.forEach(([x, z]) => {
+    const cone = new THREE.Mesh(coneGeo, coneMat);
+    cone.position.set(x, 0.4, z);
+    cone.rotation.x = Math.PI; // nozzle opening faces down, toward the pad
+    addPartMesh(g, cone);
+  });
+  engineRingMat = new THREE.MeshLambertMaterial({ color: 0xff6a2a, emissive: 0xff6a2a, emissiveIntensity: 0.4 });
+  const ringGeo = new THREE.TorusGeometry(0.32, 0.05, 6, 12);
+  offsets.forEach(([x, z]) => {
+    const ring = new THREE.Mesh(ringGeo, engineRingMat);
+    ring.position.set(x, 0.15, z);
+    addPartMesh(g, ring);
+  });
+  return g; // dark cone cluster + orange emissive rings, sits below the frame
+}
+
+function buildFuelTank() {
+  const g = new THREE.Group();
+  const tankMat = new THREE.MeshLambertMaterial({ color: 0xb5502a });
+  const tankGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 10);
+  [1.35, -1.35].forEach((x) => {
+    const tank = new THREE.Mesh(tankGeo, tankMat);
+    tank.position.set(x, 1.1, 0);
+    addPartMesh(g, tank);
+  });
+  return g; // two rust-orange side cylinders flanking the frame
+}
+
+function buildCockpit() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshPhongMaterial({ color: 0xaee0ff, transparent: true, opacity: 0.8, shininess: 90 });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.85, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat);
+  dome.position.y = 2;
+  addPartMesh(g, dome);
+  return g; // light-blue glass sphere-cap on top of the frame
+}
+
+function buildNavigation() {
+  const g = new THREE.Group();
+  const dishMat = new THREE.MeshLambertMaterial({ color: 0xdddddd, side: THREE.DoubleSide });
+  const dish = new THREE.Mesh(new THREE.CircleGeometry(0.3, 12), dishMat);
+  dish.position.set(0.5, 2.55, 0);
+  dish.rotation.y = Math.PI / 2;
+  addPartMesh(g, dish);
+  const antennaMat = new THREE.MeshLambertMaterial({ color: 0xcccccc });
+  const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.6, 6), antennaMat);
+  antenna.position.set(0, 2.75, 0);
+  addPartMesh(g, antenna);
+  const navLightMat = new THREE.MeshLambertMaterial({ color: 0xff3333, emissive: 0xff0000, emissiveIntensity: 1 });
+  navLightMesh = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), navLightMat);
+  navLightMesh.position.set(0, 3.05, 0);
+  addPartMesh(g, navLightMesh);
+  return g; // small dish + antenna + blinking red light, topmost part
+}
+
+function buildShip() {
+  shipGroup = new THREE.Group();
+  placeOnSurface(shipGroup, world.padDir, 0, 0.3); // ship sits on the pad, pad top is at height ~0.3
+  scene.add(shipGroup);
+
+  shipParts = [buildFrame(), buildEngine(), buildFuelTank(), buildCockpit(), buildNavigation()];
+  shipParts.forEach((g) => shipGroup.add(g));
+
+  // Exhaust: a single scaling emissive cone (Task 9's particle system doesn't exist yet, per
+  // the brief). Not part of the ghost/owned progression -- hidden until launch starts.
+  const exhaustMat = new THREE.MeshBasicMaterial({ color: 0xffaa33, transparent: true, opacity: 0.7 });
+  exhaustMesh = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.2, 10), exhaustMat);
+  exhaustMesh.position.y = -0.2;
+  exhaustMesh.rotation.x = Math.PI;
+  exhaustMesh.visible = false;
+  shipGroup.add(exhaustMesh);
+
+  updateShipVisual();
+}
+
+function setPartMode(group, mode) { // 'solid' | 'ghost' | 'hidden'
+  group.visible = mode !== 'hidden';
+  if (mode === 'hidden') return;
+  group.traverse((obj) => {
+    if (obj.isMesh) obj.material = mode === 'ghost' ? GHOST_MAT : obj.userData.origMat;
+  });
+}
+
+function updateShipVisual() {
+  for (let i = 0; i < shipParts.length; i++) {
+    const mode = i < G.partsOwned ? 'solid' : (i === G.partsOwned ? 'ghost' : 'hidden');
+    setPartMode(shipParts[i], mode);
+  }
+}
+
 function startLaunchSequence() {
-  // Task 6
+  G.state = 'launch'; // player input & updateCamera stop: the main loop only calls update(dt)
+                       // for 'playing'/'shop', so this state drives itself from render()'s hook
+  G.launchT = 0;
+  document.getElementById('hud').style.display = 'none';
+
+  exhaustMesh.visible = true;
+  exhaustMesh.scale.set(0.01, 0.01, 0.01);
+
+  const fade = document.getElementById('launch-fade');
+  fade.style.transition = 'none';
+  fade.style.opacity = '0';
+
+  // Tangent basis perpendicular to padDir, used both to frame the side-view camera and for
+  // the liftoff wobble. Computed once here (not per frame).
+  _launchTangentA.set(0, 1, 0).cross(world.padDir);
+  if (_launchTangentA.lengthSq() < 1e-6) _launchTangentA.set(1, 0, 0).cross(world.padDir);
+  _launchTangentA.normalize();
+  _launchTangentB.crossVectors(world.padDir, _launchTangentA).normalize();
+
+  const padPos = _v1.copy(world.padDir).multiplyScalar(PLANET_R + 0.3);
+  _launchCamTarget.copy(padPos)
+    .addScaledVector(_launchTangentA, 11)
+    .addScaledVector(world.padDir, 6);
+}
+
+// Drives the ~8s launch cinematic; called from render() each frame while G.state === 'launch'.
+// camera.up stays pinned to world.padDir throughout since updateCamera never runs in this state.
+function updateLaunch(dt) {
+  G.launchT += dt;
+  const t = G.launchT;
+
+  camera.position.lerp(_launchCamTarget, 1 - Math.pow(0.0008, dt));
+  camera.up.copy(world.padDir);
+  camera.lookAt(shipGroup.position);
+
+  // Engine glow + exhaust ramp over the first 2s, then hold steady.
+  const glow = Math.min(t / 2, 1);
+  engineRingMat.emissiveIntensity = 0.4 + glow * 1.8;
+  exhaustMesh.scale.set(1, 0.4 + glow * 2.2, 1);
+  exhaustMesh.material.opacity = 0.3 + glow * 0.5;
+
+  // Liftoff: ship eases outward along padDir starting at t=1s, with tangential wobble that
+  // decays as it climbs.
+  const liftT = Math.max(0, t - 1);
+  const liftFrac = Math.min(liftT / 6, 1);
+  const dist = liftFrac * liftFrac * 34;
+  const wobbleDecay = Math.max(0, 1 - liftFrac);
+  _v1.copy(world.padDir).multiplyScalar(PLANET_R + 0.3 + dist);
+  _v1.addScaledVector(_launchTangentA, Math.sin(t * 5) * 0.12 * wobbleDecay);
+  _v1.addScaledVector(_launchTangentB, Math.cos(t * 4) * 0.08 * wobbleDecay);
+  shipGroup.position.copy(_v1);
+
+  // Blinking nav light, driven purely by elapsed launch time (allocation-free).
+  navLightMesh.visible = Math.floor(t / 0.35) % 2 === 0;
+
+  // Fade to white over the last 2s, then reveal the victory screen.
+  if (t >= 6) {
+    const fadeT = Math.min((t - 6) / 2, 1);
+    document.getElementById('launch-fade').style.opacity = String(fadeT);
+  }
+  if (t >= LAUNCH_DURATION) showVictory();
+}
+
+function showVictory() {
+  G.state = 'victory';
+  const fade = document.getElementById('launch-fade');
+  fade.style.transition = 'opacity 1s ease';
+  fade.style.opacity = '0'; // white flash eases back out, revealing the victory overlay beneath
+
+  document.getElementById('victory-stats').innerHTML =
+    'Days survived: ' + (G.day || 1) + '<br>' +
+    'Total money earned: ' + G.stats.earned + ' 🪙<br>' +
+    'Aliens defeated: ' + G.stats.kills + '<br>' +
+    'Harvests: ' + G.stats.harvests;
+
+  document.getElementById('victory-screen').style.display = 'flex';
 }
 
 function setupShopUI() {
   document.getElementById('shop-close-btn').addEventListener('click', closeShop);
   document.querySelectorAll('.shop-tab').forEach((btn) => {
     btn.addEventListener('click', () => renderShopTab(btn.dataset.tab));
+  });
+}
+
+function setupVictoryUI() {
+  document.getElementById('victory-replay-btn').addEventListener('click', () => {
+    location.reload(); // Task 10 replaces with resetGame()
   });
 }
 
@@ -1141,16 +1374,18 @@ function boot() {
   world.planet.userData.pick = { kind: 'space' };
   pickables.push(world.planet, world.doorMesh);
   buildPlots();
+  buildShip();
   updateHUD();
   updateSeedBar();
   setupShopUI();
+  setupVictoryUI();
   G.state = 'playing'; // TEMP: until Task 10 start screen
   let last = performance.now();
   (function loop(now) {
     requestAnimationFrame(loop);
     const dt = Math.min((now - last) / 1000, 0.05); last = now;
     if (G.state === 'playing' || G.state === 'shop') update(dt);
-    render();
+    render(dt);
   })(performance.now());
 }
 
@@ -1161,7 +1396,11 @@ function update(dt) {
   updatePlots(dt);
 }
 
-function render() {
+// Launch is driven from here (rather than a gate in update()/the loop) since it needs to run
+// every frame while G.state === 'launch', a state the loop deliberately excludes from update()
+// so player input and updateCamera stay frozen during the cinematic.
+function render(dt) {
+  if (G.state === 'launch') updateLaunch(dt);
   renderer.render(scene, camera);
 }
 
