@@ -296,6 +296,153 @@ function buildWorld() {
   buildStarfield();
 }
 
+// ===== Player: mesh, local frame, surface movement =====
+let player;
+const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q1 = new THREE.Quaternion();
+function playerUp(out)      { return out.set(0, 1, 0).applyQuaternion(player.q); }
+function playerForward(out) { return out.set(0, 0, 1).applyQuaternion(player.q); }
+
+function buildPlayerMesh() {
+  const group = new THREE.Group();
+
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.35, 0.35, 0.9, 12),
+    new THREE.MeshLambertMaterial({ color: 0xffffff })
+  );
+  body.position.y = 0.9;
+  group.add(body);
+
+  const helmet = new THREE.Mesh(
+    new THREE.SphereGeometry(0.32, 16, 12),
+    new THREE.MeshPhongMaterial({ color: 0xaee0ff, transparent: true, opacity: 0.75, shininess: 90 })
+  );
+  helmet.position.y = 1.5;
+  group.add(helmet);
+
+  const backpack = new THREE.Mesh(
+    new THREE.BoxGeometry(0.3, 0.45, 0.2),
+    new THREE.MeshLambertMaterial({ color: 0xdd8833 })
+  );
+  backpack.position.set(0, 0.95, -0.3);
+  group.add(backpack);
+
+  const legGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.55, 8);
+  const legMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+  const legL = new THREE.Mesh(legGeo, legMat);
+  legL.position.set(-0.15, 0.275, 0);
+  group.add(legL);
+  const legR = new THREE.Mesh(legGeo, legMat);
+  legR.position.set(0.15, 0.275, 0);
+  group.add(legR);
+
+  return group;
+}
+
+function movePlayerToDir(dir) {
+  player.q.setFromUnitVectors(_Y, _v1.copy(dir).normalize());
+  player.pos.set(0, 1, 0).applyQuaternion(player.q).multiplyScalar(PLANET_R);
+  player.mesh.position.copy(player.pos);
+  player.mesh.quaternion.copy(player.q);
+}
+
+function buildPlayer() {
+  player = {
+    q: new THREE.Quaternion(),
+    pos: new THREE.Vector3(),
+    mesh: buildPlayerMesh(),
+    hp: 100,
+    maxHp: 100,
+    speed: 6,
+    lastHurt: 0,
+  };
+  player.q.setFromUnitVectors(_Y, world.houseDoorDir);
+  // Rotate slightly around the local up axis so the spawn facing isn't the raw
+  // minimal-rotation twist (purely aesthetic framing for the initial view).
+  player.q.premultiply(_q1.setFromAxisAngle(playerUp(_v1), 0.3));
+  scene.add(player.mesh);
+}
+
+const TURN_SPEED = 2.6; // rad/s
+let _walkT = 0;
+function updatePlayer(dt) {
+  const turn = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+  const fwd  = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
+  if (turn) player.q.premultiply(_q1.setFromAxisAngle(playerUp(_v1), -turn * TURN_SPEED * dt));
+  if (fwd) {
+    const right = _v1.set(1, 0, 0).applyQuaternion(player.q);
+    player.q.premultiply(_q1.setFromAxisAngle(right, fwd * (player.speed * dt) / PLANET_R));
+  }
+  player.pos.set(0, 1, 0).applyQuaternion(player.q).multiplyScalar(PLANET_R);
+  player.mesh.position.copy(player.pos);
+  player.mesh.quaternion.copy(player.q);
+
+  // Simple walk-cycle bob while moving.
+  if (fwd || turn) {
+    _walkT += dt;
+    const bob = 0.06 * Math.sin(_walkT * 10);
+    player.mesh.position.addScaledVector(playerUp(_v2), bob);
+  }
+}
+
+function stepOnSphere(q, targetDir, speed, dt) { // shared with alien walkers
+  const up = _v1.set(0, 1, 0).applyQuaternion(q);
+  const axis = _v2.crossVectors(up, targetDir);
+  if (axis.lengthSq() < 1e-8) return;
+  axis.normalize();
+  const step = Math.min(speed * dt / PLANET_R, up.angleTo(targetDir));
+  q.premultiply(_q1.setFromAxisAngle(axis, step));
+}
+
+// ===== Camera: third-person follow + right-drag orbit =====
+const cam = { yaw: 0, pitch: 0.35, dragging: false };
+const CAM_DIST = 7, CAM_HEIGHT = 3.2;
+function updateCamera(dt) {
+  // Reuses module-scope _v1 (up) / _v2 (fwd -> offset -> ideal) instead of the
+  // brief's per-frame `new THREE.Vector3()` / `.clone()` calls, per the 60fps
+  // "reuse temp vectors" constraint; math is otherwise identical to the brief.
+  const up = playerUp(_v1);
+  const fwd = playerForward(_v2);
+  fwd.multiplyScalar(-CAM_DIST).addScaledVector(up, CAM_HEIGHT + CAM_DIST * cam.pitch);
+  fwd.applyAxisAngle(up, cam.yaw); // fwd is now the camera offset
+  fwd.add(player.pos); // fwd is now the ideal camera position
+  camera.position.lerp(fwd, 1 - Math.pow(0.0001, dt));
+  camera.up.copy(up);
+  up.multiplyScalar(1.5).add(player.pos); // up is now the lookAt target
+  camera.lookAt(up);
+
+  if (!cam.dragging && cam.yaw !== 0) {
+    const ease = 3 * dt; // rad/s back to 0
+    if (Math.abs(cam.yaw) <= ease) cam.yaw = 0;
+    else cam.yaw -= Math.sign(cam.yaw) * ease;
+  }
+}
+
+// ===== Input: keyboard movement map + right-drag orbit =====
+const keys = {};
+window.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  keys[e.code] = true;
+});
+window.addEventListener('keyup', (e) => {
+  keys[e.code] = false;
+});
+
+window.addEventListener('contextmenu', (e) => e.preventDefault());
+window.addEventListener('mousedown', (e) => {
+  if (e.button === 2) cam.dragging = true;
+});
+window.addEventListener('mouseup', (e) => {
+  if (e.button === 2) cam.dragging = false;
+});
+window.addEventListener('mousemove', (e) => {
+  if (!cam.dragging) return;
+  const ORBIT_SPEED = 0.005;
+  cam.yaw -= e.movementX * ORBIT_SPEED;
+  cam.yaw = Math.max(-Math.PI, Math.min(Math.PI, cam.yaw));
+  cam.pitch -= e.movementY * ORBIT_SPEED;
+  cam.pitch = Math.max(0.05, Math.min(0.9, cam.pitch));
+});
+
 function boot() {
   G.state = 'menu';
   renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -308,6 +455,8 @@ function boot() {
   camera.position.set(0, PLANET_R + 8, PLANET_R + 14);
   camera.lookAt(0, PLANET_R, 0);
   buildWorld();
+  buildPlayer();
+  G.state = 'playing'; // TEMP: until Task 10 start screen
   let last = performance.now();
   (function loop(now) {
     requestAnimationFrame(loop);
@@ -319,6 +468,8 @@ function boot() {
 
 // Populated by later tasks (crops, enemies, ship, etc.).
 function update(dt) {
+  updatePlayer(dt);
+  updateCamera(dt);
 }
 
 function render() {
