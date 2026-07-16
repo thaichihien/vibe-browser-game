@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Galaxy Farmer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+<style>
+  :root {
+    --accent: #6ee7a0;
+    --money: #ffd76a;
+    --hp: #ff5c6a;
+    --ui-bg: rgba(8, 12, 20, .78);
+    --ui-border: rgba(110, 231, 160, .35);
+    --text: #e8f5ec;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0f1e; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; color: var(--text); user-select: none; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* ===== Overlays (hidden by default) ===== */
+  .overlay {
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center; flex-direction: column;
+    background: radial-gradient(ellipse at center, rgba(10, 20, 16, 0.88) 0%, rgba(3, 6, 10, 0.96) 100%);
+    z-index: 20; text-align: center;
+  }
+  #start-screen { display: flex; } /* game boots into G.state === 'menu' */
+  #no-internet { z-index: 30; }
+  #no-internet h2 { color: var(--accent); margin-bottom: 12px; }
+
+  .overlay h1, .overlay h2 { color: var(--accent); text-shadow: 0 0 18px var(--accent); letter-spacing: 4px; margin-bottom: 16px; }
+
+  /* ===== HUD skeleton ===== */
+  #hud {
+    position: fixed; inset: 0; z-index: 10; pointer-events: none;
+  }
+  #money, #hp-bar, #day-info, #seed-bar {
+    position: absolute; pointer-events: none;
+    background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 8px;
+  }
+  #money { top: 14px; left: 14px; padding: 6px 14px; color: var(--money); }
+  #hp-bar { top: 14px; right: 14px; padding: 6px 14px; color: var(--hp); }
+  #day-info { top: 14px; left: 50%; transform: translateX(-50%); padding: 6px 14px; }
+  #seed-bar { bottom: 14px; left: 50%; transform: translateX(-50%); padding: 6px 14px; }
+  #toast {
+    position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
+    pointer-events: none;
+  }
+  #banner {
+    position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+    pointer-events: none; font-size: 28px; letter-spacing: 3px; color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<div id="start-screen" class="overlay">
+  <h1>GALAXY FARMER</h1>
+</div>
+<div id="pause-screen" class="overlay">
+  <h2>PAUSED</h2>
+</div>
+<div id="help-panel" class="overlay">
+  <h2>HELP</h2>
+</div>
+<div id="victory-screen" class="overlay">
+  <h2>VICTORY</h2>
+</div>
+<div id="downed-screen" class="overlay">
+  <h2>DOWNED</h2>
+</div>
+<div id="shop-panel" class="overlay">
+  <h2>SHOP</h2>
+</div>
+<div id="no-internet" class="overlay">
+  <h2>🚀 Galaxy Farmer needs an internet connection</h2>
+  <p>The 3D engine (Three.js) could not be loaded. Check your connection and reload the page.</p>
+</div>
+
+<div id="hud">
+  <div id="money"></div>
+  <div id="hp-bar"></div>
+  <div id="day-info"></div>
+  <div id="seed-bar"></div>
+  <div id="toast"></div>
+  <div id="banner"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+
+// ===== Game namespace & globals =====
+const G = {}; // G.state: 'menu' | 'playing' | 'shop' | 'paused' | 'downed' | 'launch' | 'victory'
+let scene, camera, renderer;
+const PLANET_R = 20;
+
+function boot() {
+  G.state = 'menu';
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  document.body.prepend(renderer.domElement);
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0f1e);
+  camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 500);
+  camera.position.set(0, PLANET_R + 8, PLANET_R + 14);
+  camera.lookAt(0, PLANET_R, 0);
+  let last = performance.now();
+  (function loop(now) {
+    requestAnimationFrame(loop);
+    const dt = Math.min((now - last) / 1000, 0.05); last = now;
+    if (G.state === 'playing' || G.state === 'shop') update(dt);
+    render();
+  })(performance.now());
+}
+
+// Populated by later tasks (crops, enemies, ship, etc.).
+function update(dt) {
+}
+
+function render() {
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  if (!renderer || !camera) return;
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof THREE === 'undefined') {
+    document.getElementById('no-internet').style.display = 'flex';
+    return; // boot() never runs
+  }
+  boot();
+});
+</script>
+</body>
+</html>
