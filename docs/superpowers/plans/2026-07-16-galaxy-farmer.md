@@ -13,7 +13,7 @@
 - Everything lives in ONE file: `games/galaxy-farmer.html` (spec: single HTML file).
 - No build step, no npm; the only external resource is the Three.js CDN script.
 - If Three.js fails to load, show a friendly "This game needs an internet connection" overlay, never a blank page (spec: error handling).
-- Planet radius `PLANET_R = 20`. World space is fixed; the player orbits the sphere (spec: player-orbits approach).
+- Planet radius `PLANET_R = 14` (reduced from 20 at the user's request after milestone playtest 1; farm dirt patch threshold is now dot > 0.88, decoration exclusion 0.86/0.93). World space is fixed; the player orbits the sphere (spec: player-orbits approach).
 - Day/night is cosmetic only — no gameplay values change with time of day (spec).
 - Death is forgiving: respawn at house, lose 10% of money; crops, inventory, upgrades, ship parts never lost (spec).
 - Target 60fps on a mid-range laptop: shared geometries/materials, capped alive enemies (12), pooled bullets/particles, no shadow maps.
@@ -238,7 +238,7 @@ const CROPS = {
 
 - [ ] **Step 2: Plot meshes + states**
 
-12 plot dirs in a 4×3 fan around `world.houseDir` (offset the house dir by small tangent rotations, ~3.2u apart on the surface). Each plot Group: soil box 1.6×0.25×1.6 (locked = barely visible dark ring; untilled = grassy mound with a faint dashed ring + hovering `+` sprite; empty dry soil 0xa8845a; watered soil 0x6a4a30), plus crop mesh slot. Crop visuals per growth stage: sprout (<0.4: small green cone), mid (<1: taller cone + tinted sphere bud), ready (colored sphere/box sized by crop, slight emissive pulse). Dry planted crops show a 💧 sprite above. `userData.pick = { kind: 'plot', ref: plot }` on the group.
+12 plot dirs in a 4×3 fan around `world.houseDir` (offset the house dir by small tangent rotations, ~2.6u apart on the surface — planet radius is 14, keep the whole fan inside the dirt patch, dot > 0.88, without overlapping the house). Each plot Group: soil box 1.6×0.25×1.6 (locked = barely visible dark ring; untilled = grassy mound with a faint dashed ring + hovering `+` sprite; empty dry soil 0xa8845a; watered soil 0x6a4a30), plus crop mesh slot. Crop visuals per growth stage: sprout (<0.4: small green cone), mid (<1: taller cone + tinted sphere bud), ready (colored sphere/box sized by crop, slight emissive pulse). Dry planted crops show a 💧 sprite above. `userData.pick = { kind: 'plot', ref: plot }` on the group.
 
 `updatePlots(dt)`: for each growing plot, if `watered` advance `growth += dt / CROPS[cropId].growTime`; at `growth >= 0.5 && !redried` set `watered = false, redried = true` (needs one more watering); at `growth >= 1` state = `'ready'`. Rebuild/swap stage mesh when stage changes.
 
