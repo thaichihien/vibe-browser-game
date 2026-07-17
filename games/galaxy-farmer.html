@@ -652,7 +652,10 @@ function makeRingGeometry(radius, segments) {
     pts.push(new THREE.Vector3(Math.cos(a) * radius, 0.02, Math.sin(a) * radius));
   }
   const geo = new THREE.BufferGeometry().setFromPoints(pts);
-  geo.computeLineDistances(); // harmless for the LineBasicMaterial ring; required for the dashed one
+  // r128: computeLineDistances() lives on THREE.Line, not BufferGeometry. The dashed
+  // material needs the lineDistance attribute, so compute it via a throwaway Line
+  // (writes the attribute onto this shared geometry).
+  new THREE.Line(geo).computeLineDistances();
   return geo;
 }
 const plotRingGeo = makeRingGeometry(0.9, 24);
