@@ -92,8 +92,16 @@
     pointer-events: none;
   }
   #banner {
-    position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
-    pointer-events: none; font-size: 28px; letter-spacing: 3px; color: var(--accent);
+    position: absolute; top: 64px; left: 50%;
+    pointer-events: none; font-size: 20px; letter-spacing: 1.5px; color: var(--accent);
+    background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 10px;
+    padding: 10px 24px; white-space: nowrap; text-align: center;
+    transform: translate(-50%, -140%); opacity: 0;
+    transition: transform 0.45s cubic-bezier(.2, .85, .25, 1), opacity 0.35s ease;
+  }
+  #banner.show {
+    transform: translate(-50%, 0);
+    opacity: 1;
   }
 
   /* ===== Farming HUD: seed bar + toast ===== */
@@ -402,6 +410,137 @@ function buildWorld() {
   buildStarfield();
 }
 
+// ===== Particles: pooled burst emitter (Task 9) =====
+// ONE shared THREE.Points draw call, cap 1000. Particles recycle round-robin (allocation-
+// free per frame): burst() just overwrites the next slot in the ring regardless of whether
+// it was still alive, and updateParticles() writes position/color into the shared typed
+// arrays every frame. PointsMaterial has no per-particle alpha or size in r128 (size is a
+// single uniform for the whole system), so fade-out is done via per-vertex COLOR DARKENING
+// (rgb *= remaining-life fraction) rather than size shrink -- additive blending then makes
+// fully-decayed (black) particles draw as invisible.
+const PARTICLE_CAP = 1000;
+const particlePool = [];
+let particlePoints, particlePosAttr, particleColorAttr;
+let _particleCursor = 0;
+const _particleColorTmp = new THREE.Color();
+const _burstV1 = new THREE.Vector3(); // shared temp for computing burst() call-site positions
+
+function buildParticles() {
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(PARTICLE_CAP * 3);
+  const colors = new Float32Array(PARTICLE_CAP * 3);
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  particlePosAttr = geo.attributes.position;
+  particleColorAttr = geo.attributes.color;
+  const mat = new THREE.PointsMaterial({
+    size: 0.16, vertexColors: true, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+  });
+  particlePoints = new THREE.Points(geo, mat);
+  scene.add(particlePoints);
+  for (let i = 0; i < PARTICLE_CAP; i++) {
+    particlePool.push({ active: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 0, maxLife: 1, r: 0, g: 0, b: 0 });
+  }
+}
+
+// Spawns `count` particles at pos with a small random outward burst velocity. Called from
+// rare/discrete events (bullet impacts, deaths, harvest, etc.) so the Vector3 reads here are
+// fine; the recycling loop itself never allocates.
+function burst(pos, color, count) {
+  _particleColorTmp.set(color);
+  for (let i = 0; i < count; i++) {
+    const p = particlePool[_particleCursor];
+    _particleCursor = (_particleCursor + 1) % PARTICLE_CAP;
+    p.active = true;
+    p.x = pos.x; p.y = pos.y; p.z = pos.z;
+    const speed = 1.5 + Math.random() * 3;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(Math.random() * 2 - 1);
+    const sinPhi = Math.sin(phi);
+    p.vx = sinPhi * Math.cos(theta) * speed;
+    p.vy = sinPhi * Math.sin(theta) * speed;
+    p.vz = Math.cos(phi) * speed;
+    p.life = 0.35 + Math.random() * 0.45;
+    p.maxLife = p.life;
+    p.r = _particleColorTmp.r; p.g = _particleColorTmp.g; p.b = _particleColorTmp.b;
+  }
+}
+
+// Per-frame, allocation-free: walks the fixed-size pool, integrates active particles, and
+// darkens color toward black as life runs out (see fade-strategy note above).
+function updateParticles(dt) {
+  for (let i = 0; i < PARTICLE_CAP; i++) {
+    const p = particlePool[i];
+    if (!p.active) continue;
+    const idx = i * 3;
+    p.life -= dt;
+    if (p.life <= 0) {
+      p.active = false;
+      particleColorAttr.array[idx] = 0; particleColorAttr.array[idx + 1] = 0; particleColorAttr.array[idx + 2] = 0;
+      continue;
+    }
+    p.vy -= 4 * dt; // gentle gravity
+    p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+    const frac = p.life / p.maxLife;
+    particlePosAttr.array[idx] = p.x; particlePosAttr.array[idx + 1] = p.y; particlePosAttr.array[idx + 2] = p.z;
+    particleColorAttr.array[idx] = p.r * frac; particleColorAttr.array[idx + 1] = p.g * frac; particleColorAttr.array[idx + 2] = p.b * frac;
+  }
+  particlePosAttr.needsUpdate = true;
+  particleColorAttr.needsUpdate = true;
+}
+
+// ===== Day/night cycle (Task 9) =====
+// Cosmetic only -- nothing gameplay-relevant reads G.tod. Sun and moon orbit the planet on
+// opposite sides of a great circle whose axis is tilted ~25° off world-up; the tilt basis
+// (_dnAxis/_dnE1/_dnE2) is computed once here since it's constant, so the per-frame update
+// only ever mutates the shared _dnSunDir temp.
+const DAY_NIGHT_CYCLE = 150; // seconds for a full day+night loop
+const DAYNIGHT_TILT = 25 * Math.PI / 180;
+const _dnAxis = new THREE.Vector3(Math.sin(DAYNIGHT_TILT), Math.cos(DAYNIGHT_TILT), 0).normalize();
+const _dnE1 = new THREE.Vector3(_dnAxis.y, -_dnAxis.x, 0).normalize();
+const _dnE2 = new THREE.Vector3().crossVectors(_dnAxis, _dnE1).normalize();
+const _dnSunDir = new THREE.Vector3();
+const SUN_ORBIT_DIST = 80, MOON_ORBIT_DIST = 80;
+const BG_NIGHT = new THREE.Color(0x0a0f1e), BG_DAY = new THREE.Color(0x16294a);
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function smoothstep(x, e0, e1) {
+  const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
+  return t * t * (3 - 2 * t);
+}
+
+let _hudDay = null, _hudPhase = null;
+function updateDayInfo() {
+  const phase = G.tod < 0.5 ? '☀️' : '🌙';
+  if (G.day !== _hudDay || phase !== _hudPhase) {
+    _hudDay = G.day; _hudPhase = phase;
+    document.getElementById('day-info').textContent = 'Day ' + G.day + ' ' + phase;
+  }
+}
+
+function updateDayNight(dt) {
+  G.tod += dt / DAY_NIGHT_CYCLE;
+  if (G.tod >= 1) { G.tod -= 1; G.day++; }
+
+  const phi = G.tod * Math.PI * 2;
+  _dnSunDir.copy(_dnE1).multiplyScalar(Math.cos(phi)).addScaledVector(_dnE2, Math.sin(phi));
+  sunLight.position.copy(_dnSunDir).multiplyScalar(SUN_ORBIT_DIST);
+  moonLight.position.copy(_dnSunDir).multiplyScalar(-MOON_ORBIT_DIST);
+
+  const dayFactor = smoothstep(_dnSunDir.y, -0.12, 0.12); // 0 = full night, 1 = full day
+
+  scene.background.lerpColors(BG_NIGHT, BG_DAY, dayFactor);
+  ambient.intensity = lerp(0.35, 0.7, dayFactor);
+  sunLight.intensity = lerp(0, 1.1, dayFactor);
+  moonLight.intensity = lerp(0.25, 0, dayFactor);
+  starfield.material.opacity = lerp(1, 0.35, dayFactor);
+  houseLamp.intensity = lerp(1.2, 0, dayFactor);
+  houseWindowMat.emissiveIntensity = lerp(0.9, 0, dayFactor);
+
+  updateDayInfo();
+}
+
 // ===== Player: mesh, local frame, surface movement =====
 let player;
 const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q1 = new THREE.Quaternion();
@@ -584,6 +723,8 @@ const SHIP_PARTS = [
 
 G.money = 20;
 G.time = 0; // seconds of elapsed 'playing'/'shop' time (advanced in update()); combat regen/cooldowns key off this
+G.tod = 0; // 0-1 fraction through the current 150s day/night cycle; 0-0.5 day, 0.5-1 night. Cosmetic only.
+G.day = 1; // increments each time G.tod wraps past 1
 G.selectedSeed = 'wheat';
 G.stats = { harvests: 0, kills: 0, earned: 0 };
 G.upgrades = { gunDmg: 0, gunRate: 0, boots: 0, field: 0, sprinkler: false };
@@ -602,7 +743,6 @@ function updateHUD() {
   document.getElementById('hp-bar').innerHTML =
     '<div class="hp-track"><div class="hp-fill" style="width:' + hpPct + '%"></div></div>' +
     '<div class="hp-label">' + Math.ceil(player.hp) + ' / ' + player.maxHp + ' HP</div>';
-  document.getElementById('day-info').textContent = 'Day 1 ☀️';
 }
 function earn(n) {
   G.money += n;
@@ -625,14 +765,14 @@ function toast(msg) {
   _toastTimer = setTimeout(() => { el.style.opacity = '0'; }, 2000);
 }
 
-// Simple banner: sets #banner text and hides it after 3s. Task 9 adds real styling/animation.
+// Banner: slides in top-center (CSS .show class), auto-hides after 3s.
 let _bannerTimer = null;
 function showBanner(text) {
   const el = document.getElementById('banner');
   el.textContent = text;
-  el.style.display = 'block';
+  el.classList.add('show');
   clearTimeout(_bannerTimer);
-  _bannerTimer = setTimeout(() => { el.style.display = 'none'; }, 3000);
+  _bannerTimer = setTimeout(() => { el.classList.remove('show'); }, 3000);
 }
 
 function updateSeedBar() {
@@ -912,12 +1052,15 @@ function interactPlot(plot) {
       }
       break;
     case 'growing':
-      if (!plot.watered) plot.watered = true; // soil darkens next updatePlotVisual pass
-      else toast('Growing…');
+      if (!plot.watered) {
+        plot.watered = true; // soil darkens next updatePlotVisual pass
+        burst(_burstV1.copy(plot.dir).multiplyScalar(PLANET_R + 0.3), 0x6ecbff, 14);
+      } else toast('Growing…');
       break;
     case 'ready':
       inventory.produce[plot.cropId]++; // harvest touches produce only; seed bar unaffected
       G.stats.harvests++;
+      burst(_burstV1.copy(plot.dir).multiplyScalar(PLANET_R + 0.4), CROPS[plot.cropId].color, 20);
       plot.state = 'empty';
       plot.cropId = null;
       plot.growth = 0;
@@ -1184,6 +1327,7 @@ const _launchTangentA = new THREE.Vector3();
 const _launchTangentB = new THREE.Vector3();
 const _launchCamTarget = new THREE.Vector3();
 const LAUNCH_DURATION = 8; // seconds, per brief's "~8s scripted"
+let _launchPuffAcc = 0; // accumulator driving periodic burst() puffs under the exhaust
 
 function addPartMesh(group, mesh) {
   mesh.userData.origMat = mesh.material; // remembered so ghost mode can be swapped back to 'solid'
@@ -1329,6 +1473,7 @@ function startLaunchSequence() {
   if (_launchTangentA.lengthSq() < 1e-6) _launchTangentA.set(1, 0, 0).cross(world.padDir);
   _launchTangentA.normalize();
   _launchTangentB.crossVectors(world.padDir, _launchTangentA).normalize();
+  _launchPuffAcc = 0;
 
   const padPos = _v1.copy(world.padDir).multiplyScalar(PLANET_R + 0.3);
   _launchCamTarget.copy(padPos)
@@ -1362,6 +1507,14 @@ function updateLaunch(dt) {
   _v1.addScaledVector(_launchTangentA, Math.sin(t * 5) * 0.12 * wobbleDecay);
   _v1.addScaledVector(_launchTangentB, Math.cos(t * 4) * 0.08 * wobbleDecay);
   shipGroup.position.copy(_v1);
+
+  // Liftoff exhaust puffs: periodic burst() under the engines (the exhaust cone itself
+  // stays, per brief — this just adds particle polish alongside it).
+  _launchPuffAcc += dt;
+  if (_launchPuffAcc >= 0.12) {
+    _launchPuffAcc -= 0.12;
+    burst(_burstV1.copy(shipGroup.position).addScaledVector(world.padDir, -0.4), 0xffaa33, 12);
+  }
 
   // Blinking nav light, driven purely by elapsed launch time (allocation-free).
   navLightMesh.visible = Math.floor(t / 0.35) % 2 === 0;
@@ -1466,33 +1619,10 @@ function updateMuzzleFlash(dt) {
   }
 }
 
-// Hit spark: single shared scale-pulse sprite reused across hits (surface or enemy).
-// Minimal placeholder — Task 9's particle system replaces this with real polish.
-const HIT_SPARK_DURATION = 0.15;
-const hitSparkMat = new THREE.SpriteMaterial({ map: makeGlowTexture('rgba(255,255,255,1)'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 });
-const hitSparkMesh = new THREE.Sprite(hitSparkMat);
-hitSparkMesh.visible = false;
-let _hitSparkT = -1;
-
+// Hit spark: delegates to the pooled burst() particle system (Task 9) instead of the old
+// single shared sprite — lets multiple simultaneous hits each show their own spark.
 function spawnHitSpark(pos) {
-  hitSparkMesh.position.copy(pos);
-  hitSparkMesh.scale.set(0.05, 0.05, 1);
-  hitSparkMesh.visible = true;
-  hitSparkMat.opacity = 1;
-  _hitSparkT = 0;
-}
-function updateHitSpark(dt) {
-  if (_hitSparkT < 0) return;
-  _hitSparkT += dt;
-  const t = _hitSparkT / HIT_SPARK_DURATION;
-  if (t >= 1) {
-    hitSparkMesh.visible = false;
-    _hitSparkT = -1;
-    return;
-  }
-  const s = 0.05 + t * 0.35;
-  hitSparkMesh.scale.set(s, s, 1);
-  hitSparkMat.opacity = 1 - t;
+  burst(pos, 0xd8ffe0, 9);
 }
 
 function buildCombat() {
@@ -1511,7 +1641,6 @@ function buildCombat() {
     });
   }
   scene.add(muzzleFlashMesh);
-  scene.add(hitSparkMesh);
 }
 
 function findFreeBullet() {
@@ -1559,7 +1688,6 @@ function shootAt(point) {
 function updateBullets(dt) {
   _gunCooldownT = Math.max(0, _gunCooldownT - dt);
   updateMuzzleFlash(dt);
-  updateHitSpark(dt);
   // Hostile bullets test against this hurt-box center (player's chest).
   _combatV1.copy(player.pos).addScaledVector(playerUp(_combatV2), 0.75);
 
@@ -1587,7 +1715,13 @@ function updateBullets(dt) {
         deactivateBullet(b);
       }
     } else {
-      // Task 9 adds here: sphere test vs starEvent's falling star (same pattern as enemies).
+      // Star event: friendly bullets can burst the shooting star, same sphere-test pattern
+      // as enemies below. All clicks shoot now, so no pick routing is needed for this.
+      if (star && b.pos.distanceTo(star.pos) < star.radius + 0.12) {
+        burstStar();
+        deactivateBullet(b);
+        continue;
+      }
       for (let j = 0; j < enemies.length; j++) {
         const en = enemies[j];
         if (!en.alive) continue;
@@ -2056,13 +2190,18 @@ function removeAlienFromWorld(alien) {
   const ei = enemies.indexOf(alien);
   if (ei !== -1) enemies.splice(ei, 1);
 }
+// Per-variant death burst accent colors (mirrors each alien's primary body material hue).
+const ALIEN_DEATH_COLOR = {
+  grunt: 0x3fae5c, hopper: 0xe8d94a, raider: 0x8a4ae0, spitter: 0x7a8a3a,
+  brute: 0xb8342a, shieldbearer: 0x3a6ae0, summoner: 0xe86ad0, ufo: 0x88ccff,
+};
 function killAlien(alien) {
   if (!alien.alive) return;
   dropCoins(alien.pos, alien.def.coins);
   if (alien.type === 'raider' && alien.carrying) {
     dropProducePickup(alien.pos, alien.carrying);
   }
-  spawnHitSpark(alien.pos);
+  burst(alien.pos, ALIEN_DEATH_COLOR[alien.type] || 0x6ee7a0, 26);
   G.stats.kills++;
   removeAlienFromWorld(alien);
 }
@@ -2213,7 +2352,10 @@ function updateBrute(alien, dt) {
     alien.windupT -= dt;
     if (alien.windupT <= 0) {
       const plot = alien.targetPlot;
-      if (plot && (plot.state === 'growing' || plot.state === 'ready')) resetPlotToEmpty(plot);
+      if (plot && (plot.state === 'growing' || plot.state === 'ready')) {
+        resetPlotToEmpty(plot);
+        burst(_burstV1.copy(plot.dir).multiplyScalar(PLANET_R + 0.4), 0xffb060, 24);
+      }
       alien.targetPlot = null;
       alien.state = 'walk';
     }
@@ -2394,6 +2536,132 @@ function updateRaidDirector(dt) {
   }
 }
 
+// ===== Star event: periodic shootable shooting star (Task 9) =====
+// A single active `star` (or null) — no pick routing needed since all clicks already shoot;
+// the marked comment in updateBullets does a plain sphere test against star.pos, same as
+// enemies. Spawn/despawn are rare, so they allocate freely per codebase convention (see
+// spawnAlien/dropCoins); the per-frame tick (updateStarEvent) only mutates existing fields.
+const STAR_ORBIT_R = 30;
+const STAR_DURATION = 15;
+const STAR_HIT_RADIUS = 1.2;
+let star = null; // { t, startDir, axis, totalAngle, pos, radius }
+let starNextT = 100 + Math.random() * 80;
+const _starV1 = new THREE.Vector3();
+
+const starGlowMat = new THREE.SpriteMaterial({ map: makeGlowTexture('rgba(255,250,200,1)'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+const starMesh = new THREE.Sprite(starGlowMat);
+starMesh.scale.set(1.6, 1.6, 1);
+starMesh.visible = false;
+const starLight = new THREE.PointLight(0xfff6c0, 0, 20);
+
+function buildStarEvent() {
+  scene.add(starMesh);
+  scene.add(starLight);
+}
+
+// Random direction well above the horizon, so the star's arc reads as "across the sky".
+function randomSkyDir(out) {
+  const theta = Math.random() * Math.PI * 2;
+  const elevation = 0.3 + Math.random() * 0.9; // radians above horizon
+  const y = Math.sin(elevation), r = Math.cos(elevation);
+  return out.set(r * Math.cos(theta), y, r * Math.sin(theta));
+}
+
+function spawnStar() {
+  const start = randomSkyDir(new THREE.Vector3());
+  const end = randomSkyDir(new THREE.Vector3());
+  const axis = new THREE.Vector3().crossVectors(start, end);
+  if (axis.lengthSq() < 1e-6) axis.set(0, 1, 0).cross(start).normalize();
+  else axis.normalize();
+  star = {
+    t: 0,
+    startDir: start, axis, totalAngle: start.angleTo(end),
+    pos: start.clone().multiplyScalar(STAR_ORBIT_R),
+    radius: STAR_HIT_RADIUS,
+  };
+  starMesh.position.copy(star.pos);
+  starMesh.visible = true;
+  starMesh.material.opacity = 0;
+  starLight.position.copy(star.pos);
+  starLight.intensity = 0;
+  showBanner('💫 A shooting star!');
+}
+
+function updateStarEvent(dt) {
+  if (G.state !== 'playing') return;
+  if (!star) {
+    starNextT -= dt;
+    if (starNextT <= 0) spawnStar();
+    return;
+  }
+
+  star.t += dt;
+  _starV1.copy(star.startDir).applyAxisAngle(star.axis, star.totalAngle * Math.min(star.t / STAR_DURATION, 1)).multiplyScalar(STAR_ORBIT_R);
+  star.pos.copy(_starV1);
+  starMesh.position.copy(star.pos);
+  starLight.position.copy(star.pos);
+
+  // Fade envelope: ease in over the first second, hold, ease out over the last 2s; a soft
+  // twinkle (sine pulse) rides on top while visible.
+  const fadeIn = Math.min(star.t / 1, 1);
+  const fadeOut = Math.min((STAR_DURATION - star.t) / 2, 1);
+  const envelope = Math.max(0, Math.min(fadeIn, fadeOut));
+  const twinkle = 0.85 + 0.15 * Math.sin(star.t * 9);
+  starMesh.material.opacity = envelope * twinkle;
+  const scale = 1.6 * (0.85 + 0.15 * envelope);
+  starMesh.scale.set(scale, scale, 1);
+  starLight.intensity = envelope * 1.5;
+
+  if (star.t >= STAR_DURATION) despawnStar(); // ignored — fades out and despawns
+}
+
+function burstStar() {
+  if (!star) return;
+  burst(star.pos, 0xfff6c0, 46);
+  dropStarLoot(star.pos);
+  despawnStar();
+}
+
+function despawnStar() {
+  star = null;
+  starMesh.visible = false;
+  starLight.intensity = 0;
+  starNextT = 100 + Math.random() * 80;
+}
+
+// 3 coin pickups (10-25 each) + 30% chance of a melon/pumpkin seed pickup, scattered on the
+// surface below the star — reuses dropCoins' surface-scatter geometry inline since dropCoins
+// itself groups coins by total value rather than guaranteeing an exact count.
+function dropStarLoot(pos) {
+  const baseDir = pos.clone().normalize();
+  const upHelper = Math.abs(baseDir.y) < 0.9 ? _Y : new THREE.Vector3(1, 0, 0);
+  for (let i = 0; i < 3; i++) {
+    const value = 10 + Math.floor(Math.random() * 16); // 10-25
+    const perp = new THREE.Vector3().crossVectors(baseDir, upHelper).normalize();
+    perp.applyAxisAngle(baseDir, Math.random() * Math.PI * 2);
+    const coinDir = baseDir.clone().applyAxisAngle(perp, (0.3 + Math.random() * 0.6) / PLANET_R).normalize();
+    const mesh = new THREE.Mesh(coinGeo, coinMat);
+    mesh.position.copy(coinDir).multiplyScalar(PLANET_R + 0.3);
+    scene.add(mesh);
+    pickups.push({ kind: 'coin', value, mesh, dir: coinDir });
+  }
+  if (Math.random() < 0.3) {
+    const seedId = Math.random() < 0.5 ? 'melon' : 'pumpkin';
+    dropSeedPickup(baseDir.clone().multiplyScalar(PLANET_R + 0.3), seedId);
+  }
+}
+
+function dropSeedPickup(pos, cropId) {
+  const dir = pos.clone().normalize();
+  const crop = CROPS[cropId];
+  const mat = new THREE.SpriteMaterial({ map: makeIconTexture(crop.icon, '#ffe873'), transparent: true, depthTest: false });
+  const mesh = new THREE.Sprite(mat);
+  mesh.scale.set(0.55, 0.55, 1);
+  mesh.position.copy(dir).multiplyScalar(PLANET_R + 0.3);
+  scene.add(mesh);
+  pickups.push({ kind: 'seed', id: cropId, mesh, dir });
+}
+
 // ----- Player HP: damage, regen, downed/respawn flow -----
 function flashHurtVignette() {
   const el = document.getElementById('hurt-vignette');
@@ -2507,6 +2775,7 @@ function boot() {
   camera.position.set(0, PLANET_R + 8, PLANET_R + 14);
   camera.lookAt(0, PLANET_R, 0);
   buildWorld();
+  buildParticles();
   buildPlayer();
   world.planet.userData.pick = { kind: 'space' };
   pickables.push(world.planet, world.doorMesh);
@@ -2514,7 +2783,9 @@ function boot() {
   scene.add(highlightRing);
   buildShip();
   buildCombat();
+  buildStarEvent();
   updateHUD();
+  updateDayInfo();
   updateSeedBar();
   setupShopUI();
   setupVictoryUI();
@@ -2532,6 +2803,7 @@ function boot() {
 // Populated by later tasks (crops, enemies, ship, etc.).
 function update(dt) {
   G.time += dt;
+  updateDayNight(dt);
   updatePlayer(dt);
   updateCamera(dt);
   updatePlots(dt);
@@ -2542,14 +2814,18 @@ function update(dt) {
   updatePickups(dt);
   updateTeleportFlashes(dt);
   updateRaidDirector(dt);
+  updateStarEvent(dt);
   updatePlayerRegen(dt);
 }
 
 // Launch is driven from here (rather than a gate in update()/the loop) since it needs to run
 // every frame while G.state === 'launch', a state the loop deliberately excludes from update()
-// so player input and updateCamera stay frozen during the cinematic.
+// so player input and updateCamera stay frozen during the cinematic. updateParticles also
+// lives here (not in update()) so launch's liftoff puffs keep animating/fading even though
+// update() itself doesn't run during 'launch'.
 function render(dt) {
   if (G.state === 'launch') updateLaunch(dt);
+  updateParticles(dt);
   renderer.render(scene, camera);
 }
 
