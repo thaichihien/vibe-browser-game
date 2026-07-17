@@ -1670,6 +1670,7 @@ function boot() {
   setupShopUI();
   setupVictoryUI();
   G.state = 'playing'; // TEMP: until Task 10 start screen
+  document.getElementById('start-screen').style.display = 'none'; // TEMP: Task 10 wires the real menu flow
   let last = performance.now();
   (function loop(now) {
     requestAnimationFrame(loop);
