@@ -973,7 +973,11 @@ function computePromptText(focus) {
 function updateFocusVisual() {
   if (G.focus) {
     const dir = G.focus.kind === 'door' ? world.houseDoorDir : G.focus.ref.dir;
-    placeOnSurface(highlightRing, dir);
+    // Per-frame path: dir is already unit-length (plot dirs and houseDoorDir are
+    // normalized at construction), so place directly instead of placeOnSurface,
+    // whose dir.clone() would allocate every frame.
+    highlightRing.position.copy(dir).multiplyScalar(PLANET_R);
+    highlightRing.quaternion.setFromUnitVectors(_Y, dir);
     highlightRing.visible = true;
     highlightRingMat.opacity = 0.5 + 0.3 * Math.sin(G.time * 4); // gentle pulse
   } else {
