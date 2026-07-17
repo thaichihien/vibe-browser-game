@@ -126,6 +126,14 @@
     padding: 10px 26px; border-radius: 8px; cursor: pointer; font-size: 15px; pointer-events: auto;
   }
   .victory-btn:hover { background: rgba(110, 231, 160, 0.3); }
+
+  /* ===== Hurt vignette: red flash pulse on damagePlayer() ===== */
+  #hurt-vignette {
+    position: fixed; inset: 0; z-index: 16; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(255, 60, 60, 0) 45%, rgba(255, 20, 20, 0.55) 100%);
+    opacity: 0;
+  }
+  #downed-screen p { margin-top: 4px; opacity: 0.85; }
 </style>
 </head>
 <body>
@@ -146,6 +154,7 @@
 </div>
 <div id="downed-screen" class="overlay">
   <h2>DOWNED</h2>
+  <p>You were knocked out&hellip; &minus;10% coins</p>
 </div>
 <div id="shop-panel" class="overlay">
   <div class="shop-box">
@@ -176,6 +185,7 @@
   <div id="banner"></div>
 </div>
 <div id="launch-fade"></div>
+<div id="hurt-vignette"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -567,6 +577,7 @@ const SHIP_PARTS = [
 ];
 
 G.money = 20;
+G.time = 0; // seconds of elapsed 'playing'/'shop' time (advanced in update()); combat regen/cooldowns key off this
 G.selectedSeed = 'wheat';
 G.stats = { harvests: 0, kills: 0, earned: 0 };
 G.upgrades = { gunDmg: 0, gunRate: 0, boots: 0, field: 0, sprinkler: false };
@@ -1295,6 +1306,268 @@ function setupVictoryUI() {
   });
 }
 
+// ===== Combat: raygun, bullet pool, player HP & respawn =====
+// Enemy shape expected by aim-assist / updateBullets (Task 8 must match this):
+//   { pos: THREE.Vector3, radius: number, alive: bool, hostileProjectile?: bool }
+const enemies = []; // empty until Task 8 populates it; bullets already collide against it
+
+function damageEnemy(enemy, n) {} // Task 8
+
+function gunStats() {
+  return {
+    damage: [10, 16, 24][G.upgrades.gunDmg],
+    cooldown: [0.35, 0.27, 0.2][G.upgrades.gunRate],
+  };
+}
+
+// ----- Bullet pool: 60 pooled meshes, pre-allocated once. One shared material for
+// friendly tracers, one for hostile (alien spitter) shots; pool entries are reused,
+// never reallocated, to keep updateBullets/shootAt allocation-free. -----
+const BULLET_COUNT = 60;
+const BULLET_SPEED = 45;
+const BULLET_LIFE = 2;
+const bulletGeo = new THREE.SphereGeometry(0.12, 8, 8);
+const bulletMat = new THREE.MeshBasicMaterial({ color: 0x8dffb0 });
+const hostileBulletMat = new THREE.MeshBasicMaterial({ color: 0xff5c6a });
+let bullets = [];
+
+function makeGlowTexture(color) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, color);
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(canvas);
+}
+
+// Muzzle flash: single shared additive sprite, fades over ~80ms. Restarting the
+// flash on rapid-fire simply resets its timer — acceptable per brief ("keep minimal").
+const MUZZLE_FLASH_DURATION = 0.08;
+const muzzleFlashMat = new THREE.SpriteMaterial({ map: makeGlowTexture('rgba(190,255,210,1)'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 });
+const muzzleFlashMesh = new THREE.Sprite(muzzleFlashMat);
+muzzleFlashMesh.scale.set(0.6, 0.6, 1);
+muzzleFlashMesh.visible = false;
+let _muzzleFlashT = -1;
+
+function spawnMuzzleFlash(pos) {
+  muzzleFlashMesh.position.copy(pos);
+  muzzleFlashMesh.visible = true;
+  muzzleFlashMat.opacity = 1;
+  _muzzleFlashT = 0;
+}
+function updateMuzzleFlash(dt) {
+  if (_muzzleFlashT < 0) return;
+  _muzzleFlashT += dt;
+  if (_muzzleFlashT >= MUZZLE_FLASH_DURATION) {
+    muzzleFlashMesh.visible = false;
+    _muzzleFlashT = -1;
+  } else {
+    muzzleFlashMat.opacity = 1 - _muzzleFlashT / MUZZLE_FLASH_DURATION;
+  }
+}
+
+// Hit spark: single shared scale-pulse sprite reused across hits (surface or enemy).
+// Minimal placeholder — Task 9's particle system replaces this with real polish.
+const HIT_SPARK_DURATION = 0.15;
+const hitSparkMat = new THREE.SpriteMaterial({ map: makeGlowTexture('rgba(255,255,255,1)'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 });
+const hitSparkMesh = new THREE.Sprite(hitSparkMat);
+hitSparkMesh.visible = false;
+let _hitSparkT = -1;
+
+function spawnHitSpark(pos) {
+  hitSparkMesh.position.copy(pos);
+  hitSparkMesh.scale.set(0.05, 0.05, 1);
+  hitSparkMesh.visible = true;
+  hitSparkMat.opacity = 1;
+  _hitSparkT = 0;
+}
+function updateHitSpark(dt) {
+  if (_hitSparkT < 0) return;
+  _hitSparkT += dt;
+  const t = _hitSparkT / HIT_SPARK_DURATION;
+  if (t >= 1) {
+    hitSparkMesh.visible = false;
+    _hitSparkT = -1;
+    return;
+  }
+  const s = 0.05 + t * 0.35;
+  hitSparkMesh.scale.set(s, s, 1);
+  hitSparkMat.opacity = 1 - t;
+}
+
+function buildCombat() {
+  for (let i = 0; i < BULLET_COUNT; i++) {
+    const mesh = new THREE.Mesh(bulletGeo, bulletMat);
+    mesh.visible = false;
+    scene.add(mesh);
+    bullets.push({
+      mesh,
+      pos: new THREE.Vector3(),
+      vel: new THREE.Vector3(),
+      life: 0,
+      active: false,
+      hostile: false,
+      damage: 0,
+    });
+  }
+  scene.add(muzzleFlashMesh);
+  scene.add(hitSparkMesh);
+}
+
+function findFreeBullet() {
+  for (let i = 0; i < bullets.length; i++) if (!bullets[i].active) return bullets[i];
+  return null; // pool exhausted (shouldn't happen at 60 bullets / current fire rates)
+}
+function deactivateBullet(b) {
+  b.active = false;
+  b.mesh.visible = false;
+}
+
+// Generic pool spawn shared by the player's shootAt() and (later) alien hostile shots.
+function spawnBullet(origin, target, damage, hostile) {
+  const b = findFreeBullet();
+  if (!b) return null;
+  b.pos.copy(origin);
+  b.vel.subVectors(target, origin);
+  if (b.vel.lengthSq() < 1e-6) b.vel.set(0, 0, 1);
+  b.vel.normalize().multiplyScalar(BULLET_SPEED);
+  b.life = BULLET_LIFE;
+  b.active = true;
+  b.hostile = !!hostile;
+  b.damage = damage;
+  b.mesh.material = hostile ? hostileBulletMat : bulletMat;
+  b.mesh.visible = true;
+  b.mesh.position.copy(b.pos);
+  return b;
+}
+
+// Combat-only scratch vectors, separate from _v1/_v2 to avoid aliasing hazards with
+// the player/camera code that also reuses those across the same update() frame.
+const _combatV1 = new THREE.Vector3(), _combatV2 = new THREE.Vector3();
+
+let _gunCooldownT = 0;
+function shootAt(point) {
+  if (_gunCooldownT > 0) return;
+  _combatV1.copy(player.pos).addScaledVector(playerUp(_combatV2), 1.0); // muzzle: player's chest
+  const stats = gunStats();
+  const b = spawnBullet(_combatV1, point, stats.damage, false);
+  if (!b) return;
+  _gunCooldownT = stats.cooldown;
+  spawnMuzzleFlash(b.pos);
+}
+
+function updateBullets(dt) {
+  _gunCooldownT = Math.max(0, _gunCooldownT - dt);
+  updateMuzzleFlash(dt);
+  updateHitSpark(dt);
+  // Hostile bullets test against this hurt-box center (player's chest).
+  _combatV1.copy(player.pos).addScaledVector(playerUp(_combatV2), 0.75);
+
+  for (let i = 0; i < bullets.length; i++) {
+    const b = bullets[i];
+    if (!b.active) continue;
+    b.pos.addScaledVector(b.vel, dt);
+    b.life -= dt;
+    b.mesh.position.copy(b.pos);
+
+    if (b.pos.length() < PLANET_R + 0.2) { // hit the surface
+      spawnHitSpark(b.pos);
+      deactivateBullet(b);
+      continue;
+    }
+    if (b.life <= 0) {
+      deactivateBullet(b);
+      continue;
+    }
+
+    if (b.hostile) {
+      if (b.pos.distanceTo(_combatV1) < 1) {
+        damagePlayer(b.damage);
+        spawnHitSpark(b.pos);
+        deactivateBullet(b);
+      }
+    } else {
+      // Task 9 adds here: sphere test vs starEvent's falling star (same pattern as enemies).
+      for (let j = 0; j < enemies.length; j++) {
+        const en = enemies[j];
+        if (!en.alive) continue;
+        if (b.pos.distanceTo(en.pos) < en.radius + 0.12) {
+          damageEnemy(en, b.damage);
+          spawnHitSpark(b.pos);
+          deactivateBullet(b);
+          break;
+        }
+      }
+    }
+  }
+}
+
+// Aim assist: projects alive enemies to screen space; a click within 36px of an
+// enemy's projected position shoots at that enemy directly instead of whatever the
+// world raycast would have hit. enemies[] is empty until Task 8, so this is a
+// harmless no-op until then.
+const AIM_ASSIST_PX = 36;
+function findAimAssistTarget(e) {
+  if (enemies.length === 0) return null;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  let best = null, bestD = AIM_ASSIST_PX;
+  for (let i = 0; i < enemies.length; i++) {
+    const en = enemies[i];
+    if (!en.alive) continue;
+    _combatV1.copy(en.pos).project(camera);
+    if (_combatV1.z > 1) continue; // behind camera
+    const sx = (_combatV1.x * 0.5 + 0.5) * rect.width;
+    const sy = (1 - (_combatV1.y * 0.5 + 0.5)) * rect.height;
+    const d = Math.hypot(sx - cx, sy - cy);
+    if (d < bestD) { bestD = d; best = en; }
+  }
+  return best;
+}
+
+// ----- Player HP: damage, regen, downed/respawn flow -----
+function flashHurtVignette() {
+  const el = document.getElementById('hurt-vignette');
+  el.style.transition = 'none';
+  el.style.opacity = '1';
+  void el.offsetWidth; // force reflow so the transition below actually animates 1 -> 0
+  el.style.transition = 'opacity 0.4s ease';
+  el.style.opacity = '0';
+}
+
+function damagePlayer(n) {
+  if (G.state === 'downed') return; // already down; ignore further hits until respawn completes
+  player.hp = Math.max(0, player.hp - n);
+  player.lastHurt = G.time;
+  flashHurtVignette();
+  updateHUD();
+  if (player.hp <= 0) downPlayer();
+}
+
+function updatePlayerRegen(dt) {
+  if (player.hp < player.maxHp && (G.time - player.lastHurt) > 5) {
+    player.hp = Math.min(player.maxHp, player.hp + 5 * dt);
+    updateHUD();
+  }
+}
+
+function downPlayer() {
+  G.state = 'downed';
+  document.getElementById('downed-screen').style.display = 'flex';
+  setTimeout(() => {
+    G.money = Math.floor(G.money * 0.9);
+    movePlayerToDir(world.houseDoorDir);
+    player.hp = player.maxHp;
+    updateHUD();
+    document.getElementById('downed-screen').style.display = 'none';
+    G.state = 'playing';
+  }, 3000);
+}
+
 // ----- Picking: raycast mouse -> plot / door / planet('space') -----
 function pickWorld(e) {
   const rect = renderer.domElement.getBoundingClientRect();
@@ -1316,8 +1589,15 @@ function pickWorld(e) {
   return { kind: 'space', ref: null, point };
 }
 
+const _farPoint = new THREE.Vector3();
 window.addEventListener('mousedown', (e) => {
   if (e.button !== 0 || G.state !== 'playing' || cam.dragging) return;
+
+  // Aim assist runs before the world raycast: a click near an alive enemy's screen
+  // position shoots at it directly, bypassing plot/door/space routing entirely.
+  const assistTarget = findAimAssistTarget(e);
+  if (assistTarget) { shootAt(assistTarget.pos); return; }
+
   const hit = pickWorld(e);
   switch (hit.kind) {
     case 'plot': {
@@ -1330,16 +1610,22 @@ window.addEventListener('mousedown', (e) => {
     case 'door':
       tryOpenShopDoor();
       break;
-    case 'enemy':
-      // Task 7: enemy hit/target logic.
+    case 'enemy': // never matches until Task 8 registers enemy meshes in pickables
+      shootAt(hit.point);
       break;
-    case 'star':
-      // Task 9: star/launch interaction.
+    case 'star': // never matches until Task 9 registers the falling star in pickables
+      shootAt(hit.point);
       break;
     case 'space':
-    default:
-      // Task 7: shooting handles clicks on open space.
+    default: {
+      let point = hit.point;
+      if (!point) { // clicked empty sky: unproject to a far point along the click ray
+        _raycaster.ray.at(60, _farPoint);
+        point = _farPoint;
+      }
+      shootAt(point);
       break;
+    }
   }
 });
 
@@ -1375,6 +1661,7 @@ function boot() {
   pickables.push(world.planet, world.doorMesh);
   buildPlots();
   buildShip();
+  buildCombat();
   updateHUD();
   updateSeedBar();
   setupShopUI();
@@ -1391,9 +1678,12 @@ function boot() {
 
 // Populated by later tasks (crops, enemies, ship, etc.).
 function update(dt) {
+  G.time += dt;
   updatePlayer(dt);
   updateCamera(dt);
   updatePlots(dt);
+  updateBullets(dt);
+  updatePlayerRegen(dt);
 }
 
 // Launch is driven from here (rather than a gate in update()/the loop) since it needs to run
