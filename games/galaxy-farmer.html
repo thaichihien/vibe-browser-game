@@ -112,6 +112,11 @@
     padding: 6px 14px; border-radius: 8px; background: var(--ui-bg); border: 1px solid var(--ui-border);
     opacity: 0; transition: opacity 0.3s ease; font-size: 14px;
   }
+  #interact-prompt {
+    position: absolute; bottom: 84px; left: 50%; transform: translateX(-50%);
+    padding: 6px 14px; border-radius: 8px; background: var(--ui-bg); border: 1px solid var(--ui-border);
+    opacity: 0; transition: opacity 0.3s ease; font-size: 14px; pointer-events: none; white-space: nowrap;
+  }
 
   /* ===== Launch cinematic: fullscreen white fade before the victory reveal ===== */
   #launch-fade {
@@ -182,6 +187,7 @@
   <div id="day-info"></div>
   <div id="seed-bar"></div>
   <div id="toast"></div>
+  <div id="interact-prompt"></div>
   <div id="banner"></div>
 </div>
 <div id="launch-fade"></div>
@@ -583,6 +589,7 @@ G.stats = { harvests: 0, kills: 0, earned: 0 };
 G.upgrades = { gunDmg: 0, gunRate: 0, boots: 0, field: 0, sprinkler: false };
 G.partsOwned = 0;
 G.shopTab = 'seeds';
+G.focus = null; // { kind: 'plot'|'door', ref } | null — nearest interactable in range, recomputed each frame
 
 let inventory = {
   seeds:   { wheat: 2, berry: 0, carrot: 0, melon: 0, pumpkin: 0 },
@@ -672,6 +679,13 @@ const plotRingGeo = makeRingGeometry(0.9, 24);
 const lockedRingMat = new THREE.LineBasicMaterial({ color: 0x333333, transparent: true, opacity: 0.35 });
 const untilledRingMat = new THREE.LineDashedMaterial({ color: 0x9fe89f, transparent: true, opacity: 0.6, dashSize: 0.15, gapSize: 0.12 });
 
+// Shared focus-highlight ring (Space-interaction target): one module-scope mesh,
+// repositioned/hidden per frame in updateFocusVisual rather than allocated per plot.
+const highlightRingGeo = makeRingGeometry(1.05, 32);
+const highlightRingMat = new THREE.LineBasicMaterial({ color: 0x6ee7a0, transparent: true, opacity: 0.7 });
+const highlightRing = new THREE.LineLoop(highlightRingGeo, highlightRingMat);
+highlightRing.visible = false;
+
 function makeIconTexture(char, color) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 64;
@@ -707,6 +721,9 @@ let pickables = [];
 const _raycaster = new THREE.Raycaster();
 const _ndc = new THREE.Vector2();
 let _plotPulseT = 0;
+const _focusV1 = new THREE.Vector3(); // focus scan's up-vector temp (allocation-free)
+const _focusSlot = { kind: null, ref: null }; // reused object backing G.focus, mutated not reallocated
+let _lastPromptText = null;
 
 // 12 plot dirs in a 4x3 fan around world.houseDir, spreading toward world.houseDoorDir.
 // Each row sits at a constant geodesic (surface) distance from houseDir so the whole fan
@@ -907,6 +924,68 @@ function interactPlot(plot) {
       plot.watered = false;
       plot.redried = false;
       break;
+  }
+}
+
+// ===== Focus: nearest interactable (plot or house door) within range, driving the
+// Space-key shortcut, the highlight ring, and the #interact-prompt text. Recomputed
+// every frame in update(); scan is allocation-free (reuses _focusV1 / _focusSlot).
+function updateFocus() {
+  const up = playerUp(_focusV1);
+  let bestKind = null, bestRef = null, bestDist = Infinity;
+  for (let i = 0; i < plots.length; i++) {
+    const plot = plots[i];
+    const dist = up.angleTo(plot.dir) * PLANET_R;
+    if (dist <= PLOT_RANGE && dist < bestDist) {
+      bestDist = dist; bestKind = 'plot'; bestRef = plot;
+    }
+  }
+  const doorDist = up.angleTo(world.houseDoorDir) * PLANET_R;
+  if (doorDist <= DOOR_RANGE && doorDist < bestDist) {
+    bestDist = doorDist; bestKind = 'door'; bestRef = null;
+  }
+  if (bestKind) {
+    _focusSlot.kind = bestKind;
+    _focusSlot.ref = bestRef;
+    G.focus = _focusSlot;
+  } else {
+    G.focus = null;
+  }
+}
+
+function computePromptText(focus) {
+  if (!focus) return '';
+  if (focus.kind === 'door') return '␣ Enter shop';
+  const plot = focus.ref;
+  switch (plot.state) {
+    case 'locked': return '🔒 Buy Field Expansion at the house';
+    case 'untilled': return '␣ Till plot (🪙10)';
+    case 'empty':
+      return inventory.seeds[G.selectedSeed] > 0
+        ? '␣ Plant ' + CROPS[G.selectedSeed].name
+        : 'No seeds — buy at the house';
+    case 'growing': return plot.watered ? 'Growing…' : '␣ Water';
+    case 'ready': return '␣ Harvest';
+    default: return '';
+  }
+}
+
+function updateFocusVisual() {
+  if (G.focus) {
+    const dir = G.focus.kind === 'door' ? world.houseDoorDir : G.focus.ref.dir;
+    placeOnSurface(highlightRing, dir);
+    highlightRing.visible = true;
+    highlightRingMat.opacity = 0.5 + 0.3 * Math.sin(G.time * 4); // gentle pulse
+  } else {
+    highlightRing.visible = false;
+  }
+
+  const text = computePromptText(G.focus);
+  if (text !== _lastPromptText) {
+    _lastPromptText = text;
+    const el = document.getElementById('interact-prompt');
+    el.textContent = text;
+    el.style.opacity = text ? '1' : '0';
   }
 }
 
@@ -1508,7 +1587,7 @@ function updateBullets(dt) {
       for (let j = 0; j < enemies.length; j++) {
         const en = enemies[j];
         if (!en.alive) continue;
-        if (b.pos.distanceTo(en.pos) < en.radius + 0.12) {
+        if (b.pos.distanceTo(en.pos) < (en.hitRadius || en.radius) + 0.12) {
           damageEnemy(en, b.damage, b.vel);
           spawnHitSpark(b.pos);
           deactivateBullet(b);
@@ -1523,7 +1602,7 @@ function updateBullets(dt) {
 // enemy's projected position shoots at that enemy directly instead of whatever the
 // world raycast would have hit. enemies[] is empty until Task 8, so this is a
 // harmless no-op until then.
-const AIM_ASSIST_PX = 36;
+const AIM_ASSIST_PX = 56;
 function findAimAssistTarget(e) {
   if (enemies.length === 0) return null;
   const rect = renderer.domElement.getBoundingClientRect();
@@ -1915,7 +1994,7 @@ function spawnAlien(typeId, dir) {
   const hp = Math.round(def.hp * (1 + 0.15 * G.partsOwned));
   const alien = {
     type: typeId, def, hp, maxHp: hp, alive: true,
-    radius: def.radius, pos: new THREE.Vector3(),
+    radius: def.radius, hitRadius: def.radius * 1.6, pos: new THREE.Vector3(),
     mesh: buildAlienMesh(typeId),
     state: 'walk', atkT: 0, flashT: 0, flashMats: [],
     fromRaid: false,
@@ -2375,40 +2454,19 @@ const _farPoint = new THREE.Vector3();
 window.addEventListener('mousedown', (e) => {
   if (e.button !== 0 || G.state !== 'playing' || cam.dragging) return;
 
-  // Aim assist runs before the world raycast: a click near an alive enemy's screen
-  // position shoots at it directly, bypassing plot/door/space routing entirely.
+  // Left click always shoots — farm/house interaction moved to focus+Space (see
+  // updateFocus/interactPlot/tryOpenShopDoor). Aim assist runs before the world
+  // raycast: a click near an alive enemy's screen position shoots at it directly.
   const assistTarget = findAimAssistTarget(e);
   if (assistTarget) { shootAt(assistTarget.pos); return; }
 
-  const hit = pickWorld(e);
-  switch (hit.kind) {
-    case 'plot': {
-      const plot = hit.ref;
-      const dist = playerUp(_v1).angleTo(plot.dir) * PLANET_R;
-      if (dist > PLOT_RANGE) toast('Walk closer to the plot');
-      else interactPlot(plot);
-      break;
-    }
-    case 'door':
-      tryOpenShopDoor();
-      break;
-    case 'enemy': // never matches until Task 8 registers enemy meshes in pickables
-      shootAt(hit.point);
-      break;
-    case 'star': // never matches until Task 9 registers the falling star in pickables
-      shootAt(hit.point);
-      break;
-    case 'space':
-    default: {
-      let point = hit.point;
-      if (!point) { // clicked empty sky: unproject to a far point along the click ray
-        _raycaster.ray.at(60, _farPoint);
-        point = _farPoint;
-      }
-      shootAt(point);
-      break;
-    }
+  const hit = pickWorld(e); // plot/door meshes stay in pickables just to give a surface point to shoot at
+  let point = hit.point;
+  if (!point) { // clicked empty sky: unproject to a far point along the click ray
+    _raycaster.ray.at(60, _farPoint);
+    point = _farPoint;
   }
+  shootAt(point);
 });
 
 window.addEventListener('keydown', (e) => {
@@ -2419,6 +2477,13 @@ window.addEventListener('keydown', (e) => {
     updateSeedBar();
   }
   if (e.code === 'KeyE') tryOpenShopDoor();
+  if (e.code === 'Space') {
+    e.preventDefault(); // stop page scroll
+    if (G.focus) {
+      if (G.focus.kind === 'plot') interactPlot(G.focus.ref);
+      else if (G.focus.kind === 'door') tryOpenShopDoor();
+    }
+  }
 });
 
 window.addEventListener('keydown', (e) => {
@@ -2442,6 +2507,7 @@ function boot() {
   world.planet.userData.pick = { kind: 'space' };
   pickables.push(world.planet, world.doorMesh);
   buildPlots();
+  scene.add(highlightRing);
   buildShip();
   buildCombat();
   updateHUD();
@@ -2465,6 +2531,8 @@ function update(dt) {
   updatePlayer(dt);
   updateCamera(dt);
   updatePlots(dt);
+  updateFocus();
+  updateFocusVisual();
   updateEnemies(dt);
   updateBullets(dt);
   updatePickups(dt);
