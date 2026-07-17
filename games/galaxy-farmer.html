@@ -1639,18 +1639,26 @@ function resetPlotToEmpty(plot) {
   updatePlotVisual(plot);
 }
 
-// ----- Hit-flash: per-alien cloned materials (cloned once at spawn, not shared across
-// aliens of the same type) so one alien can flash white without tinting its siblings. -----
+// ----- Hit-flash: per-alien cloned materials (cloned at spawn, ONE clone per canonical
+// material identity — parts sharing a canonical material share the same clone) so one
+// alien can flash white without tinting its siblings and without tripling material count. -----
 const ALIEN_FLASH_DURATION = 0.12;
+const _flashCloneMap = new Map(); // canonical material -> per-alien clone; cleared per tagFlashable call
 function tagFlashable(alien) {
   alien.flashMats = [];
+  _flashCloneMap.clear();
   alien.mesh.traverse((o) => {
     if (o.isMesh && o.material && o.material.emissive) {
-      const mat = o.material.clone();
+      let mat = _flashCloneMap.get(o.material);
+      if (!mat) {
+        mat = o.material.clone();
+        _flashCloneMap.set(o.material, mat);
+        alien.flashMats.push({ mat, baseHex: mat.emissive.getHex(), baseIntensity: mat.emissiveIntensity || 0 });
+      }
       o.material = mat;
-      alien.flashMats.push({ mat, baseHex: mat.emissive.getHex(), baseIntensity: mat.emissiveIntensity || 0 });
     }
   });
+  _flashCloneMap.clear();
 }
 function triggerFlash(alien) {
   alien.flashT = ALIEN_FLASH_DURATION;
@@ -1694,25 +1702,71 @@ function redrawHealthBar(alien) {
   tex.needsUpdate = true;
 }
 
-// ----- Low-poly mesh builds (r128 primitives only — no CapsuleGeometry, added post-r128). -----
+// ----- Low-poly mesh builds (r128 primitives only — no CapsuleGeometry, added post-r128).
+// All geometries and canonical materials are module-scope singletons shared across every
+// spawn; tagFlashable clones the emissive-capable materials once per alien (one clone per
+// canonical material identity) so hit-flash stays per-alien without per-part duplication. -----
+const alienGeo = {
+  gruntBody: new THREE.CylinderGeometry(0.35, 0.35, 0.7, 10),
+  gruntCap: new THREE.SphereGeometry(0.35, 10, 8),
+  gruntStalk: new THREE.CylinderGeometry(0.03, 0.03, 0.35, 6),
+  gruntEye: new THREE.SphereGeometry(0.08, 8, 8),
+  hopperBall: new THREE.SphereGeometry(0.4, 12, 10),
+  hopperLeg: new THREE.ConeGeometry(0.14, 0.5, 6),
+  raiderBody: new THREE.CylinderGeometry(0.22, 0.28, 1.0, 8),
+  raiderHead: new THREE.SphereGeometry(0.24, 10, 8),
+  raiderSack: new THREE.SphereGeometry(0.28, 8, 8),
+  spitterCone: new THREE.ConeGeometry(0.4, 1.1, 10),
+  spitterEye: new THREE.SphereGeometry(0.13, 8, 8),
+  bruteBox1: new THREE.BoxGeometry(0.9, 0.5, 0.6),
+  bruteBox2: new THREE.BoxGeometry(0.75, 0.5, 0.55),
+  bruteBox3: new THREE.BoxGeometry(0.55, 0.45, 0.5),
+  shieldBody: new THREE.CylinderGeometry(0.32, 0.32, 0.7, 10),
+  shieldHead: new THREE.SphereGeometry(0.3, 10, 8),
+  shieldPlate: new THREE.BoxGeometry(0.55, 0.9, 0.1),
+  summonerDome: new THREE.SphereGeometry(0.45, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+  summonerTentacle: new THREE.CylinderGeometry(0.03, 0.01, 0.6, 4),
+  ufoDome: new THREE.SphereGeometry(0.35, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+  ufoSaucer: new THREE.CylinderGeometry(0.9, 0.9, 0.2, 16),
+  ufoBeam: new THREE.ConeGeometry(0.5, 6, 12, 1, true),
+};
+const alienMat = {
+  gruntBody: new THREE.MeshLambertMaterial({ color: 0x3fae5c }),
+  gruntEye: new THREE.MeshLambertMaterial({ color: 0x111111, emissive: 0x6effa0, emissiveIntensity: 0.8 }),
+  hopperBody: new THREE.MeshLambertMaterial({ color: 0xe8d94a }),
+  hopperLeg: new THREE.MeshLambertMaterial({ color: 0xb8952a }),
+  raiderBody: new THREE.MeshLambertMaterial({ color: 0x8a4ae0 }),
+  raiderSack: new THREE.MeshLambertMaterial({ color: 0x6a3a1a }),
+  spitterBody: new THREE.MeshLambertMaterial({ color: 0x7a8a3a }),
+  spitterEye: new THREE.MeshLambertMaterial({ color: 0x111111, emissive: 0xd8ff4a, emissiveIntensity: 0.8 }),
+  bruteBody: new THREE.MeshLambertMaterial({ color: 0xb8342a }),
+  shieldBody: new THREE.MeshLambertMaterial({ color: 0x3a6ae0 }),
+  shieldPlate: new THREE.MeshLambertMaterial({ color: 0x9fd0ff, emissive: 0x4aa0ff, emissiveIntensity: 0.3 }),
+  summonerBody: new THREE.MeshLambertMaterial({ color: 0xe86ad0, transparent: true, opacity: 0.85, emissive: 0xff6ad0, emissiveIntensity: 0.25 }),
+  summonerTentacle: new THREE.MeshLambertMaterial({ color: 0xff9ae0, transparent: true, opacity: 0.6 }),
+  ufoDome: new THREE.MeshPhongMaterial({ color: 0x88ccff, transparent: true, opacity: 0.7, shininess: 80 }),
+  ufoSaucer: new THREE.MeshLambertMaterial({ color: 0xbbbbbb }),
+  // MeshBasicMaterial has no emissive, so tagFlashable never clones the beam — it stays
+  // truly shared across all UFOs (per-UFO state is just the beam mesh's .visible flag).
+  ufoBeam: new THREE.MeshBasicMaterial({ color: 0x66ffee, transparent: true, opacity: 0.35, depthWrite: false }),
+};
+
 function buildGruntMesh() {
   const g = new THREE.Group();
-  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x3fae5c });
-  const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.7, 10), bodyMat);
+  const cyl = new THREE.Mesh(alienGeo.gruntBody, alienMat.gruntBody);
   cyl.position.y = 0.75;
   g.add(cyl);
-  const capTop = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), bodyMat);
+  const capTop = new THREE.Mesh(alienGeo.gruntCap, alienMat.gruntBody);
   capTop.position.y = 1.1;
   g.add(capTop);
-  const capBot = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), bodyMat);
+  const capBot = new THREE.Mesh(alienGeo.gruntCap, alienMat.gruntBody);
   capBot.position.y = 0.4;
   g.add(capBot);
-  const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111, emissive: 0x6effa0, emissiveIntensity: 0.8 });
   [-0.12, 0.12].forEach((x) => {
-    const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.35, 6), bodyMat);
+    const stalk = new THREE.Mesh(alienGeo.gruntStalk, alienMat.gruntBody);
     stalk.position.set(x, 1.5, 0.05);
     g.add(stalk);
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), eyeMat);
+    const eye = new THREE.Mesh(alienGeo.gruntEye, alienMat.gruntEye);
     eye.position.set(x, 1.68, 0.05);
     g.add(eye);
   });
@@ -1720,13 +1774,11 @@ function buildGruntMesh() {
 }
 function buildHopperMesh() {
   const g = new THREE.Group();
-  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xe8d94a });
-  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 10), bodyMat);
+  const ball = new THREE.Mesh(alienGeo.hopperBall, alienMat.hopperBody);
   ball.position.y = 0.7;
   g.add(ball);
-  const legMat = new THREE.MeshLambertMaterial({ color: 0xb8952a });
   [-0.25, 0.25].forEach((x) => {
-    const leg = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.5, 6), legMat);
+    const leg = new THREE.Mesh(alienGeo.hopperLeg, alienMat.hopperLeg);
     leg.position.set(x, 0.25, 0);
     g.add(leg);
   });
@@ -1734,15 +1786,13 @@ function buildHopperMesh() {
 }
 function buildRaiderMesh() {
   const g = new THREE.Group();
-  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x8a4ae0 });
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 1.0, 8), bodyMat);
+  const body = new THREE.Mesh(alienGeo.raiderBody, alienMat.raiderBody);
   body.position.y = 0.6;
   g.add(body);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 10, 8), bodyMat);
+  const head = new THREE.Mesh(alienGeo.raiderHead, alienMat.raiderBody);
   head.position.y = 1.25;
   g.add(head);
-  const sackMat = new THREE.MeshLambertMaterial({ color: 0x6a3a1a });
-  const sack = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 8), sackMat);
+  const sack = new THREE.Mesh(alienGeo.raiderSack, alienMat.raiderSack);
   sack.position.set(0, 0.85, -0.3);
   sack.scale.set(1, 1.2, 0.8);
   g.add(sack);
@@ -1750,12 +1800,10 @@ function buildRaiderMesh() {
 }
 function buildSpitterMesh() {
   const g = new THREE.Group();
-  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x7a8a3a });
-  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.1, 10), bodyMat);
+  const cone = new THREE.Mesh(alienGeo.spitterCone, alienMat.spitterBody);
   cone.position.y = 0.65;
   g.add(cone);
-  const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111, emissive: 0xd8ff4a, emissiveIntensity: 0.8 });
-  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8), eyeMat);
+  const eye = new THREE.Mesh(alienGeo.spitterEye, alienMat.spitterEye);
   eye.position.set(0, 0.95, 0.32);
   g.add(eye);
   g.userData.muzzle = eye;
@@ -1763,56 +1811,50 @@ function buildSpitterMesh() {
 }
 function buildBruteMesh() {
   const g = new THREE.Group();
-  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xb8342a });
-  const box1 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.6), bodyMat);
+  const box1 = new THREE.Mesh(alienGeo.bruteBox1, alienMat.bruteBody);
   box1.position.y = 0.3;
   g.add(box1);
-  const box2 = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.5, 0.55), bodyMat);
+  const box2 = new THREE.Mesh(alienGeo.bruteBox2, alienMat.bruteBody);
   box2.position.y = 0.8;
   g.add(box2);
-  const box3 = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.45, 0.5), bodyMat);
+  const box3 = new THREE.Mesh(alienGeo.bruteBox3, alienMat.bruteBody);
   box3.position.y = 1.25;
   g.add(box3);
   return g;
 }
 function buildShieldbearerMesh() {
   const g = new THREE.Group();
-  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x3a6ae0 });
-  const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.7, 10), bodyMat);
+  const cyl = new THREE.Mesh(alienGeo.shieldBody, alienMat.shieldBody);
   cyl.position.y = 0.75;
   g.add(cyl);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), bodyMat);
+  const head = new THREE.Mesh(alienGeo.shieldHead, alienMat.shieldBody);
   head.position.y = 1.2;
   g.add(head);
-  const shieldMat = new THREE.MeshLambertMaterial({ color: 0x9fd0ff, emissive: 0x4aa0ff, emissiveIntensity: 0.3 });
-  const shield = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.9, 0.1), shieldMat);
+  const shield = new THREE.Mesh(alienGeo.shieldPlate, alienMat.shieldPlate);
   shield.position.set(0, 0.75, 0.35); // local +Z = "front" (orientWalker aligns +Z to travel dir)
   g.add(shield);
   return g;
 }
 function buildSummonerMesh() {
   const g = new THREE.Group();
-  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xe86ad0, transparent: true, opacity: 0.85, emissive: 0xff6ad0, emissiveIntensity: 0.25 });
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), bodyMat);
+  const dome = new THREE.Mesh(alienGeo.summonerDome, alienMat.summonerBody);
   g.add(dome);
-  const tentacleMat = new THREE.MeshLambertMaterial({ color: 0xff9ae0, transparent: true, opacity: 0.6 });
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2;
-    const t = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.01, 0.6, 4), tentacleMat);
+    const t = new THREE.Mesh(alienGeo.summonerTentacle, alienMat.summonerTentacle);
     t.position.set(Math.cos(a) * 0.25, -0.3, Math.sin(a) * 0.25);
     g.add(t);
   }
   return g;
 }
-const ufoBeamMat = new THREE.MeshBasicMaterial({ color: 0x66ffee, transparent: true, opacity: 0.35, depthWrite: false });
 function buildUfoMesh() {
   const g = new THREE.Group();
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshPhongMaterial({ color: 0x88ccff, transparent: true, opacity: 0.7, shininess: 80 }));
+  const dome = new THREE.Mesh(alienGeo.ufoDome, alienMat.ufoDome);
   dome.position.y = 0.15;
   g.add(dome);
-  const saucer = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.2, 16), new THREE.MeshLambertMaterial({ color: 0xbbbbbb }));
+  const saucer = new THREE.Mesh(alienGeo.ufoSaucer, alienMat.ufoSaucer);
   g.add(saucer);
-  const beam = new THREE.Mesh(new THREE.ConeGeometry(0.5, 6, 12, 1, true), ufoBeamMat);
+  const beam = new THREE.Mesh(alienGeo.ufoBeam, alienMat.ufoBeam);
   beam.rotation.x = Math.PI; // flip so the open end points down, toward the planet
   beam.position.y = -3;
   beam.visible = false;
@@ -2106,7 +2148,10 @@ function updateSummoner(alien, dt) {
   if (alien.spawnT <= 0) {
     alien.spawnT = 6;
     alien.minions = alien.minions.filter((m) => m.alive);
-    if (alien.minions.length < 3) alien.minions.push(spawnMinionNear(alien.dir, alien.fromRaid));
+    // Same 12-alive cap as startRaid — at cap the summoner just waits for its next tick.
+    if (alien.minions.length < 3 && countAliveEnemies() < 12) {
+      alien.minions.push(spawnMinionNear(alien.dir, alien.fromRaid));
+    }
   }
 }
 
@@ -2227,11 +2272,18 @@ function unlockedPool() {
   return pool;
 }
 
+// Single source of truth for the 12-alive cap, shared by startRaid and summoner minions.
+function countAliveEnemies() {
+  let n = 0;
+  for (let i = 0; i < enemies.length; i++) if (enemies[i].alive) n++;
+  return n;
+}
+
 function startRaid() {
   G.raid.active = true;
   const pool = unlockedPool();
   const want = Math.min(2 + 2 * G.partsOwned, 12);
-  const room = Math.max(0, 12 - enemies.filter((e) => e.alive).length);
+  const room = Math.max(0, 12 - countAliveEnemies());
   const n = Math.min(want, room);
   G.raid.count = n;
   for (let i = 0; i < n; i++) {
