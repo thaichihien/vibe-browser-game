@@ -523,7 +523,10 @@ function updateDayNight(dt) {
   G.tod += dt / DAY_NIGHT_CYCLE;
   if (G.tod >= 1) { G.tod -= 1; G.day++; }
 
-  const phi = G.tod * Math.PI * 2;
+  // Phase shift +0.25 aligns the orbit with the HUD convention (tod 0-0.5 = day):
+  // sunY = -sin(TILT)*cos(phi), so the +0.25 shift puts noon (sunY max) at tod=0.25,
+  // sunrise at tod=0, sunset at tod=0.5 — exactly where #day-info flips ☀️/🌙.
+  const phi = (G.tod + 0.25) * Math.PI * 2;
   _dnSunDir.copy(_dnE1).multiplyScalar(Math.cos(phi)).addScaledVector(_dnE2, Math.sin(phi));
   sunLight.position.copy(_dnSunDir).multiplyScalar(SUN_ORBIT_DIST);
   moonLight.position.copy(_dnSunDir).multiplyScalar(-MOON_ORBIT_DIST);
