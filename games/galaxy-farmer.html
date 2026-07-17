@@ -2886,7 +2886,19 @@ function saveGame() {
 }
 
 function hasSave() {
-  try { return localStorage.getItem(SAVE_KEY) !== null; } catch (e) { return false; }
+  // Validates (parse + version), not just key presence: a corrupt save must not
+  // produce a Continue button that silently does nothing. Purges bad saves so the
+  // start screen offers a clean fresh start instead.
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data || data.v !== 1) throw new Error('bad save');
+    return true;
+  } catch (e) {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e2) {}
+    return false;
+  }
 }
 
 // Discards a save that fails to parse, carries an unknown version, or otherwise blows up
