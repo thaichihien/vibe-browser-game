@@ -2240,7 +2240,11 @@ function updateGruntLike(alien, dt) { // grunt + shieldbearer: fly at player, me
   const def = alien.def;
   const targetDir = playerUp(_alienV3);
   const dist = alien.dir.angleTo(targetDir) * PLANET_R;
-  const moveDir = dist > 1.5 ? targetDir : null;
+  // Stop threshold (1.1, tangential) must sit inside the melee range (1.5, 3D to
+  // chest): hovering at alt 1.2 (+/-0.15 bob) above a 0.75 chest leaves a radial gap
+  // up to 0.6, so tangential must be <= sqrt(1.5^2 - 0.6^2) ~= 1.37 for hits to land.
+  // Settling at ~1.15 keeps the 3D distance ~1.30 < 1.5 even at worst bob.
+  const moveDir = dist > 1.1 ? targetDir : null;
   flyerTick(alien, def, moveDir, dt);
   tryMeleeAttack(alien, 1.5, def.dmg, 1.0, dt);
 }
