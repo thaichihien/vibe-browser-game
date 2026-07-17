@@ -633,14 +633,8 @@ function updatePlayer(dt) {
   }
 }
 
-function stepOnSphere(q, targetDir, speed, dt) { // shared with alien walkers
-  const up = _v1.set(0, 1, 0).applyQuaternion(q);
-  const axis = _v2.crossVectors(up, targetDir);
-  if (axis.lengthSq() < 1e-8) return;
-  axis.normalize();
-  const step = Math.min(speed * dt / PLANET_R, up.angleTo(targetDir));
-  q.premultiply(_q1.setFromAxisAngle(axis, step));
-}
+// (stepOnSphere, Task 3's quaternion surface-walker stepper, was removed when all aliens
+// became hover-flyers — no remaining callers; flyers steer via flyerTick/stepDirTowards.)
 
 // ===== Camera: third-person follow + right-drag orbit =====
 const cam = { yaw: 0, pitch: 0.35, dragging: false };
@@ -1763,59 +1757,72 @@ function findAimAssistTarget(e) {
   return best;
 }
 
-// ===== Aliens: 8 variants, raid director, coin/produce pickups =====
+// ===== Aliens: 8 variants (all hover-flyers), raid director, coin/produce pickups =====
 // ALIENS table — hp/speed/dmg/coins verbatim from the task brief; radius/hbY (health-bar
-// height) and alt (float altitude for flyers) are implementation details, not spec columns.
+// height) are implementation details. alt = per-variant hover altitude above the surface
+// (every alien flies; pos = dir × (PLANET_R + alt + bob)).
 const ALIENS = {
-  grunt:        { id: 'grunt',        hp: 25,  speed: 3.5, dmg: 8,  coins: 4,  radius: 0.6,  hbY: 2.0, alt: 0 },
-  hopper:       { id: 'hopper',       hp: 10,  speed: 6,   dmg: 5,  coins: 3,  radius: 0.45, hbY: 1.3, alt: 0 },
-  raider:       { id: 'raider',       hp: 20,  speed: 5,   dmg: 0,  coins: 8,  radius: 0.55, hbY: 1.7, alt: 0 },
-  spitter:      { id: 'spitter',      hp: 22,  speed: 2.5, dmg: 6,  coins: 6,  radius: 0.55, hbY: 1.4, alt: 0 },
-  brute:        { id: 'brute',        hp: 120, speed: 1.8, dmg: 20, coins: 15, radius: 0.9,  hbY: 1.9, alt: 0 },
-  shieldbearer: { id: 'shieldbearer', hp: 40,  speed: 3,   dmg: 12, coins: 10, radius: 0.6,  hbY: 1.7, alt: 0 },
-  summoner:     { id: 'summoner',     hp: 50,  speed: 2,   dmg: 0,  coins: 18, radius: 0.7,  hbY: 0.9, alt: 2 },
-  ufo:          { id: 'ufo',          hp: 60,  speed: 4,   dmg: 0,  coins: 25, radius: 1.0,  hbY: 0.8, alt: 6 },
+  grunt:        { id: 'grunt',        hp: 25,  speed: 3.5, dmg: 8,  coins: 4,  radius: 0.6,  hbY: 2.0, alt: 1.2 },
+  hopper:       { id: 'hopper',       hp: 10,  speed: 6,   dmg: 5,  coins: 3,  radius: 0.45, hbY: 1.3, alt: 1.0 },
+  raider:       { id: 'raider',       hp: 20,  speed: 5,   dmg: 0,  coins: 8,  radius: 0.55, hbY: 1.7, alt: 1.5 },
+  spitter:      { id: 'spitter',      hp: 22,  speed: 2.5, dmg: 6,  coins: 6,  radius: 0.55, hbY: 1.4, alt: 2.5 },
+  brute:        { id: 'brute',        hp: 120, speed: 1.8, dmg: 20, coins: 15, radius: 0.9,  hbY: 1.9, alt: 1.4 },
+  shieldbearer: { id: 'shieldbearer', hp: 40,  speed: 3,   dmg: 12, coins: 10, radius: 0.6,  hbY: 1.7, alt: 1.2 },
+  summoner:     { id: 'summoner',     hp: 50,  speed: 2,   dmg: 0,  coins: 18, radius: 0.7,  hbY: 0.9, alt: 2.0 },
+  ufo:          { id: 'ufo',          hp: 60,  speed: 4,   dmg: 0,  coins: 25, radius: 1.0,  hbY: 0.8, alt: 6.0 },
 };
+const ALIEN_BOB_FREQ = 2.0, ALIEN_BOB_AMP = 0.15; // gentle hover bob shared by all variants
 
 // Alien-only scratch temps, separate from _v1/_v2 (player/camera) and _combatV1/_combatV2
 // (bullets) to stay aliasing-safe per multiple simultaneous in-flight vectors per frame.
 const _alienV1 = new THREE.Vector3(), _alienV2 = new THREE.Vector3(), _alienV3 = new THREE.Vector3(), _alienV4 = new THREE.Vector3();
 const _alienM1 = new THREE.Matrix4();
 
-function alienUp(alien, out) { return out.set(0, 1, 0).applyQuaternion(alien.q); }
-
-// Orients a walker mesh so local +Y = up (away from planet center) and local +Z = tangent
-// (direction of travel) — a direct orthonormal-basis construction (right = up × tangent),
-// robust for any up/tangent pair the callers pass (tangent is always ⊥ up by construction).
-function orientWalker(mesh, up, tangent) {
+// Orients a flyer mesh so local +Y = up (away from planet center, i.e. alien.dir) and
+// local +Z = tangent (direction of travel) — direct orthonormal-basis construction
+// (right = up × tangent); tangent is always projected ⊥ up by callers before passing.
+function orientFlyer(mesh, up, tangent) {
   const right = _alienV4.crossVectors(up, tangent).normalize();
   _alienM1.makeBasis(right, up, tangent);
   mesh.quaternion.setFromRotationMatrix(_alienM1);
 }
 
-// Shared walker movement + placement: steps alien.q toward moveTargetDir (if given) via
-// stepOnSphere, then re-derives pos/mesh.position from the (possibly moved) up vector.
+// Sets pos/mesh.position from the alien's dir + hover altitude + gentle bob (per-alien
+// phase stored at spawn; allocation-free).
+function placeFlyer(alien) {
+  const bob = Math.sin(G.time * ALIEN_BOB_FREQ + alien.bobPhase) * ALIEN_BOB_AMP;
+  alien.pos.copy(alien.dir).multiplyScalar(PLANET_R + alien.alt + bob);
+  alien.mesh.position.copy(alien.pos);
+}
+
+// Shared flyer movement + placement: rotates alien.dir toward moveTargetDir (if given) at
+// angular speed def.speed / (PLANET_R + alt) rad/s, then re-derives pos/mesh.position.
 // Mesh orientation is only touched while actively moving (moveTargetDir truthy) — when
 // idle/attacking we deliberately leave the mesh's last orientation alone rather than
 // snapping to the minimal-rotation quaternion, which would visibly "untwist" the model.
-function walkerTick(alien, def, moveTargetDir, dt) {
-  if (moveTargetDir) stepOnSphere(alien.q, moveTargetDir, def.speed, dt);
-  const up = alienUp(alien, _alienV1);
-  alien.pos.copy(up).multiplyScalar(PLANET_R);
-  alien.mesh.position.copy(alien.pos);
+function flyerTick(alien, def, moveTargetDir, dt) {
   if (moveTargetDir) {
-    const dot = moveTargetDir.dot(up);
-    _alienV2.copy(moveTargetDir).addScaledVector(up, -dot);
+    const axis = _alienV4.crossVectors(alien.dir, moveTargetDir);
+    if (axis.lengthSq() > 1e-8) {
+      axis.normalize();
+      const step = Math.min(def.speed * dt / (PLANET_R + alien.alt), alien.dir.angleTo(moveTargetDir));
+      alien.dir.applyAxisAngle(axis, step);
+      alien.dir.normalize();
+    }
+  }
+  placeFlyer(alien);
+  if (moveTargetDir) {
+    const dot = moveTargetDir.dot(alien.dir);
+    _alienV2.copy(moveTargetDir).addScaledVector(alien.dir, -dot);
     if (_alienV2.lengthSq() > 1e-6) {
       _alienV2.normalize();
-      orientWalker(alien.mesh, up, _alienV2);
+      orientFlyer(alien.mesh, alien.dir, _alienV2);
     }
   }
 }
 
-// Rotates a raw direction vector (flyers, pickup magnet) toward targetDir at `speed`
-// surface-equivalent units/sec — same shortest-arc mechanics as stepOnSphere but operating
-// directly on a Vector3 instead of a quaternion (flyers don't carry their own quaternion).
+// Rotates a raw direction vector (summoner/ufo drift, pickup magnet) toward targetDir at
+// `speed` surface-equivalent units/sec — shortest-arc rotation on a bare Vector3.
 function stepDirTowards(dir, targetDir, speed, dt) {
   const axis = _alienV4.crossVectors(dir, targetDir);
   if (axis.lengthSq() < 1e-8) return;
@@ -1825,11 +1832,12 @@ function stepDirTowards(dir, targetDir, speed, dt) {
   dir.normalize();
 }
 
+// Hover melee: 3D distance from the alien's center to the player's chest point
+// (player.pos + up×0.75) — the low hover altitudes keep the existing ranges reachable.
 function tryMeleeAttack(alien, range, dmg, cooldown, dt) {
   alien.atkT -= dt;
-  const up = alienUp(alien, _alienV1);
-  const dist = up.angleTo(playerUp(_alienV3)) * PLANET_R;
-  if (dist <= range && alien.atkT <= 0) {
+  _alienV3.copy(player.pos).addScaledVector(playerUp(_alienV1), 0.75);
+  if (alien.pos.distanceTo(_alienV3) <= range && alien.atkT <= 0) {
     damagePlayer(dmg);
     alien.atkT = cooldown;
   }
@@ -2051,7 +2059,7 @@ function buildShieldbearerMesh() {
   head.position.y = 1.2;
   g.add(head);
   const shield = new THREE.Mesh(alienGeo.shieldPlate, alienMat.shieldPlate);
-  shield.position.set(0, 0.75, 0.35); // local +Z = "front" (orientWalker aligns +Z to travel dir)
+  shield.position.set(0, 0.75, 0.35); // local +Z = "front" (orientFlyer aligns +Z to travel dir)
   g.add(shield);
   return g;
 }
@@ -2139,13 +2147,11 @@ function spawnAlien(typeId, dir) {
     mesh: buildAlienMesh(typeId),
     state: 'walk', atkT: 0, flashT: 0, flashMats: [],
     fromRaid: false,
+    // Unified hover-flyer locomotion: every variant is dir + alt (+ per-alien bob phase).
+    dir: spawnDir.clone(),
+    alt: def.alt,
+    bobPhase: Math.random() * Math.PI * 2,
   };
-  if (def.alt) {
-    alien.dir = spawnDir.clone();
-    alien.alt = def.alt;
-  } else {
-    alien.q = new THREE.Quaternion().setFromUnitVectors(_Y, spawnDir);
-  }
   if (typeId === 'hopper') { alien.hopDir = new THREE.Vector3(); alien.hopT = 0; alien.state = 'pause'; }
   else if (typeId === 'raider') { alien.targetPlot = null; alien.carrying = null; }
   else if (typeId === 'spitter') { alien.atkT = 2.5; }
@@ -2160,7 +2166,7 @@ function spawnAlien(typeId, dir) {
   alien.mesh.add(alien.hpSprite);
   redrawHealthBar(alien);
 
-  const worldPos = spawnDir.clone().multiplyScalar(PLANET_R + (def.alt || 0));
+  const worldPos = spawnDir.clone().multiplyScalar(PLANET_R + def.alt);
   alien.pos.copy(worldPos);
   alien.mesh.position.copy(worldPos);
   alien.mesh.quaternion.setFromUnitVectors(_Y, spawnDir);
@@ -2229,32 +2235,30 @@ function damageEnemy(enemy, n, bulletVel) {
   if (enemy.hp <= 0) killAlien(enemy);
 }
 
-// ----- Per-variant behavior -----
-function updateGruntLike(alien, dt) { // grunt + shieldbearer: walk at player, melee in range
+// ----- Per-variant behavior (all hover-flyers) -----
+function updateGruntLike(alien, dt) { // grunt + shieldbearer: fly at player, melee in range
   const def = alien.def;
   const targetDir = playerUp(_alienV3);
-  const up = alienUp(alien, _alienV1);
-  const dist = up.angleTo(targetDir) * PLANET_R;
+  const dist = alien.dir.angleTo(targetDir) * PLANET_R;
   const moveDir = dist > 1.5 ? targetDir : null;
-  walkerTick(alien, def, moveDir, dt);
+  flyerTick(alien, def, moveDir, dt);
   tryMeleeAttack(alien, 1.5, def.dmg, 1.0, dt);
 }
 
-function updateHopper(alien, dt) {
+function updateHopper(alien, dt) { // hop-bursts become air dash-bursts, same timings
   const def = alien.def;
   alien.hopT -= dt;
   if (alien.state === 'pause') {
     if (alien.hopT <= 0) {
       const targetDir = playerUp(_alienV3);
-      const up = alienUp(alien, _alienV1);
       const zigzag = (Math.random() * 2 - 1) * (Math.PI * 40 / 180);
-      alien.hopDir.copy(targetDir).applyAxisAngle(up, zigzag).normalize();
+      alien.hopDir.copy(targetDir).applyAxisAngle(alien.dir, zigzag).normalize();
       alien.state = 'hop';
       alien.hopT = 0.4;
     }
-    walkerTick(alien, def, null, dt);
+    flyerTick(alien, def, null, dt);
   } else {
-    walkerTick(alien, def, alien.hopDir, dt);
+    flyerTick(alien, def, alien.hopDir, dt);
     if (alien.hopT <= 0) { alien.state = 'pause'; alien.hopT = 0.5; }
   }
   tryMeleeAttack(alien, 1.3, def.dmg, 1.0, dt);
@@ -2264,24 +2268,22 @@ function updateRaider(alien, dt) {
   const def = alien.def;
   if (alien.state === 'walk') {
     if (!alien.targetPlot) {
-      const up = alienUp(alien, _alienV1);
-      alien.targetPlot = nearestPlot(up, (p) => p.state === 'growing' || p.state === 'ready');
+      alien.targetPlot = nearestPlot(alien.dir, (p) => p.state === 'growing' || p.state === 'ready');
     }
     if (alien.targetPlot) {
-      const up = alienUp(alien, _alienV1);
-      const dist = up.angleTo(alien.targetPlot.dir) * PLANET_R;
+      const dist = alien.dir.angleTo(alien.targetPlot.dir) * PLANET_R;
       if (dist > 1.0) {
-        walkerTick(alien, def, alien.targetPlot.dir, dt);
-      } else {
-        walkerTick(alien, def, null, dt);
+        flyerTick(alien, def, alien.targetPlot.dir, dt);
+      } else { // hovering ~alt (1.5u) above the plot: grab from the air
+        flyerTick(alien, def, null, dt);
         alien.state = 'grab';
         alien.grabT = 1.0;
       }
     } else {
-      walkerTick(alien, def, null, dt); // nothing to steal right now
+      flyerTick(alien, def, null, dt); // nothing to steal right now
     }
   } else if (alien.state === 'grab') {
-    walkerTick(alien, def, null, dt);
+    flyerTick(alien, def, null, dt);
     alien.grabT -= dt;
     if (alien.grabT <= 0) {
       const plot = alien.targetPlot;
@@ -2292,30 +2294,28 @@ function updateRaider(alien, dt) {
       alien.state = 'ascend';
       alien.ascendT = 0;
     }
-  } else if (alien.state === 'ascend') {
+  } else if (alien.state === 'ascend') { // climbs +12u above hover alt over 3s, then despawns
     alien.ascendT += dt;
-    const up = alienUp(alien, _alienV1);
-    const h = Math.min(alien.ascendT / 3, 1) * 12;
-    alien.pos.copy(up).multiplyScalar(PLANET_R + h);
+    const h = alien.alt + Math.min(alien.ascendT / 3, 1) * 12;
+    alien.pos.copy(alien.dir).multiplyScalar(PLANET_R + h);
     alien.mesh.position.copy(alien.pos);
-    alien.mesh.quaternion.setFromUnitVectors(_Y, up);
+    alien.mesh.quaternion.setFromUnitVectors(_Y, alien.dir);
     if (alien.ascendT >= 3) killAlienSilently(alien);
   }
 }
 
 function updateSpitter(alien, dt) {
   const def = alien.def;
-  const up = alienUp(alien, _alienV1);
   const targetDir = playerUp(_alienV3);
-  const dist = up.angleTo(targetDir) * PLANET_R;
+  const dist = alien.dir.angleTo(targetDir) * PLANET_R; // surface-angle distance band, as before
   let moveDir = null;
-  if (dist < 8) moveDir = _alienV2.copy(up).multiplyScalar(2).sub(targetDir).normalize(); // retreat
+  if (dist < 8) moveDir = _alienV2.copy(alien.dir).multiplyScalar(2).sub(targetDir).normalize(); // retreat
   else if (dist > 12) moveDir = targetDir; // close in
-  walkerTick(alien, def, moveDir, dt);
+  flyerTick(alien, def, moveDir, dt);
 
   alien.atkT -= dt;
   if (alien.atkT <= 0) {
-    const muzzle = _alienV3.copy(alienUp(alien, _alienV1)).multiplyScalar(0.9).add(alien.pos);
+    const muzzle = _alienV3.copy(alien.dir).multiplyScalar(0.9).add(alien.pos); // lob from hover height
     const chest = playerUp(_alienV2).multiplyScalar(0.75).add(player.pos);
     spawnBullet(muzzle, chest, def.dmg, true);
     alien.atkT = 2.5;
@@ -2324,34 +2324,32 @@ function updateSpitter(alien, dt) {
 
 function updateBrute(alien, dt) {
   const def = alien.def;
-  const up = alienUp(alien, _alienV1);
-  const targetDir = playerUp(_alienV3);
-  const distPlayer = up.angleTo(targetDir) * PLANET_R;
-
-  if (distPlayer <= 2) {
-    walkerTick(alien, def, null, dt);
+  // Melee override: player within 2u (3D distance to chest point).
+  _alienV3.copy(player.pos).addScaledVector(playerUp(_alienV1), 0.75);
+  if (alien.pos.distanceTo(_alienV3) <= 2) {
+    flyerTick(alien, def, null, dt);
     tryMeleeAttack(alien, 2, def.dmg, 1.2, dt);
     return;
   }
 
   if (alien.state === 'walk') {
     if (!alien.targetPlot) {
-      alien.targetPlot = nearestPlot(up, (p) => p.state === 'growing' || p.state === 'ready');
+      alien.targetPlot = nearestPlot(alien.dir, (p) => p.state === 'growing' || p.state === 'ready');
     }
     if (alien.targetPlot) {
-      const dist = up.angleTo(alien.targetPlot.dir) * PLANET_R;
+      const dist = alien.dir.angleTo(alien.targetPlot.dir) * PLANET_R;
       if (dist > 1.2) {
-        walkerTick(alien, def, alien.targetPlot.dir, dt);
-      } else {
-        walkerTick(alien, def, null, dt);
+        flyerTick(alien, def, alien.targetPlot.dir, dt);
+      } else { // hovers above the plot, winds up, smashes from the air
+        flyerTick(alien, def, null, dt);
         alien.state = 'windup';
         alien.windupT = 1.5;
       }
     } else {
-      walkerTick(alien, def, null, dt);
+      flyerTick(alien, def, null, dt);
     }
   } else if (alien.state === 'windup') {
-    walkerTick(alien, def, null, dt);
+    flyerTick(alien, def, null, dt);
     alien.windupT -= dt;
     if (alien.windupT <= 0) {
       const plot = alien.targetPlot;
@@ -2368,8 +2366,7 @@ function updateBrute(alien, dt) {
 function updateSummoner(alien, dt) {
   const def = alien.def;
   stepDirTowards(alien.dir, world.houseDir, def.speed, dt);
-  alien.pos.copy(alien.dir).multiplyScalar(PLANET_R + alien.alt);
-  alien.mesh.position.copy(alien.pos);
+  placeFlyer(alien);
   alien.mesh.quaternion.setFromUnitVectors(_Y, alien.dir);
 
   alien.spawnT -= dt;
@@ -2410,8 +2407,7 @@ function updateUfo(alien, dt) {
       alien.state = 'seek';
     }
   }
-  alien.pos.copy(alien.dir).multiplyScalar(PLANET_R + alien.alt);
-  alien.mesh.position.copy(alien.pos);
+  placeFlyer(alien);
   alien.mesh.quaternion.setFromUnitVectors(_Y, alien.dir);
 }
 
