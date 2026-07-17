@@ -140,6 +140,49 @@
   }
   .victory-btn:hover { background: rgba(110, 231, 160, 0.3); }
 
+  /* ===== Start / Pause / Help screens (Task 10) ===== */
+  #start-screen, #pause-screen { position: fixed; }
+  #start-title { animation: titlePulse 2.4s ease-in-out infinite; }
+  @keyframes titlePulse {
+    0%, 100% { text-shadow: 0 0 18px var(--accent); transform: scale(1); }
+    50% { text-shadow: 0 0 34px var(--accent), 0 0 50px var(--money); transform: scale(1.04); }
+  }
+  .howto { font-size: 14px; line-height: 1.9; opacity: 0.9; margin-bottom: 22px; }
+  .howto p { margin: 0; }
+  .menu-buttons { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-bottom: 14px; }
+  .menu-btn {
+    background: rgba(110, 231, 160, 0.15); border: 1px solid var(--ui-border); color: var(--accent);
+    padding: 10px 26px; border-radius: 8px; cursor: pointer; font-size: 15px; pointer-events: auto;
+  }
+  .menu-btn:hover { background: rgba(110, 231, 160, 0.3); }
+  .menu-btn.small { padding: 6px 14px; font-size: 13px; }
+  .confirm-row { display: flex; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 14px; pointer-events: auto; }
+  .reset-link { color: var(--text); opacity: 0.6; font-size: 12px; cursor: pointer; pointer-events: auto; text-decoration: underline; }
+  .reset-link:hover { opacity: 1; }
+  .help-corner-btn {
+    position: absolute; top: 18px; right: 18px;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(110, 231, 160, 0.15); border: 1px solid var(--ui-border); color: var(--accent);
+    font-size: 16px; cursor: pointer; pointer-events: auto;
+  }
+  .help-box {
+    width: min(680px, 92vw); max-height: 84vh; overflow-y: auto;
+    background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 12px;
+    padding: 18px 22px; text-align: left; pointer-events: auto;
+  }
+  .help-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .help-header h2 { margin: 0; }
+  .help-section { margin-bottom: 18px; }
+  .help-section h3 { color: var(--accent); font-size: 14px; letter-spacing: 1px; margin-bottom: 8px; }
+  .help-controls-list, .help-tips-list { font-size: 13px; line-height: 1.8; opacity: 0.9; padding-left: 18px; margin: 0; }
+  .help-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .help-table th, .help-table td { padding: 4px 8px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .help-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .help-alien-card { background: rgba(255,255,255,0.04); border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+  .help-alien-card .icon { font-size: 20px; margin-right: 6px; }
+  .help-alien-card .name { font-weight: 600; }
+  .help-alien-card .blurb { opacity: 0.75; display: block; margin-top: 2px; }
+
   /* ===== Hurt vignette: red flash pulse on damagePlayer() ===== */
   #hurt-vignette {
     position: fixed; inset: 0; z-index: 16; pointer-events: none;
@@ -152,13 +195,42 @@
 <body>
 
 <div id="start-screen" class="overlay">
-  <h1>GALAXY FARMER</h1>
+  <button id="start-help-btn" class="help-corner-btn" type="button">?</button>
+  <h1 id="start-title">🌱 GALAXY FARMER 🚀</h1>
+  <div class="howto">
+    <p>WASD to walk</p>
+    <p>Click to shoot</p>
+    <p>Space to interact with the highlighted plot/house</p>
+    <p>Right-drag to look around</p>
+    <p>Build the spaceship to win!</p>
+  </div>
+  <div id="start-buttons" class="menu-buttons">
+    <button id="start-btn" class="menu-btn" type="button">Start</button>
+    <button id="continue-btn" class="menu-btn" type="button" style="display:none;">Continue</button>
+  </div>
+  <div id="start-confirm" class="confirm-row" style="display:none;">
+    <span>Overwrite existing save?</span>
+    <button id="confirm-overwrite-yes" class="menu-btn small" type="button">Yes, start new</button>
+    <button id="confirm-overwrite-no" class="menu-btn small" type="button">Cancel</button>
+  </div>
+  <a id="reset-save-link" class="reset-link">Reset Save</a>
 </div>
 <div id="pause-screen" class="overlay">
   <h2>PAUSED</h2>
+  <div class="menu-buttons">
+    <button id="resume-btn" class="menu-btn" type="button">Resume</button>
+    <button id="pause-help-btn" class="menu-btn" type="button">Help</button>
+    <button id="pause-reset-btn" class="menu-btn" type="button">Reset Save &amp; Quit to Menu</button>
+  </div>
 </div>
 <div id="help-panel" class="overlay">
-  <h2>HELP</h2>
+  <div class="help-box">
+    <div class="help-header">
+      <h2>HELP</h2>
+      <button id="help-close-btn" class="shop-close-btn" type="button">✕</button>
+    </div>
+    <div id="help-body"></div>
+  </div>
 </div>
 <div id="victory-screen" class="overlay">
   <h2>YOU BUILT THE SPACESHIP!</h2>
@@ -728,6 +800,10 @@ G.upgrades = { gunDmg: 0, gunRate: 0, boots: 0, field: 0, sprinkler: false };
 G.partsOwned = 0;
 G.shopTab = 'seeds';
 G.focus = null; // { kind: 'plot'|'door', ref } | null — nearest interactable in range, recomputed each frame
+G.helpFrom = null; // 'start' | 'pause' — which screen opened the help panel, so Close returns there
+G._saveAcc = 0; // seconds accumulated toward the next 10s autosave tick (see update())
+
+const SAVE_KEY = 'galaxy-farmer-save-v1';
 
 let inventory = {
   seeds:   { wheat: 2, berry: 0, carrot: 0, melon: 0, pumpkin: 0 },
@@ -1063,6 +1139,7 @@ function interactPlot(plot) {
       plot.growth = 0;
       plot.watered = false;
       plot.redried = false;
+      saveGame();
       break;
   }
 }
@@ -1189,6 +1266,7 @@ function buySeed(id) {
   inventory.seeds[id]++;
   updateSeedBar();
   renderShopTab('seeds');
+  saveGame();
 }
 
 function renderSellTab(body) {
@@ -1221,6 +1299,7 @@ function sellProduce(id, n) {
   inventory.produce[id] -= n;
   earn(CROPS[id].sellPrice * n);
   renderShopTab('sell');
+  saveGame();
 }
 
 function renderUpgradesTab(body) {
@@ -1257,6 +1336,7 @@ function buyUpgrade(id) {
     else if (id === 'field') applyFieldExpansion(G.upgrades.field);
   }
   renderShopTab('upgrades');
+  saveGame();
 }
 
 function applyFieldExpansion(level) {
@@ -1301,6 +1381,7 @@ function buyPart() {
   if (!spend(SHIP_PARTS[idx].cost)) return;
   G.partsOwned++;
   updateShipVisual();
+  saveGame();
   if (G.partsOwned >= SHIP_PARTS.length) {
     closeShop();
     startLaunchSequence();
@@ -1548,7 +1629,9 @@ function setupShopUI() {
 
 function setupVictoryUI() {
   document.getElementById('victory-replay-btn').addEventListener('click', () => {
-    location.reload(); // Task 10 replaces with resetGame()
+    document.getElementById('victory-screen').style.display = 'none';
+    resetGame();
+    returnToMenu(); // hides the HUD (menu convention, see boot()) and shows the start screen
   });
 }
 
@@ -2535,6 +2618,7 @@ function updateRaidDirector(dt) {
       G.raid.count = 0;
       G.raid.next = 60 + Math.random() * 60;
       toast('The skies are quiet again... for now.');
+      saveGame();
     }
   }
 }
@@ -2761,10 +2845,335 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+// Esc priority: closing the shop beats closing help beats pausing beats resuming — only
+// one of these ever fires per keypress. P is a dedicated pause/resume toggle; it's
+// suppressed while the help panel is on top (e.g. opened from pause) so it can't resume
+// the game behind a still-visible help overlay.
 window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
-  if (e.code === 'Escape' && G.state === 'shop') closeShop();
+  if (e.code === 'Escape') {
+    if (G.state === 'shop') closeShop();
+    else if (isHelpOpen()) closeHelp();
+    else if (G.state === 'playing') pauseGame();
+    else if (G.state === 'paused') resumeGame();
+  } else if (e.code === 'KeyP' && !isHelpOpen()) {
+    if (G.state === 'playing') pauseGame();
+    else if (G.state === 'paused') resumeGame();
+  }
 });
+
+// ===== Save / Load / Reset (Task 10) =====
+function saveGame() {
+  try {
+    const data = {
+      v: 1,
+      money: G.money,
+      day: G.day,
+      tod: G.tod,
+      time: G.time,
+      stats: G.stats,
+      upgrades: G.upgrades,
+      partsOwned: G.partsOwned,
+      inventory: inventory,
+      hp: player.hp,
+      plots: plots.map((p) => ({ state: p.state, cropId: p.cropId, growth: p.growth, watered: p.watered, redried: p.redried })),
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch (e) {
+    // Storage can throw (quota exceeded, private-browsing lockout, etc.); autosave is
+    // best-effort and must never crash the game.
+  }
+}
+
+function hasSave() {
+  try { return localStorage.getItem(SAVE_KEY) !== null; } catch (e) { return false; }
+}
+
+// Discards a save that fails to parse, carries an unknown version, or otherwise blows up
+// while being applied — a corrupt/foreign save must never crash the game, so any error
+// here just deletes the key and falls back to a fresh start (returns null).
+function loadGame() {
+  let raw;
+  try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { return null; }
+  if (!raw) return null;
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e2) {}
+    return null;
+  }
+  if (!data || data.v !== 1) {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e2) {}
+    return null;
+  }
+  try {
+    applySaveData(data);
+    return data;
+  } catch (e) {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e2) {}
+    return null;
+  }
+}
+
+// Clears every runtime-only entity that's never persisted (live aliens, in-flight
+// bullets, ground pickups, the shooting star) — shared by loadGame's post-apply cleanup
+// and resetGame.
+function clearLiveEntities() {
+  for (let i = enemies.length - 1; i >= 0; i--) removeAlienFromWorld(enemies[i]);
+  for (let i = 0; i < bullets.length; i++) deactivateBullet(bullets[i]);
+  for (let i = 0; i < pickups.length; i++) scene.remove(pickups[i].mesh);
+  pickups.length = 0;
+  despawnStar();
+}
+
+// Applies a parsed save object onto live game state, then refreshes every derived visual
+// (plot meshes, ship ghost/solid parts, HUD, seed bar). Runtime-only state the save never
+// carried (live aliens/bullets/pickups/star, the raid timer, player position) is reset to
+// a fresh start regardless of what was happening when the save was written.
+function applySaveData(data) {
+  G.money = typeof data.money === 'number' ? data.money : 20;
+  G.day = typeof data.day === 'number' ? data.day : 1;
+  G.tod = typeof data.tod === 'number' ? data.tod : 0;
+  G.time = typeof data.time === 'number' ? data.time : 0;
+  G.stats = Object.assign({ harvests: 0, kills: 0, earned: 0 }, data.stats);
+  G.upgrades = Object.assign({ gunDmg: 0, gunRate: 0, boots: 0, field: 0, sprinkler: false }, data.upgrades);
+  G.partsOwned = typeof data.partsOwned === 'number' ? data.partsOwned : 0;
+  G.selectedSeed = 'wheat';
+  G._saveAcc = 0;
+
+  const savedInv = data.inventory || {};
+  inventory = {
+    seeds: Object.assign({ wheat: 0, berry: 0, carrot: 0, melon: 0, pumpkin: 0 }, savedInv.seeds),
+    produce: Object.assign({ wheat: 0, berry: 0, carrot: 0, melon: 0, pumpkin: 0 }, savedInv.produce),
+  };
+
+  player.hp = typeof data.hp === 'number' ? data.hp : player.maxHp;
+  player.speed = [6, 7.5, 9][G.upgrades.boots] || 6;
+
+  const savedPlots = Array.isArray(data.plots) ? data.plots : [];
+  for (let i = 0; i < plots.length; i++) {
+    const sp = savedPlots[i];
+    const plot = plots[i];
+    if (sp) {
+      plot.state = sp.state;
+      plot.cropId = sp.cropId && cropMats[sp.cropId] ? sp.cropId : null;
+      plot.growth = typeof sp.growth === 'number' ? sp.growth : 0;
+      plot.watered = !!sp.watered;
+      plot.redried = !!sp.redried;
+      if (plot.cropId) assignCropVisual(plot);
+    }
+    updatePlotVisual(plot);
+  }
+
+  updateShipVisual();
+  updateHUD();
+  updateSeedBar();
+  updateDayInfo();
+
+  // Everything below is deliberately NOT part of the save: live combat state, the
+  // shooting star, the raid timer, and the player's position all start fresh.
+  clearLiveEntities();
+  G.raid = { next: 75, active: false, count: 0 };
+  movePlayerToDir(world.houseDoorDir);
+}
+
+// Restores pristine new-game state without a page reload. Used by both Reset Save
+// buttons (start screen + pause) and the victory screen's Play Again.
+function resetGame() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+
+  G.money = 20;
+  G.day = 1;
+  G.tod = 0;
+  G.time = 0;
+  G.selectedSeed = 'wheat';
+  G.stats = { harvests: 0, kills: 0, earned: 0 };
+  G.upgrades = { gunDmg: 0, gunRate: 0, boots: 0, field: 0, sprinkler: false };
+  G.partsOwned = 0;
+  G.shopTab = 'seeds';
+  G.focus = null;
+  G._saveAcc = 0;
+
+  inventory = {
+    seeds: { wheat: 2, berry: 0, carrot: 0, melon: 0, pumpkin: 0 },
+    produce: { wheat: 0, berry: 0, carrot: 0, melon: 0, pumpkin: 0 },
+  };
+
+  for (let i = 0; i < plots.length; i++) {
+    const plot = plots[i];
+    plot.state = i < 4 ? 'untilled' : 'locked';
+    plot.cropId = null;
+    plot.growth = 0;
+    plot.watered = false;
+    plot.redried = false;
+    updatePlotVisual(plot);
+  }
+
+  player.hp = player.maxHp;
+  player.speed = 6;
+  movePlayerToDir(world.houseDoorDir);
+
+  clearLiveEntities();
+  G.raid = { next: 75, active: false, count: 0 };
+
+  updateShipVisual();
+  updateHUD();
+  updateSeedBar();
+  updateDayInfo();
+
+  document.getElementById('continue-btn').style.display = 'none';
+}
+
+// ===== Start / Pause / Help screens (Task 10) =====
+function pauseGame() {
+  if (G.state !== 'playing') return;
+  G.state = 'paused';
+  document.getElementById('pause-screen').style.display = 'flex';
+}
+function resumeGame() {
+  if (G.state !== 'paused') return;
+  G.state = 'playing';
+  document.getElementById('pause-screen').style.display = 'none';
+}
+
+function isHelpOpen() {
+  return document.getElementById('help-panel').style.display === 'flex';
+}
+function openHelp(from) {
+  G.helpFrom = from;
+  document.getElementById(from === 'pause' ? 'pause-screen' : 'start-screen').style.display = 'none';
+  document.getElementById('help-panel').style.display = 'flex';
+}
+function closeHelp() {
+  document.getElementById('help-panel').style.display = 'none';
+  document.getElementById(G.helpFrom === 'pause' ? 'pause-screen' : 'start-screen').style.display = 'flex';
+  G.helpFrom = null;
+}
+
+function returnToMenu() {
+  G.state = 'menu';
+  document.getElementById('pause-screen').style.display = 'none';
+  document.getElementById('help-panel').style.display = 'none';
+  document.getElementById('start-screen').style.display = 'flex';
+  document.getElementById('continue-btn').style.display = 'none';
+  document.getElementById('start-confirm').style.display = 'none';
+  document.getElementById('hud').style.display = 'none';
+}
+
+function enterPlaying() {
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('hud').style.display = '';
+  G.state = 'playing';
+}
+
+function setupStartUI() {
+  const startBtn = document.getElementById('start-btn');
+  const continueBtn = document.getElementById('continue-btn');
+  const confirmRow = document.getElementById('start-confirm');
+  const resetLink = document.getElementById('reset-save-link');
+
+  continueBtn.style.display = hasSave() ? '' : 'none';
+
+  startBtn.addEventListener('click', () => {
+    if (hasSave()) {
+      confirmRow.style.display = 'flex';
+    } else {
+      resetGame();
+      enterPlaying();
+    }
+  });
+  document.getElementById('confirm-overwrite-yes').addEventListener('click', () => {
+    confirmRow.style.display = 'none';
+    resetGame();
+    enterPlaying();
+  });
+  document.getElementById('confirm-overwrite-no').addEventListener('click', () => {
+    confirmRow.style.display = 'none';
+  });
+  continueBtn.addEventListener('click', () => {
+    if (!loadGame()) { continueBtn.style.display = 'none'; return; } // shouldn't happen — button only shows when hasSave()
+    enterPlaying();
+  });
+  resetLink.addEventListener('click', () => {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+    continueBtn.style.display = 'none';
+    confirmRow.style.display = 'none';
+  });
+  document.getElementById('start-help-btn').addEventListener('click', () => openHelp('start'));
+}
+
+function setupPauseUI() {
+  document.getElementById('resume-btn').addEventListener('click', resumeGame);
+  document.getElementById('pause-help-btn').addEventListener('click', () => openHelp('pause'));
+  document.getElementById('pause-reset-btn').addEventListener('click', () => {
+    resetGame();
+    returnToMenu();
+  });
+}
+
+// Flavor text only (name/icon/blurb aren't part of ALIENS, which is stats-only) — mirrors
+// each variant's actual behavior from the Aliens section above (updateGruntLike, etc).
+const ALIEN_INFO = {
+  grunt:        { name: 'Grunt',        icon: '👾', blurb: 'Flies straight at you and melees in range.' },
+  hopper:       { name: 'Hopper',       icon: '🦗', blurb: 'Fast and fragile — darts in with erratic dash-bursts.' },
+  raider:       { name: 'Raider',       icon: '🥷', blurb: 'Steals a crop from your plots, then flees with it.' },
+  spitter:      { name: 'Spitter',      icon: '🐍', blurb: 'Keeps its distance and spits ranged shots.' },
+  brute:        { name: 'Brute',        icon: '👹', blurb: 'Slow but very tough — a heavy melee hit up close.' },
+  shieldbearer: { name: 'Shieldbearer', icon: '🛡️', blurb: 'Blocks frontal shots — hit it from the side or behind.' },
+  summoner:     { name: 'Summoner',     icon: '👽', blurb: 'Heads for your house, periodically summoning grunts.' },
+  ufo:          { name: 'UFO',          icon: '🛸', blurb: 'Locks onto a plot, then beams up the crop.' },
+};
+
+function buildHelpHtml() {
+  const cropRows = SEED_ORDER.map((id) => {
+    const c = CROPS[id];
+    return '<tr><td>' + c.icon + ' ' + c.name + '</td><td>' + c.growTime + 's</td><td>' + c.seedCost + ' 🪙</td><td>' + c.sellPrice + ' 🪙</td></tr>';
+  }).join('');
+
+  const alienCards = Object.keys(ALIEN_INFO).map((id) => {
+    const a = ALIEN_INFO[id];
+    return '<div class="help-alien-card"><span class="icon">' + a.icon + '</span><span class="name">' + a.name + '</span>' +
+      '<span class="blurb">' + a.blurb + '</span></div>';
+  }).join('');
+
+  return (
+    '<div class="help-section">' +
+      '<h3>CONTROLS</h3>' +
+      '<ul class="help-controls-list">' +
+        '<li>WASD / arrow keys — walk</li>' +
+        '<li>Click — shoot</li>' +
+        '<li>Space — interact with the highlighted plot/house</li>' +
+        '<li>Right-drag — look around</li>' +
+        '<li>1-5 — select seed &middot; E — open shop near the door</li>' +
+        '<li>Esc / P — pause</li>' +
+      '</ul>' +
+    '</div>' +
+    '<div class="help-section">' +
+      '<h3>CROPS</h3>' +
+      '<table class="help-table"><thead><tr><th>Crop</th><th>Grow time</th><th>Seed cost</th><th>Sell price</th></tr></thead>' +
+      '<tbody>' + cropRows + '</tbody></table>' +
+    '</div>' +
+    '<div class="help-section">' +
+      '<h3>ALIENS</h3>' +
+      '<div class="help-gallery">' + alienCards + '</div>' +
+    '</div>' +
+    '<div class="help-section">' +
+      '<h3>TIPS</h3>' +
+      '<ul class="help-tips-list">' +
+        '<li>Crops need watering twice — once at planting and once more partway through growth.</li>' +
+        '<li>Sell produce and buy seeds/upgrades at the house.</li>' +
+        '<li>Shooting stars drop bonus coins and sometimes seeds — shoot them before they fade.</li>' +
+        '<li>Buy spaceship parts in order — each one unlocks the next.</li>' +
+      '</ul>' +
+    '</div>'
+  );
+}
+
+function setupHelpUI() {
+  document.getElementById('help-close-btn').addEventListener('click', closeHelp);
+  document.getElementById('help-body').innerHTML = buildHelpHtml();
+}
 
 function boot() {
   G.state = 'menu';
@@ -2792,8 +3201,10 @@ function boot() {
   updateSeedBar();
   setupShopUI();
   setupVictoryUI();
-  G.state = 'playing'; // TEMP: until Task 10 start screen
-  document.getElementById('start-screen').style.display = 'none'; // TEMP: Task 10 wires the real menu flow
+  setupStartUI();
+  setupPauseUI();
+  setupHelpUI();
+  document.getElementById('hud').style.display = 'none'; // hidden until Start/Continue leaves the menu
   let last = performance.now();
   (function loop(now) {
     requestAnimationFrame(loop);
@@ -2819,6 +3230,14 @@ function update(dt) {
   updateRaidDirector(dt);
   updateStarEvent(dt);
   updatePlayerRegen(dt);
+
+  if (G.state === 'playing') {
+    G._saveAcc += dt;
+    if (G._saveAcc >= 10) {
+      G._saveAcc = 0;
+      saveGame();
+    }
+  }
 }
 
 // Launch is driven from here (rather than a gate in update()/the loop) since it needs to run
