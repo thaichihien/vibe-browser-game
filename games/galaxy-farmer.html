@@ -208,7 +208,7 @@
 // ===== Game namespace & globals =====
 const G = {}; // G.state: 'menu' | 'playing' | 'shop' | 'paused' | 'downed' | 'launch' | 'victory'
 let scene, camera, renderer;
-const PLANET_R = 14;
+const PLANET_R = 11;
 
 // ===== World: planet, decorations, house, launch pad, lighting, starfield =====
 let world, sunLight, moonLight, ambient, houseLamp, houseWindowMat, starfield;
@@ -246,7 +246,7 @@ function buildPlanet() {
   const c = new THREE.Color();
   for (let i = 0; i < count; i++) {
     v.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)).normalize();
-    c.copy(v.dot(world.houseDir) > 0.88 ? dirt : grass);
+    c.copy(v.dot(world.houseDir) > 0.76 ? dirt : grass);
     c.offsetHSL(0, 0, (Math.random() - 0.5) * 0.12);
     colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
   }
@@ -259,7 +259,7 @@ function buildPlanet() {
 
 function inExclusionZone(dir) {
   // Keep decorations off the farm patch around the house and off the landing pad.
-  return dir.dot(world.houseDir) > 0.86 || dir.dot(world.padDir) > 0.93;
+  return dir.dot(world.houseDir) > 0.74 || dir.dot(world.padDir) > 0.93;
 }
 
 function buildDecorations() {

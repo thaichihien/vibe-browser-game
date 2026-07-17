@@ -13,7 +13,8 @@
 - Everything lives in ONE file: `games/galaxy-farmer.html` (spec: single HTML file).
 - No build step, no npm; the only external resource is the Three.js CDN script.
 - If Three.js fails to load, show a friendly "This game needs an internet connection" overlay, never a blank page (spec: error handling).
-- Planet radius `PLANET_R = 14` (reduced from 20 at the user's request after milestone playtest 1; farm dirt patch threshold is now dot > 0.88, decoration exclusion 0.86/0.93). World space is fixed; the player orbits the sphere (spec: player-orbits approach).
+- Planet radius `PLANET_R = 11` (reduced 20→14→11 at the user's request after playtests; farm dirt patch threshold dot > 0.76, decoration exclusion 0.74/0.93; plot fan arc radii unchanged at [3.2, 5.0, 6.8]). World space is fixed; the player orbits the sphere (spec: player-orbits approach).
+- ALL aliens fly (user request after Task 9): no surface walkers — every variant hovers at a per-variant altitude (grunt 1.2, hopper 1.0, raider 1.5, spitter 2.5, brute 1.4, shieldbearer 1.2, summoner 2.0, ufo 6.0) with a gentle bob; behaviors otherwise per the Task 8 table.
 - Day/night is cosmetic only — no gameplay values change with time of day (spec).
 - Death is forgiving: respawn at house, lose 10% of money; crops, inventory, upgrades, ship parts never lost (spec).
 - CONTROL CHANGE (user request after Task 8 playtest): left click ALWAYS shoots (aim assist, no plot/door routing). Farm/house interaction is proximity-focus + Space: the nearest interactable within range (plot ≤ 4u, house door ≤ 4u) gets a visible highlight + a bottom prompt (e.g. "␣ Harvest"); Space performs the contextual action. E near the door still opens the shop. Alien bullet hitboxes are enlarged (hitRadius ≈ radius × 1.6; aim assist 56px).
