@@ -16,6 +16,7 @@
 - Planet radius `PLANET_R = 14` (reduced from 20 at the user's request after milestone playtest 1; farm dirt patch threshold is now dot > 0.88, decoration exclusion 0.86/0.93). World space is fixed; the player orbits the sphere (spec: player-orbits approach).
 - Day/night is cosmetic only — no gameplay values change with time of day (spec).
 - Death is forgiving: respawn at house, lose 10% of money; crops, inventory, upgrades, ship parts never lost (spec).
+- CONTROL CHANGE (user request after Task 8 playtest): left click ALWAYS shoots (aim assist, no plot/door routing). Farm/house interaction is proximity-focus + Space: the nearest interactable within range (plot ≤ 4u, house door ≤ 4u) gets a visible highlight + a bottom prompt (e.g. "␣ Harvest"); Space performs the contextual action. E near the door still opens the shop. Alien bullet hitboxes are enlarged (hitRadius ≈ radius × 1.6; aim assist 56px).
 - Target 60fps on a mid-range laptop: shared geometries/materials, capped alive enemies (12), pooled bullets/particles, no shadow maps.
 - In-game UI text in English; README/hub entry in Vietnamese like neighbors.
 - Testing is manual browser playtesting (repo has no test infra). Every task ends with a browser verification step via `python -m http.server 8000` from repo root, opening `http://localhost:8000/games/galaxy-farmer.html`, and checking the DevTools console for errors.
@@ -421,7 +422,7 @@ Watch a full 150s cycle: smooth dusk/dawn, stars fade in, lamp/windows glow at n
   - `SAVE_KEY = 'galaxy-farmer-save-v1'`; `saveGame()` — serializes `{ v: 1, money, day, tod, inventory, upgrades, partsOwned, stats, hp, plots: plots.map(p => ({ state, cropId, growth, watered, redried })) }`; autosave every 10s while playing + after every purchase/sale/harvest/raid end.
   - `loadGame()` — try/catch JSON parse; on any error or `v !== 1`, delete the key and return null (spec: corrupt saves discarded gracefully). Applies save: rebuild plot visuals, ship visual, HUD, `player.speed` from boots.
   - `resetGame()` — clears the key and restores pristine state (used by Reset Save buttons and victory Play Again; replace Task 6's page-reload).
-  - Screens: start screen (animated title "🌱 GALAXY FARMER 🚀", 5-line how-to: WASD walk · click = shoot/farm · E/click house = shop · build the spaceship to win, Start button, Continue button only when a save exists, Reset Save link), pause overlay on `Esc`/`P` while playing (Resume / Help / Reset Save), help panel (controls, crop table, alien gallery, tips), downed screen already exists.
+  - Screens: start screen (animated title "🌱 GALAXY FARMER 🚀", 5-line how-to: WASD walk · click = shoot · Space = interact with highlighted plot/house · build the spaceship to win, Start button, Continue button only when a save exists, Reset Save link), pause overlay on `Esc`/`P` while playing (Resume / Help / Reset Save), help panel (controls, crop table, alien gallery, tips), downed screen already exists.
 
 - [ ] **Step 1: Implement save/load/reset + autosave hooks**
 - [ ] **Step 2: Build screens + state wiring** (menu→playing; playing↔paused; shop and panels layered correctly; `Esc` priority: close shop > close help > pause)
