@@ -1,0 +1,3284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Galaxy Farmer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+<style>
+  :root {
+    --accent: #6ee7a0;
+    --money: #ffd76a;
+    --hp: #ff5c6a;
+    --ui-bg: rgba(8, 12, 20, .78);
+    --ui-border: rgba(110, 231, 160, .35);
+    --text: #e8f5ec;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0f1e; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; color: var(--text); user-select: none; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* ===== Overlays (hidden by default) ===== */
+  .overlay {
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center; flex-direction: column;
+    background: radial-gradient(ellipse at center, rgba(10, 20, 16, 0.88) 0%, rgba(3, 6, 10, 0.96) 100%);
+    z-index: 20; text-align: center;
+  }
+  #start-screen { display: flex; } /* game boots into G.state === 'menu' */
+  #no-internet { z-index: 30; }
+  #no-internet h2 { color: var(--accent); margin-bottom: 12px; }
+
+  .overlay h1, .overlay h2 { color: var(--accent); text-shadow: 0 0 18px var(--accent); letter-spacing: 4px; margin-bottom: 16px; }
+
+  /* ===== HUD skeleton ===== */
+  #hud {
+    position: fixed; inset: 0; z-index: 10; pointer-events: none;
+  }
+  #money, #hp-bar, #day-info, #seed-bar {
+    position: absolute; pointer-events: none;
+    background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 8px;
+  }
+  #money { top: 14px; left: 14px; padding: 6px 14px; color: var(--money); font-weight: 600; }
+  #hp-bar { top: 14px; right: 14px; padding: 6px 10px; width: 170px; }
+  #day-info { top: 14px; left: 50%; transform: translateX(-50%); padding: 6px 14px; }
+  #seed-bar { bottom: 14px; left: 50%; transform: translateX(-50%); padding: 6px 14px; }
+
+  /* ===== HP bar fill ===== */
+  .hp-track { position: relative; width: 100%; height: 14px; background: rgba(255, 255, 255, 0.08); border-radius: 4px; overflow: hidden; }
+  .hp-fill { height: 100%; background: var(--hp); transition: width 0.2s ease; }
+  .hp-label { font-size: 11px; text-align: center; margin-top: 3px; color: var(--hp); }
+
+  /* ===== Shop panel ===== */
+  #shop-panel { pointer-events: auto; }
+  #shop-panel .shop-box {
+    width: min(640px, 92vw); max-height: 82vh; display: flex; flex-direction: column;
+    background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 12px;
+    overflow: hidden; pointer-events: auto;
+  }
+  .shop-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid var(--ui-border); }
+  .shop-header h2 { margin: 0; }
+  .shop-close-btn {
+    background: none; border: 1px solid var(--ui-border); color: var(--text); border-radius: 6px;
+    width: 28px; height: 28px; cursor: pointer; font-size: 14px; pointer-events: auto;
+  }
+  .shop-close-btn:hover { background: rgba(255, 255, 255, 0.08); }
+  .shop-tabs { display: flex; border-bottom: 1px solid var(--ui-border); }
+  .shop-tab {
+    flex: 1; padding: 10px 4px; background: none; border: none; color: var(--text); opacity: 0.6;
+    cursor: pointer; font-size: 13px; border-bottom: 2px solid transparent; pointer-events: auto;
+  }
+  .shop-tab.active { opacity: 1; border-bottom-color: var(--accent); color: var(--accent); }
+  .shop-tab:hover { opacity: 0.9; }
+  .shop-body { padding: 14px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+  .shop-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: rgba(255, 255, 255, 0.04); border-radius: 8px; }
+  .shop-icon { font-size: 22px; width: 28px; text-align: center; flex-shrink: 0; }
+  .shop-name { flex: 1; font-size: 14px; }
+  .shop-desc { font-size: 11px; opacity: 0.6; display: block; }
+  .shop-meta { font-size: 12px; opacity: 0.85; min-width: 64px; text-align: right; }
+  .shop-buy-btn, .shop-sell-btn {
+    background: rgba(110, 231, 160, 0.15); border: 1px solid var(--ui-border); color: var(--accent);
+    padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; white-space: nowrap; pointer-events: auto;
+  }
+  .shop-buy-btn:hover:not(:disabled), .shop-sell-btn:hover:not(:disabled) { background: rgba(110, 231, 160, 0.3); }
+  .shop-buy-btn:disabled, .shop-sell-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .shop-owned { color: var(--accent); font-size: 13px; font-weight: bold; }
+  .shop-locked { opacity: 0.45; font-size: 12px; }
+  .shop-row-later { opacity: 0.55; }
+  .shop-total-banner { margin-top: 4px; padding: 10px; text-align: center; font-size: 14px; color: var(--money); border-top: 1px solid var(--ui-border); }
+  #toast {
+    position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
+    pointer-events: none;
+  }
+  #banner {
+    position: absolute; top: 64px; left: 50%;
+    pointer-events: none; font-size: 20px; letter-spacing: 1.5px; color: var(--accent);
+    background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 10px;
+    padding: 10px 24px; white-space: nowrap; text-align: center;
+    transform: translate(-50%, -140%); opacity: 0;
+    transition: transform 0.45s cubic-bezier(.2, .85, .25, 1), opacity 0.35s ease;
+  }
+  #banner.show {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+
+  /* ===== Farming HUD: seed bar + toast ===== */
+  #seed-bar { display: flex; gap: 6px; pointer-events: auto; padding: 8px; }
+  .seed-cell {
+    position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 46px; height: 46px; border-radius: 6px; cursor: pointer;
+    background: rgba(255, 255, 255, 0.06); border: 1px solid transparent; pointer-events: auto;
+  }
+  .seed-cell .seed-key { position: absolute; top: 2px; left: 4px; font-size: 9px; opacity: 0.6; }
+  .seed-cell .seed-icon { font-size: 20px; line-height: 1; }
+  .seed-cell .seed-count { font-size: 11px; color: var(--text); }
+  .seed-cell.selected { border-color: var(--accent); background: rgba(110, 231, 160, 0.18); }
+  .seed-cell.locked { opacity: 0.35; }
+  #toast {
+    padding: 6px 14px; border-radius: 8px; background: var(--ui-bg); border: 1px solid var(--ui-border);
+    opacity: 0; transition: opacity 0.3s ease; font-size: 14px;
+  }
+  #interact-prompt {
+    position: absolute; bottom: 84px; left: 50%; transform: translateX(-50%);
+    padding: 6px 14px; border-radius: 8px; background: var(--ui-bg); border: 1px solid var(--ui-border);
+    opacity: 0; transition: opacity 0.3s ease; font-size: 14px; pointer-events: none; white-space: nowrap;
+  }
+
+  /* ===== Launch cinematic: fullscreen white fade before the victory reveal ===== */
+  #launch-fade {
+    position: fixed; inset: 0; background: #ffffff; opacity: 0;
+    pointer-events: none; z-index: 25;
+  }
+
+  /* ===== Victory screen ===== */
+  .victory-stats { font-size: 16px; line-height: 1.8; margin-bottom: 22px; }
+  .victory-btn {
+    background: rgba(110, 231, 160, 0.15); border: 1px solid var(--ui-border); color: var(--accent);
+    padding: 10px 26px; border-radius: 8px; cursor: pointer; font-size: 15px; pointer-events: auto;
+  }
+  .victory-btn:hover { background: rgba(110, 231, 160, 0.3); }
+
+  /* ===== Start / Pause / Help screens (Task 10) ===== */
+  #start-screen, #pause-screen { position: fixed; }
+  #start-title { animation: titlePulse 2.4s ease-in-out infinite; }
+  @keyframes titlePulse {
+    0%, 100% { text-shadow: 0 0 18px var(--accent); transform: scale(1); }
+    50% { text-shadow: 0 0 34px var(--accent), 0 0 50px var(--money); transform: scale(1.04); }
+  }
+  .howto { font-size: 14px; line-height: 1.9; opacity: 0.9; margin-bottom: 22px; }
+  .howto p { margin: 0; }
+  .menu-buttons { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-bottom: 14px; }
+  .menu-btn {
+    background: rgba(110, 231, 160, 0.15); border: 1px solid var(--ui-border); color: var(--accent);
+    padding: 10px 26px; border-radius: 8px; cursor: pointer; font-size: 15px; pointer-events: auto;
+  }
+  .menu-btn:hover { background: rgba(110, 231, 160, 0.3); }
+  .menu-btn.small { padding: 6px 14px; font-size: 13px; }
+  .confirm-row { display: flex; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 14px; pointer-events: auto; }
+  .reset-link { color: var(--text); opacity: 0.6; font-size: 12px; cursor: pointer; pointer-events: auto; text-decoration: underline; }
+  .reset-link:hover { opacity: 1; }
+  .help-corner-btn {
+    position: absolute; top: 18px; right: 18px;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(110, 231, 160, 0.15); border: 1px solid var(--ui-border); color: var(--accent);
+    font-size: 16px; cursor: pointer; pointer-events: auto;
+  }
+  .help-box {
+    width: min(680px, 92vw); max-height: 84vh; overflow-y: auto;
+    background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 12px;
+    padding: 18px 22px; text-align: left; pointer-events: auto;
+  }
+  .help-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .help-header h2 { margin: 0; }
+  .help-section { margin-bottom: 18px; }
+  .help-section h3 { color: var(--accent); font-size: 14px; letter-spacing: 1px; margin-bottom: 8px; }
+  .help-controls-list, .help-tips-list { font-size: 13px; line-height: 1.8; opacity: 0.9; padding-left: 18px; margin: 0; }
+  .help-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .help-table th, .help-table td { padding: 4px 8px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .help-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .help-alien-card { background: rgba(255,255,255,0.04); border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+  .help-alien-card .icon { font-size: 20px; margin-right: 6px; }
+  .help-alien-card .name { font-weight: 600; }
+  .help-alien-card .blurb { opacity: 0.75; display: block; margin-top: 2px; }
+
+  /* ===== Hurt vignette: red flash pulse on damagePlayer() ===== */
+  #hurt-vignette {
+    position: fixed; inset: 0; z-index: 16; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(255, 60, 60, 0) 45%, rgba(255, 20, 20, 0.55) 100%);
+    opacity: 0;
+  }
+  #downed-screen p { margin-top: 4px; opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<div id="start-screen" class="overlay">
+  <button id="start-help-btn" class="help-corner-btn" type="button">?</button>
+  <h1 id="start-title">🌱 GALAXY FARMER 🚀</h1>
+  <div class="howto">
+    <p>WASD to walk</p>
+    <p>Click to shoot</p>
+    <p>Space to interact with the highlighted plot/house</p>
+    <p>Right-drag to look around</p>
+    <p>Build the spaceship to win!</p>
+  </div>
+  <div id="start-buttons" class="menu-buttons">
+    <button id="start-btn" class="menu-btn" type="button">Start</button>
+    <button id="continue-btn" class="menu-btn" type="button" style="display:none;">Continue</button>
+  </div>
+  <div id="start-confirm" class="confirm-row" style="display:none;">
+    <span>Overwrite existing save?</span>
+    <button id="confirm-overwrite-yes" class="menu-btn small" type="button">Yes, start new</button>
+    <button id="confirm-overwrite-no" class="menu-btn small" type="button">Cancel</button>
+  </div>
+  <a id="reset-save-link" class="reset-link">Reset Save</a>
+</div>
+<div id="pause-screen" class="overlay">
+  <h2>PAUSED</h2>
+  <div class="menu-buttons">
+    <button id="resume-btn" class="menu-btn" type="button">Resume</button>
+    <button id="pause-help-btn" class="menu-btn" type="button">Help</button>
+    <button id="pause-reset-btn" class="menu-btn" type="button">Reset Save &amp; Quit to Menu</button>
+  </div>
+</div>
+<div id="help-panel" class="overlay">
+  <div class="help-box">
+    <div class="help-header">
+      <h2>HELP</h2>
+      <button id="help-close-btn" class="shop-close-btn" type="button">✕</button>
+    </div>
+    <div id="help-body"></div>
+  </div>
+</div>
+<div id="victory-screen" class="overlay">
+  <h2>YOU BUILT THE SPACESHIP!</h2>
+  <div id="victory-stats" class="victory-stats"></div>
+  <button id="victory-replay-btn" class="victory-btn" type="button">Play Again</button>
+</div>
+<div id="downed-screen" class="overlay">
+  <h2>DOWNED</h2>
+  <p>You were knocked out&hellip; &minus;10% coins</p>
+</div>
+<div id="shop-panel" class="overlay">
+  <div class="shop-box">
+    <div class="shop-header">
+      <h2>SHOP</h2>
+      <button id="shop-close-btn" class="shop-close-btn" type="button">✕</button>
+    </div>
+    <div class="shop-tabs">
+      <button class="shop-tab" data-tab="seeds" type="button">🌱 Seeds</button>
+      <button class="shop-tab" data-tab="sell" type="button">🪙 Sell</button>
+      <button class="shop-tab" data-tab="upgrades" type="button">⬆️ Upgrades</button>
+      <button class="shop-tab" data-tab="spaceship" type="button">🚀 Spaceship</button>
+    </div>
+    <div id="shop-body" class="shop-body"></div>
+  </div>
+</div>
+<div id="no-internet" class="overlay">
+  <h2>🚀 Galaxy Farmer needs an internet connection</h2>
+  <p>The 3D engine (Three.js) could not be loaded. Check your connection and reload the page.</p>
+</div>
+
+<div id="hud">
+  <div id="money"></div>
+  <div id="hp-bar"></div>
+  <div id="day-info"></div>
+  <div id="seed-bar"></div>
+  <div id="toast"></div>
+  <div id="interact-prompt"></div>
+  <div id="banner"></div>
+</div>
+<div id="launch-fade"></div>
+<div id="hurt-vignette"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+
+// ===== Game namespace & globals =====
+const G = {}; // G.state: 'menu' | 'playing' | 'shop' | 'paused' | 'downed' | 'launch' | 'victory'
+let scene, camera, renderer;
+const PLANET_R = 11;
+
+// ===== World: planet, decorations, house, launch pad, lighting, starfield =====
+let world, sunLight, moonLight, ambient, houseLamp, houseWindowMat, starfield;
+
+const _Y = new THREE.Vector3(0, 1, 0);
+function placeOnSurface(obj, dir, yaw = 0, height = 0) {
+  const d = dir.clone().normalize();
+  obj.position.copy(d).multiplyScalar(PLANET_R + height);
+  obj.quaternion.setFromUnitVectors(_Y, d);
+  obj.rotateY(yaw);
+}
+
+function randomSurfaceDir() {
+  const v = new THREE.Vector3(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
+  if (v.lengthSq() < 1e-6) v.set(0, 1, 0);
+  return v.normalize();
+}
+
+// Shared geometries/materials for scattered decorations (rocks/trees).
+const rockGeo = new THREE.DodecahedronGeometry(1, 0);
+const rockMat = new THREE.MeshLambertMaterial({ color: 0x8c8c8c });
+const trunkGeo = new THREE.CylinderGeometry(0.15, 0.2, 1, 6);
+const trunkMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2f });
+const leafGeo = new THREE.ConeGeometry(0.7, 1.2, 8);
+const leafMat = new THREE.MeshLambertMaterial({ color: 0x2f7a3f });
+
+function buildPlanet() {
+  const geo = new THREE.IcosahedronGeometry(PLANET_R, 4);
+  const posAttr = geo.attributes.position;
+  const count = posAttr.count;
+  const colors = new Float32Array(count * 3);
+  const grass = new THREE.Color(0x4a9e5c);
+  const dirt = new THREE.Color(0x8a6a4a);
+  const v = new THREE.Vector3();
+  const c = new THREE.Color();
+  for (let i = 0; i < count; i++) {
+    v.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)).normalize();
+    c.copy(v.dot(world.houseDir) > 0.76 ? dirt : grass);
+    c.offsetHSL(0, 0, (Math.random() - 0.5) * 0.12);
+    colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const mesh = new THREE.Mesh(geo, mat);
+  scene.add(mesh);
+  return mesh;
+}
+
+function inExclusionZone(dir) {
+  // Keep decorations off the farm patch around the house and off the landing pad.
+  return dir.dot(world.houseDir) > 0.74 || dir.dot(world.padDir) > 0.93;
+}
+
+function buildDecorations() {
+  for (let i = 0; i < 10; i++) {
+    let dir;
+    do { dir = randomSurfaceDir(); } while (inExclusionZone(dir));
+    const rock = new THREE.Mesh(rockGeo, rockMat);
+    const s = 0.3 + Math.random() * 0.6;
+    rock.scale.setScalar(s);
+    placeOnSurface(rock, dir, Math.random() * Math.PI * 2, s * 0.35);
+    scene.add(rock);
+  }
+  for (let i = 0; i < 7; i++) {
+    let dir;
+    do { dir = randomSurfaceDir(); } while (inExclusionZone(dir));
+    const tree = new THREE.Group();
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+    trunk.position.y = 0.5;
+    tree.add(trunk);
+    const leaf1 = new THREE.Mesh(leafGeo, leafMat);
+    leaf1.position.y = 1.3;
+    tree.add(leaf1);
+    const leaf2 = new THREE.Mesh(leafGeo, leafMat);
+    leaf2.position.y = 1.85;
+    leaf2.scale.setScalar(0.7);
+    tree.add(leaf2);
+    placeOnSurface(tree, dir, Math.random() * Math.PI * 2);
+    scene.add(tree);
+  }
+}
+
+function buildHouse() {
+  const houseGroup = new THREE.Group();
+  placeOnSurface(houseGroup, world.houseDir, 0, 0);
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(3, 2.5, 3),
+    new THREE.MeshLambertMaterial({ color: 0xd2b48c }) // warm tan
+  );
+  body.position.y = 1.25;
+  houseGroup.add(body);
+
+  const roof = new THREE.Mesh(
+    new THREE.ConeGeometry(2.5, 1.4, 4), // 4-sided cone = pyramid roof
+    new THREE.MeshLambertMaterial({ color: 0xb33f32 }) // rust red
+  );
+  roof.position.y = 2.5 + 0.7;
+  roof.rotation.y = Math.PI / 4; // align pyramid faces to the box sides
+  houseGroup.add(roof);
+
+  // Door on the local +Z face (the side facing the farm region).
+  const door = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.8, 1.6),
+    new THREE.MeshLambertMaterial({ color: 0x3a2a1a })
+  );
+  door.position.set(0, 0.8, 1.51);
+  houseGroup.add(door);
+  world.doorMesh = door;
+
+  houseWindowMat = new THREE.MeshLambertMaterial({ color: 0xfff2b0, emissive: 0xffdd66, emissiveIntensity: 0 });
+  const windowGeo = new THREE.PlaneGeometry(0.7, 0.7);
+  const win1 = new THREE.Mesh(windowGeo, houseWindowMat);
+  win1.position.set(1.51, 1.5, 0.6);
+  win1.rotation.y = Math.PI / 2;
+  houseGroup.add(win1);
+  const win2 = new THREE.Mesh(windowGeo, houseWindowMat);
+  win2.position.set(-1.51, 1.5, 0.6);
+  win2.rotation.y = -Math.PI / 2;
+  houseGroup.add(win2);
+
+  scene.add(houseGroup);
+
+  // Door dir: house dir nudged toward the farm center (the tangent the door opens onto).
+  const doorTangent = new THREE.Vector3(0, 0, 1).applyQuaternion(houseGroup.quaternion).normalize();
+  world.houseDoorDir = world.houseDir.clone().addScaledVector(doorTangent, 0.12).normalize();
+}
+
+function buildPad() {
+  const padGroup = new THREE.Group();
+  const pad = new THREE.Mesh(
+    new THREE.CylinderGeometry(3.5, 3.5, 0.3, 24),
+    new THREE.MeshLambertMaterial({ color: 0x565c63 })
+  );
+  pad.position.y = 0.15;
+  padGroup.add(pad);
+
+  const lightGeo = new THREE.SphereGeometry(0.15, 8, 8);
+  const lightMat = new THREE.MeshBasicMaterial({ color: 0xffaa33 });
+  [[2.3, 2.3], [2.3, -2.3], [-2.3, 2.3], [-2.3, -2.3]].forEach(([x, z]) => {
+    const l = new THREE.Mesh(lightGeo, lightMat);
+    l.position.set(x, 0.35, z);
+    padGroup.add(l);
+  });
+
+  placeOnSurface(padGroup, world.padDir, 0, 0);
+  scene.add(padGroup);
+}
+
+function buildLighting() {
+  sunLight = new THREE.DirectionalLight(0xfff2d8, 1.1);
+  sunLight.position.set(60, 40, 30);
+  sunLight.target.position.set(0, 0, 0);
+  scene.add(sunLight, sunLight.target);
+
+  moonLight = new THREE.DirectionalLight(0x8899ff, 0.25);
+  moonLight.position.set(-60, 40, -30);
+  moonLight.target.position.set(0, 0, 0);
+  moonLight.intensity = 0; // off during the day; Task 9 fades it in at night
+  scene.add(moonLight, moonLight.target);
+
+  ambient = new THREE.AmbientLight(0x445566, 0.7);
+  scene.add(ambient);
+
+  houseLamp = new THREE.PointLight(0xffc76a, 0, 8);
+  houseLamp.position.copy(world.houseDoorDir).multiplyScalar(PLANET_R + 1.2);
+  scene.add(houseLamp);
+}
+
+function buildStarfield() {
+  const starCount = 800;
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(starCount * 3);
+  const R = 300;
+  for (let i = 0; i < starCount; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(Math.random() * 2 - 1);
+    positions[i * 3] = R * Math.sin(phi) * Math.cos(theta);
+    positions[i * 3 + 1] = R * Math.sin(phi) * Math.sin(theta);
+    positions[i * 3 + 2] = R * Math.cos(phi);
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.4, sizeAttenuation: true, transparent: true, opacity: 1 });
+  starfield = new THREE.Points(geo, mat);
+  scene.add(starfield);
+}
+
+function buildWorld() {
+  world = {
+    houseDir: new THREE.Vector3(0, 0.35, 1).normalize(),
+    padDir: new THREE.Vector3(0, 0.2, -1).normalize(),
+  };
+  world.planet = buildPlanet();
+  buildDecorations();
+  buildHouse();
+  buildPad();
+  buildLighting();
+  buildStarfield();
+}
+
+// ===== Particles: pooled burst emitter (Task 9) =====
+// ONE shared THREE.Points draw call, cap 1000. Particles recycle round-robin (allocation-
+// free per frame): burst() just overwrites the next slot in the ring regardless of whether
+// it was still alive, and updateParticles() writes position/color into the shared typed
+// arrays every frame. PointsMaterial has no per-particle alpha or size in r128 (size is a
+// single uniform for the whole system), so fade-out is done via per-vertex COLOR DARKENING
+// (rgb *= remaining-life fraction) rather than size shrink -- additive blending then makes
+// fully-decayed (black) particles draw as invisible.
+const PARTICLE_CAP = 1000;
+const particlePool = [];
+let particlePoints, particlePosAttr, particleColorAttr;
+let _particleCursor = 0;
+const _particleColorTmp = new THREE.Color();
+const _burstV1 = new THREE.Vector3(); // shared temp for computing burst() call-site positions
+
+function buildParticles() {
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(PARTICLE_CAP * 3);
+  const colors = new Float32Array(PARTICLE_CAP * 3);
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  particlePosAttr = geo.attributes.position;
+  particleColorAttr = geo.attributes.color;
+  const mat = new THREE.PointsMaterial({
+    size: 0.16, vertexColors: true, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+  });
+  particlePoints = new THREE.Points(geo, mat);
+  scene.add(particlePoints);
+  for (let i = 0; i < PARTICLE_CAP; i++) {
+    particlePool.push({ active: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 0, maxLife: 1, r: 0, g: 0, b: 0 });
+  }
+}
+
+// Spawns `count` particles at pos with a small random outward burst velocity. Called from
+// rare/discrete events (bullet impacts, deaths, harvest, etc.) so the Vector3 reads here are
+// fine; the recycling loop itself never allocates.
+function burst(pos, color, count) {
+  _particleColorTmp.set(color);
+  for (let i = 0; i < count; i++) {
+    const p = particlePool[_particleCursor];
+    _particleCursor = (_particleCursor + 1) % PARTICLE_CAP;
+    p.active = true;
+    p.x = pos.x; p.y = pos.y; p.z = pos.z;
+    const speed = 1.5 + Math.random() * 3;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(Math.random() * 2 - 1);
+    const sinPhi = Math.sin(phi);
+    p.vx = sinPhi * Math.cos(theta) * speed;
+    p.vy = sinPhi * Math.sin(theta) * speed;
+    p.vz = Math.cos(phi) * speed;
+    p.life = 0.35 + Math.random() * 0.45;
+    p.maxLife = p.life;
+    p.r = _particleColorTmp.r; p.g = _particleColorTmp.g; p.b = _particleColorTmp.b;
+  }
+}
+
+// Per-frame, allocation-free: walks the fixed-size pool, integrates active particles, and
+// darkens color toward black as life runs out (see fade-strategy note above).
+function updateParticles(dt) {
+  for (let i = 0; i < PARTICLE_CAP; i++) {
+    const p = particlePool[i];
+    if (!p.active) continue;
+    const idx = i * 3;
+    p.life -= dt;
+    if (p.life <= 0) {
+      p.active = false;
+      particleColorAttr.array[idx] = 0; particleColorAttr.array[idx + 1] = 0; particleColorAttr.array[idx + 2] = 0;
+      continue;
+    }
+    p.vy -= 4 * dt; // gentle gravity
+    p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+    const frac = p.life / p.maxLife;
+    particlePosAttr.array[idx] = p.x; particlePosAttr.array[idx + 1] = p.y; particlePosAttr.array[idx + 2] = p.z;
+    particleColorAttr.array[idx] = p.r * frac; particleColorAttr.array[idx + 1] = p.g * frac; particleColorAttr.array[idx + 2] = p.b * frac;
+  }
+  particlePosAttr.needsUpdate = true;
+  particleColorAttr.needsUpdate = true;
+}
+
+// ===== Day/night cycle (Task 9) =====
+// Cosmetic only -- nothing gameplay-relevant reads G.tod. Sun and moon orbit the planet on
+// opposite sides of a great circle whose axis is tilted ~25° off world-up; the tilt basis
+// (_dnAxis/_dnE1/_dnE2) is computed once here since it's constant, so the per-frame update
+// only ever mutates the shared _dnSunDir temp.
+const DAY_NIGHT_CYCLE = 150; // seconds for a full day+night loop
+const DAYNIGHT_TILT = 25 * Math.PI / 180;
+const _dnAxis = new THREE.Vector3(Math.sin(DAYNIGHT_TILT), Math.cos(DAYNIGHT_TILT), 0).normalize();
+const _dnE1 = new THREE.Vector3(_dnAxis.y, -_dnAxis.x, 0).normalize();
+const _dnE2 = new THREE.Vector3().crossVectors(_dnAxis, _dnE1).normalize();
+const _dnSunDir = new THREE.Vector3();
+const SUN_ORBIT_DIST = 80, MOON_ORBIT_DIST = 80;
+const BG_NIGHT = new THREE.Color(0x0a0f1e), BG_DAY = new THREE.Color(0x16294a);
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function smoothstep(x, e0, e1) {
+  const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
+  return t * t * (3 - 2 * t);
+}
+
+let _hudDay = null, _hudPhase = null;
+function updateDayInfo() {
+  const phase = G.tod < 0.5 ? '☀️' : '🌙';
+  if (G.day !== _hudDay || phase !== _hudPhase) {
+    _hudDay = G.day; _hudPhase = phase;
+    document.getElementById('day-info').textContent = 'Day ' + G.day + ' ' + phase;
+  }
+}
+
+function updateDayNight(dt) {
+  G.tod += dt / DAY_NIGHT_CYCLE;
+  if (G.tod >= 1) { G.tod -= 1; G.day++; }
+
+  // Phase shift +0.25 aligns the orbit with the HUD convention (tod 0-0.5 = day):
+  // sunY = -sin(TILT)*cos(phi), so the +0.25 shift puts noon (sunY max) at tod=0.25,
+  // sunrise at tod=0, sunset at tod=0.5 — exactly where #day-info flips ☀️/🌙.
+  const phi = (G.tod + 0.25) * Math.PI * 2;
+  _dnSunDir.copy(_dnE1).multiplyScalar(Math.cos(phi)).addScaledVector(_dnE2, Math.sin(phi));
+  sunLight.position.copy(_dnSunDir).multiplyScalar(SUN_ORBIT_DIST);
+  moonLight.position.copy(_dnSunDir).multiplyScalar(-MOON_ORBIT_DIST);
+
+  const dayFactor = smoothstep(_dnSunDir.y, -0.12, 0.12); // 0 = full night, 1 = full day
+
+  scene.background.lerpColors(BG_NIGHT, BG_DAY, dayFactor);
+  ambient.intensity = lerp(0.35, 0.7, dayFactor);
+  sunLight.intensity = lerp(0, 1.1, dayFactor);
+  moonLight.intensity = lerp(0.25, 0, dayFactor);
+  starfield.material.opacity = lerp(1, 0.35, dayFactor);
+  houseLamp.intensity = lerp(1.2, 0, dayFactor);
+  houseWindowMat.emissiveIntensity = lerp(0.9, 0, dayFactor);
+
+  updateDayInfo();
+}
+
+// ===== Player: mesh, local frame, surface movement =====
+let player;
+const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q1 = new THREE.Quaternion();
+function playerUp(out)      { return out.set(0, 1, 0).applyQuaternion(player.q); }
+function playerForward(out) { return out.set(0, 0, 1).applyQuaternion(player.q); }
+
+function buildPlayerMesh() {
+  const group = new THREE.Group();
+
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.35, 0.35, 0.9, 12),
+    new THREE.MeshLambertMaterial({ color: 0xffffff })
+  );
+  body.position.y = 0.9;
+  group.add(body);
+
+  const helmet = new THREE.Mesh(
+    new THREE.SphereGeometry(0.32, 16, 12),
+    new THREE.MeshPhongMaterial({ color: 0xaee0ff, transparent: true, opacity: 0.75, shininess: 90 })
+  );
+  helmet.position.y = 1.5;
+  group.add(helmet);
+
+  const backpack = new THREE.Mesh(
+    new THREE.BoxGeometry(0.3, 0.45, 0.2),
+    new THREE.MeshLambertMaterial({ color: 0xdd8833 })
+  );
+  backpack.position.set(0, 0.95, -0.3);
+  group.add(backpack);
+
+  const legGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.55, 8);
+  const legMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+  const legL = new THREE.Mesh(legGeo, legMat);
+  legL.position.set(-0.15, 0.275, 0);
+  group.add(legL);
+  const legR = new THREE.Mesh(legGeo, legMat);
+  legR.position.set(0.15, 0.275, 0);
+  group.add(legR);
+
+  return group;
+}
+
+function movePlayerToDir(dir) {
+  player.q.setFromUnitVectors(_Y, _v1.copy(dir).normalize());
+  player.pos.set(0, 1, 0).applyQuaternion(player.q).multiplyScalar(PLANET_R);
+  player.mesh.position.copy(player.pos);
+  player.mesh.quaternion.copy(player.q);
+}
+
+function buildPlayer() {
+  player = {
+    q: new THREE.Quaternion(),
+    pos: new THREE.Vector3(),
+    mesh: buildPlayerMesh(),
+    hp: 100,
+    maxHp: 100,
+    speed: 6,
+    lastHurt: 0,
+  };
+  player.q.setFromUnitVectors(_Y, world.houseDoorDir);
+  // Rotate slightly around the local up axis so the spawn facing isn't the raw
+  // minimal-rotation twist (purely aesthetic framing for the initial view).
+  player.q.premultiply(_q1.setFromAxisAngle(playerUp(_v1), 0.3));
+  scene.add(player.mesh);
+}
+
+const TURN_SPEED = 2.6; // rad/s
+let _walkT = 0;
+function updatePlayer(dt) {
+  if (G.state !== 'playing') return; // don't move the player while the shop panel is open
+  const turn = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+  const fwd  = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
+  if (turn) player.q.premultiply(_q1.setFromAxisAngle(playerUp(_v1), -turn * TURN_SPEED * dt));
+  if (fwd) {
+    const right = _v1.set(1, 0, 0).applyQuaternion(player.q);
+    player.q.premultiply(_q1.setFromAxisAngle(right, fwd * (player.speed * dt) / PLANET_R));
+  }
+  player.pos.set(0, 1, 0).applyQuaternion(player.q).multiplyScalar(PLANET_R);
+  player.mesh.position.copy(player.pos);
+  player.mesh.quaternion.copy(player.q);
+
+  // Simple walk-cycle bob while moving.
+  if (fwd || turn) {
+    _walkT += dt;
+    const bob = 0.06 * Math.sin(_walkT * 10);
+    player.mesh.position.addScaledVector(playerUp(_v2), bob);
+  }
+}
+
+// (stepOnSphere, Task 3's quaternion surface-walker stepper, was removed when all aliens
+// became hover-flyers — no remaining callers; flyers steer via flyerTick/stepDirTowards.)
+
+// ===== Camera: third-person follow + right-drag orbit =====
+const cam = { yaw: 0, pitch: 0.35, dragging: false };
+const CAM_DIST = 7, CAM_HEIGHT = 3.2;
+function updateCamera(dt) {
+  // Reuses module-scope _v1 (up) / _v2 (fwd -> offset -> ideal) instead of the
+  // brief's per-frame `new THREE.Vector3()` / `.clone()` calls, per the 60fps
+  // "reuse temp vectors" constraint; math is otherwise identical to the brief.
+  const up = playerUp(_v1);
+  const fwd = playerForward(_v2);
+  fwd.multiplyScalar(-CAM_DIST).addScaledVector(up, CAM_HEIGHT + CAM_DIST * cam.pitch);
+  fwd.applyAxisAngle(up, cam.yaw); // fwd is now the camera offset
+  fwd.add(player.pos); // fwd is now the ideal camera position
+  camera.position.lerp(fwd, 1 - Math.pow(0.0001, dt));
+  camera.up.copy(up);
+  up.multiplyScalar(1.5).add(player.pos); // up is now the lookAt target
+  camera.lookAt(up);
+
+  if (!cam.dragging && cam.yaw !== 0) {
+    const ease = 3 * dt; // rad/s back to 0
+    if (Math.abs(cam.yaw) <= ease) cam.yaw = 0;
+    else cam.yaw -= Math.sign(cam.yaw) * ease;
+  }
+}
+
+// ===== Input: keyboard movement map + right-drag orbit =====
+const keys = {};
+window.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  keys[e.code] = true;
+});
+window.addEventListener('keyup', (e) => {
+  keys[e.code] = false;
+});
+
+window.addEventListener('contextmenu', (e) => e.preventDefault());
+window.addEventListener('mousedown', (e) => {
+  if (e.button === 2) cam.dragging = true;
+});
+window.addEventListener('mouseup', (e) => {
+  if (e.button === 2) cam.dragging = false;
+});
+window.addEventListener('mousemove', (e) => {
+  if (!cam.dragging) return;
+  const ORBIT_SPEED = 0.005;
+  cam.yaw -= e.movementX * ORBIT_SPEED;
+  cam.yaw = Math.max(-Math.PI, Math.min(Math.PI, cam.yaw));
+  cam.pitch -= e.movementY * ORBIT_SPEED;
+  cam.pitch = Math.max(0.05, Math.min(0.9, cam.pitch));
+});
+
+// ===== Farming: crops, plots, inventory, contextual interaction =====
+const CROPS = {
+  wheat:   { id:'wheat',   name:'Star Wheat',     icon:'🌾', growTime: 30,  seedCost: 5,   sellPrice: 12,  color: 0xe8d44a },
+  berry:   { id:'berry',   name:'Moon Berry',     icon:'🫐', growTime: 60,  seedCost: 12,  sellPrice: 28,  color: 0x7a6aff },
+  carrot:  { id:'carrot',  name:'Crystal Carrot', icon:'🥕', growTime: 100, seedCost: 30,  sellPrice: 70,  color: 0xff9a3c },
+  melon:   { id:'melon',   name:'Nebula Melon',   icon:'🍈', growTime: 160, seedCost: 70,  sellPrice: 165, color: 0x5affb2 },
+  pumpkin: { id:'pumpkin', name:'Void Pumpkin',   icon:'🎃', growTime: 240, seedCost: 150, sellPrice: 360, color: 0xb45aff },
+};
+const SEED_ORDER = ['wheat', 'berry', 'carrot', 'melon', 'pumpkin'];
+const SEED_HOTKEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'];
+const CROP_SCALE = { wheat: 0.6, berry: 0.7, carrot: 0.85, melon: 1.1, pumpkin: 1.35 };
+
+const TILL_COST = 10;
+const PLOT_RANGE = 4;
+const DOOR_RANGE = 4;
+
+// ===== Shop: upgrade & ship part tables =====
+const UPGRADES = [
+  { id:'gunDmg',    name:'Blaster Power',   icon:'🔫', levels:[100, 300], desc:'Damage 10 → 16 → 24' },
+  { id:'gunRate',   name:'Rapid Trigger',   icon:'⚡', levels:[100, 300], desc:'Fire rate up' },
+  { id:'boots',     name:'Speed Boots',     icon:'👢', levels:[80, 240],  desc:'Walk speed 6 → 7.5 → 9' },
+  { id:'field',     name:'Field Expansion', icon:'🏞️', levels:[150, 400], desc:'+4 farm plots each' },
+  { id:'sprinkler', name:'Auto Sprinkler',  icon:'💦', levels:[500],      desc:'Crops never dry out' },
+];
+const SHIP_PARTS = [
+  { name:'Frame',             icon:'🏗️', cost: 300 },
+  { name:'Engine',            icon:'🔥', cost: 800 },
+  { name:'Fuel Tank',         icon:'🛢️', cost: 1500 },
+  { name:'Cockpit',           icon:'🪟', cost: 2500 },
+  { name:'Navigation Module', icon:'🧭', cost: 4000 },
+];
+
+G.money = 20;
+G.time = 0; // seconds of elapsed 'playing'/'shop' time (advanced in update()); combat regen/cooldowns key off this
+G.tod = 0; // 0-1 fraction through the current 150s day/night cycle; 0-0.5 day, 0.5-1 night. Cosmetic only.
+G.day = 1; // increments each time G.tod wraps past 1
+G.selectedSeed = 'wheat';
+G.stats = { harvests: 0, kills: 0, earned: 0 };
+G.upgrades = { gunDmg: 0, gunRate: 0, boots: 0, field: 0, sprinkler: false };
+G.partsOwned = 0;
+G.shopTab = 'seeds';
+G.focus = null; // { kind: 'plot'|'door', ref } | null — nearest interactable in range, recomputed each frame
+G.helpFrom = null; // 'start' | 'pause' — which screen opened the help panel, so Close returns there
+G._saveAcc = 0; // seconds accumulated toward the next 10s autosave tick (see update())
+
+const SAVE_KEY = 'galaxy-farmer-save-v1';
+
+let inventory = {
+  seeds:   { wheat: 2, berry: 0, carrot: 0, melon: 0, pumpkin: 0 },
+  produce: { wheat: 0, berry: 0, carrot: 0, melon: 0, pumpkin: 0 },
+};
+
+function updateHUD() {
+  document.getElementById('money').textContent = '🪙 ' + G.money;
+  const hpPct = Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100));
+  document.getElementById('hp-bar').innerHTML =
+    '<div class="hp-track"><div class="hp-fill" style="width:' + hpPct + '%"></div></div>' +
+    '<div class="hp-label">' + Math.ceil(player.hp) + ' / ' + player.maxHp + ' HP</div>';
+}
+function earn(n) {
+  G.money += n;
+  G.stats.earned += n;
+  updateHUD();
+}
+function spend(n) {
+  if (G.money < n) { toast('Not enough coins'); return false; }
+  G.money -= n;
+  updateHUD();
+  return true;
+}
+
+let _toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.style.opacity = '0'; }, 2000);
+}
+
+// Banner: slides in top-center (CSS .show class), auto-hides after 3s.
+let _bannerTimer = null;
+function showBanner(text) {
+  const el = document.getElementById('banner');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(_bannerTimer);
+  _bannerTimer = setTimeout(() => { el.classList.remove('show'); }, 3000);
+}
+
+function updateSeedBar() {
+  const el = document.getElementById('seed-bar');
+  el.innerHTML = '';
+  for (let i = 0; i < SEED_ORDER.length; i++) {
+    const id = SEED_ORDER[i];
+    const crop = CROPS[id];
+    const count = inventory.seeds[id];
+    const cell = document.createElement('div');
+    cell.className = 'seed-cell' + (id === G.selectedSeed ? ' selected' : '') + (count === 0 ? ' locked' : '');
+    cell.innerHTML = '<span class="seed-key">' + (i + 1) + '</span>' +
+      '<span class="seed-icon">' + crop.icon + '</span>' +
+      '<span class="seed-count">' + count + '</span>';
+    cell.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      G.selectedSeed = id;
+      updateSeedBar();
+    });
+    el.appendChild(cell);
+  }
+}
+
+// ----- Plot meshes: shared geometries/materials across all 12 plots -----
+const plotSoilGeo = new THREE.BoxGeometry(1.6, 0.25, 1.6);
+const untilledSoilMat = new THREE.MeshLambertMaterial({ color: 0x5a8a4a });
+const drySoilMat = new THREE.MeshLambertMaterial({ color: 0xa8845a });
+const wetSoilMat = new THREE.MeshLambertMaterial({ color: 0x6a4a30 });
+
+function makeRingGeometry(radius, segments) {
+  const pts = [];
+  for (let i = 0; i <= segments; i++) {
+    const a = (i / segments) * Math.PI * 2;
+    pts.push(new THREE.Vector3(Math.cos(a) * radius, 0.02, Math.sin(a) * radius));
+  }
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  // r128: computeLineDistances() lives on THREE.Line, not BufferGeometry. The dashed
+  // material needs the lineDistance attribute, so compute it via a throwaway Line
+  // (writes the attribute onto this shared geometry).
+  new THREE.Line(geo).computeLineDistances();
+  return geo;
+}
+const plotRingGeo = makeRingGeometry(0.9, 24);
+const lockedRingMat = new THREE.LineBasicMaterial({ color: 0x333333, transparent: true, opacity: 0.35 });
+const untilledRingMat = new THREE.LineDashedMaterial({ color: 0x9fe89f, transparent: true, opacity: 0.6, dashSize: 0.15, gapSize: 0.12 });
+
+// Shared focus-highlight ring (Space-interaction target): one module-scope mesh,
+// repositioned/hidden per frame in updateFocusVisual rather than allocated per plot.
+const highlightRingGeo = makeRingGeometry(1.05, 32);
+const highlightRingMat = new THREE.LineBasicMaterial({ color: 0x6ee7a0, transparent: true, opacity: 0.7 });
+const highlightRing = new THREE.LineLoop(highlightRingGeo, highlightRingMat);
+highlightRing.visible = false;
+
+function makeIconTexture(char, color) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.font = '46px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = color || '#ffffff';
+  ctx.fillText(char, 32, 34);
+  return new THREE.CanvasTexture(canvas);
+}
+const plusSpriteMat = new THREE.SpriteMaterial({ map: makeIconTexture('+', '#eaffea'), transparent: true, depthTest: false });
+const waterSpriteMat = new THREE.SpriteMaterial({ map: makeIconTexture('💧'), transparent: true, depthTest: false });
+
+const sproutGeo = new THREE.ConeGeometry(0.15, 0.4, 6);
+const midConeGeo = new THREE.ConeGeometry(0.18, 0.6, 6);
+const budGeo = new THREE.SphereGeometry(0.16, 8, 8);
+const readyGeo = new THREE.SphereGeometry(0.3, 10, 10);
+const sproutMat = new THREE.MeshLambertMaterial({ color: 0x4a9e5c });
+// Two material sets per crop (module-scope singletons, shared across plots):
+// cropMats for mid-stage buds (constant, no glow) and readyMats for the ready stage
+// only — updatePlots pulses emissiveIntensity on readyMats exclusively, so growing
+// crops never inherit the harvest-ready glow.
+const cropMats = {};
+const readyMats = {};
+SEED_ORDER.forEach((id) => {
+  cropMats[id] = new THREE.MeshLambertMaterial({ color: CROPS[id].color });
+  readyMats[id] = new THREE.MeshLambertMaterial({ color: CROPS[id].color, emissive: CROPS[id].color, emissiveIntensity: 0.4 });
+});
+
+let plots = [];
+let pickables = [];
+const _raycaster = new THREE.Raycaster();
+const _ndc = new THREE.Vector2();
+let _plotPulseT = 0;
+const _focusV1 = new THREE.Vector3(); // focus scan's up-vector temp (allocation-free)
+const _focusSlot = { kind: null, ref: null }; // reused object backing G.focus, mutated not reallocated
+let _lastPromptText = null;
+
+// 12 plot dirs in a 4x3 fan around world.houseDir, spreading toward world.houseDoorDir.
+// Each row sits at a constant geodesic (surface) distance from houseDir so the whole fan
+// stays inside the dirt patch (dot > 0.88) regardless of lateral spread; lateral column
+// spacing is compensated by the row's circle-of-latitude size (PLANET_R*sin(theta)) so
+// columns land ~2.6u apart at every row, not just the nearest one. The first row starts
+// at 3.2u so plot boxes (half 0.8) clear the 3x3 house footprint (half 1.5). Each plot
+// also gets a deterministic orientation: the house tangent frame parallel-transported
+// along the geodesic to the plot (quat = rotation(axis, theta) * houseQuat), so all
+// soil boxes are mutually near-axis-aligned and rows/columns read as a tidy field.
+// Verified with a standalone node SAT box-overlap script (see task-4 report): all dots
+// > 0.88 (min 0.8843), min house-plot gap 0.643u, min plot-plot gap 0.236u.
+function computePlotLayout() {
+  const houseDir = world.houseDir;
+  const qHouse = new THREE.Quaternion().setFromUnitVectors(_Y, houseDir);
+  const tangentF = world.houseDoorDir.clone()
+    .addScaledVector(houseDir, -world.houseDoorDir.dot(houseDir))
+    .normalize();
+  const tangentR = new THREE.Vector3().crossVectors(houseDir, tangentF).normalize();
+
+  const ROW_RADII = [3.2, 5.0, 6.8]; // surface distance from house center; max stays < 6.93 (dot=0.88 boundary)
+  const COLS = 4;
+  const SPACING = 2.6; // target lateral surface distance between adjacent columns
+
+  const layout = [];
+  for (const R of ROW_RADII) {
+    const theta = R / PLANET_R;
+    const F = PLANET_R * Math.sin(theta);
+    for (let c = 0; c < COLS; c++) {
+      const Lc = (c - (COLS - 1) / 2) * SPACING;
+      const ang = Lc / F;
+      const offsetDir = tangentF.clone().multiplyScalar(Math.cos(ang)).addScaledVector(tangentR, Math.sin(ang)).normalize();
+      const axis = new THREE.Vector3().crossVectors(houseDir, offsetDir).normalize();
+      const dir = houseDir.clone().applyAxisAngle(axis, theta).normalize();
+      const quat = new THREE.Quaternion().setFromAxisAngle(axis, theta).multiply(qHouse);
+      layout.push({ dir, quat });
+    }
+  }
+  return layout;
+}
+
+function buildPlotGroup(plot, quat) {
+  const group = new THREE.Group();
+  // Deterministic orientation (parallel-transported house frame) — a random yaw here
+  // could rotate diagonal corners of adjacent soil boxes into each other.
+  group.position.copy(plot.dir).multiplyScalar(PLANET_R);
+  group.quaternion.copy(quat);
+
+  const soil = new THREE.Mesh(plotSoilGeo, drySoilMat);
+  soil.position.y = 0.125;
+  group.add(soil);
+
+  const lockedRing = new THREE.LineLoop(plotRingGeo, lockedRingMat);
+  group.add(lockedRing);
+  const untilledRing = new THREE.LineLoop(plotRingGeo, untilledRingMat);
+  group.add(untilledRing);
+
+  const plusSprite = new THREE.Sprite(plusSpriteMat);
+  plusSprite.scale.set(0.5, 0.5, 1);
+  plusSprite.position.y = 0.6;
+  group.add(plusSprite);
+
+  const waterSprite = new THREE.Sprite(waterSpriteMat);
+  waterSprite.scale.set(0.4, 0.4, 1);
+  waterSprite.position.y = 0.9;
+  group.add(waterSprite);
+
+  const sprout = new THREE.Mesh(sproutGeo, sproutMat);
+  sprout.position.y = 0.25 + 0.2;
+  group.add(sprout);
+
+  const mid = new THREE.Group();
+  mid.position.y = 0.25;
+  const midCone = new THREE.Mesh(midConeGeo, sproutMat);
+  midCone.position.y = 0.3;
+  mid.add(midCone);
+  const midBud = new THREE.Mesh(budGeo, cropMats.wheat); // reassigned to the real crop material on sow
+  midBud.position.y = 0.55;
+  mid.add(midBud);
+  group.add(mid);
+
+  const ready = new THREE.Mesh(readyGeo, readyMats.wheat); // reassigned to the real crop material on sow
+  ready.position.y = 0.25 + 0.3;
+  group.add(ready);
+
+  scene.add(group);
+
+  plot._meshes = { soil, lockedRing, untilledRing, plusSprite, waterSprite, sprout, mid, midBud, ready };
+  return group;
+}
+
+function assignCropVisual(plot) {
+  plot._meshes.midBud.material = cropMats[plot.cropId];
+  plot._meshes.ready.material = readyMats[plot.cropId];
+  plot._meshes.ready.scale.setScalar(CROP_SCALE[plot.cropId] || 1);
+}
+
+// Recomputes which stage mesh should be visible from state/growth/watered; only ever
+// toggles .visible/.material references (no geometry rebuilds, no per-call allocations).
+function updatePlotVisual(plot) {
+  const m = plot._meshes;
+  const locked = plot.state === 'locked';
+  const untilled = plot.state === 'untilled';
+
+  m.lockedRing.visible = locked;
+  m.untilledRing.visible = untilled;
+  m.plusSprite.visible = untilled;
+  m.soil.visible = !locked;
+  if (!locked) {
+    m.soil.material = untilled ? untilledSoilMat : (plot.watered ? wetSoilMat : drySoilMat);
+  }
+
+  let stage = null;
+  if (plot.state === 'growing') stage = plot.growth < 0.4 ? 'sprout' : 'mid';
+  else if (plot.state === 'ready') stage = 'ready';
+  m.sprout.visible = stage === 'sprout';
+  m.mid.visible = stage === 'mid';
+  m.ready.visible = stage === 'ready';
+
+  m.waterSprite.visible = plot.state === 'growing' && !plot.watered;
+}
+
+function buildPlots() {
+  const layout = computePlotLayout();
+  for (let i = 0; i < layout.length; i++) {
+    const plot = {
+      dir: layout[i].dir,
+      state: i < 4 ? 'untilled' : 'locked',
+      cropId: null,
+      growth: 0,
+      watered: false,
+      redried: false,
+      group: null,
+    };
+    plot.group = buildPlotGroup(plot, layout[i].quat);
+    updatePlotVisual(plot);
+    plots.push(plot);
+    pickables.push(plot.group);
+  }
+}
+
+function updatePlots(dt) {
+  _plotPulseT += dt;
+  const pulse = 0.4 + 0.3 * Math.sin(_plotPulseT * 3); // ready-stage-only emissive pulse
+  for (let i = 0; i < SEED_ORDER.length; i++) readyMats[SEED_ORDER[i]].emissiveIntensity = pulse;
+
+  for (let i = 0; i < plots.length; i++) {
+    const plot = plots[i];
+    if (G.upgrades.sprinkler && plot.state === 'growing' && !plot.watered) plot.watered = true;
+    if (plot.state === 'growing' && plot.watered) {
+      plot.growth += dt / CROPS[plot.cropId].growTime;
+      if (plot.growth >= 0.5 && !plot.redried) {
+        plot.watered = false;
+        plot.redried = true; // needs one more watering
+      }
+      if (plot.growth >= 1) {
+        plot.growth = 1;
+        plot.state = 'ready';
+      }
+    }
+    updatePlotVisual(plot);
+  }
+}
+
+function interactPlot(plot) {
+  switch (plot.state) {
+    case 'locked':
+      toast('Buy Field Expansion at the house');
+      break;
+    case 'untilled':
+      if (spend(TILL_COST)) plot.state = 'empty'; // small dirt burst (visual polish deferred to a later juice pass)
+      break;
+    case 'empty':
+      if (inventory.seeds[G.selectedSeed] > 0) {
+        inventory.seeds[G.selectedSeed]--;
+        plot.cropId = G.selectedSeed;
+        plot.state = 'growing';
+        plot.growth = 0;
+        plot.watered = false;
+        plot.redried = false;
+        assignCropVisual(plot);
+        updateSeedBar();
+      } else {
+        toast('No ' + CROPS[G.selectedSeed].name + ' seeds — buy at the house');
+      }
+      break;
+    case 'growing':
+      if (!plot.watered) {
+        plot.watered = true; // soil darkens next updatePlotVisual pass
+        burst(_burstV1.copy(plot.dir).multiplyScalar(PLANET_R + 0.3), 0x6ecbff, 14);
+      } else toast('Growing…');
+      break;
+    case 'ready':
+      inventory.produce[plot.cropId]++; // harvest touches produce only; seed bar unaffected
+      G.stats.harvests++;
+      burst(_burstV1.copy(plot.dir).multiplyScalar(PLANET_R + 0.4), CROPS[plot.cropId].color, 20);
+      plot.state = 'empty';
+      plot.cropId = null;
+      plot.growth = 0;
+      plot.watered = false;
+      plot.redried = false;
+      saveGame();
+      break;
+  }
+}
+
+// ===== Focus: nearest interactable (plot or house door) within range, driving the
+// Space-key shortcut, the highlight ring, and the #interact-prompt text. Recomputed
+// every frame in update(); scan is allocation-free (reuses _focusV1 / _focusSlot).
+function updateFocus() {
+  const up = playerUp(_focusV1);
+  let bestKind = null, bestRef = null, bestDist = Infinity;
+  for (let i = 0; i < plots.length; i++) {
+    const plot = plots[i];
+    const dist = up.angleTo(plot.dir) * PLANET_R;
+    if (dist <= PLOT_RANGE && dist < bestDist) {
+      bestDist = dist; bestKind = 'plot'; bestRef = plot;
+    }
+  }
+  const doorDist = up.angleTo(world.houseDoorDir) * PLANET_R;
+  if (doorDist <= DOOR_RANGE && doorDist < bestDist) {
+    bestDist = doorDist; bestKind = 'door'; bestRef = null;
+  }
+  if (bestKind) {
+    _focusSlot.kind = bestKind;
+    _focusSlot.ref = bestRef;
+    G.focus = _focusSlot;
+  } else {
+    G.focus = null;
+  }
+}
+
+function computePromptText(focus) {
+  if (!focus) return '';
+  if (focus.kind === 'door') return '␣ Enter shop';
+  const plot = focus.ref;
+  switch (plot.state) {
+    case 'locked': return '🔒 Buy Field Expansion at the house';
+    case 'untilled': return '␣ Till plot (🪙10)';
+    case 'empty':
+      return inventory.seeds[G.selectedSeed] > 0
+        ? '␣ Plant ' + CROPS[G.selectedSeed].name
+        : 'No seeds — buy at the house';
+    case 'growing': return plot.watered ? 'Growing…' : '␣ Water';
+    case 'ready': return '␣ Harvest';
+    default: return '';
+  }
+}
+
+function updateFocusVisual() {
+  if (G.focus) {
+    const dir = G.focus.kind === 'door' ? world.houseDoorDir : G.focus.ref.dir;
+    // Per-frame path: dir is already unit-length (plot dirs and houseDoorDir are
+    // normalized at construction), so place directly instead of placeOnSurface,
+    // whose dir.clone() would allocate every frame.
+    highlightRing.position.copy(dir).multiplyScalar(PLANET_R);
+    highlightRing.quaternion.setFromUnitVectors(_Y, dir);
+    highlightRing.visible = true;
+    highlightRingMat.opacity = 0.5 + 0.3 * Math.sin(G.time * 4); // gentle pulse
+  } else {
+    highlightRing.visible = false;
+  }
+
+  const text = computePromptText(G.focus);
+  if (text !== _lastPromptText) {
+    _lastPromptText = text;
+    const el = document.getElementById('interact-prompt');
+    el.textContent = text;
+    el.style.opacity = text ? '1' : '0';
+  }
+}
+
+// ===== Shop: open/close, tabs, buy actions =====
+function doorDistance() {
+  return playerUp(_v1).angleTo(world.houseDoorDir) * PLANET_R;
+}
+
+function openShop() {
+  G.state = 'shop';
+  document.getElementById('shop-panel').style.display = 'flex';
+  renderShopTab(G.shopTab);
+}
+
+function closeShop() {
+  G.state = 'playing';
+  document.getElementById('shop-panel').style.display = 'none';
+}
+
+function tryOpenShopDoor() {
+  if (doorDistance() > DOOR_RANGE) toast('Walk to the house door');
+  else openShop();
+}
+
+function renderShopTab(tab) {
+  G.shopTab = tab;
+  document.querySelectorAll('.shop-tab').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  const body = document.getElementById('shop-body');
+  body.innerHTML = '';
+  if (tab === 'seeds') renderSeedsTab(body);
+  else if (tab === 'sell') renderSellTab(body);
+  else if (tab === 'upgrades') renderUpgradesTab(body);
+  else if (tab === 'spaceship') renderSpaceshipTab(body);
+}
+
+function renderSeedsTab(body) {
+  SEED_ORDER.forEach((id) => {
+    const crop = CROPS[id];
+    const afford = G.money >= crop.seedCost;
+    const row = document.createElement('div');
+    row.className = 'shop-row';
+    row.innerHTML =
+      '<span class="shop-icon">' + crop.icon + '</span>' +
+      '<span class="shop-name">' + crop.name + '<span class="shop-desc">' + crop.growTime + 's grow · sells ' + crop.sellPrice + ' 🪙</span></span>' +
+      '<span class="shop-meta">you have ' + inventory.seeds[id] + '</span>' +
+      '<button class="shop-buy-btn"' + (afford ? '' : ' disabled') + '>Buy ' + crop.seedCost + ' 🪙</button>';
+    row.querySelector('button').addEventListener('click', () => buySeed(id));
+    body.appendChild(row);
+  });
+}
+
+function buySeed(id) {
+  const crop = CROPS[id];
+  if (!spend(crop.seedCost)) return;
+  inventory.seeds[id]++;
+  updateSeedBar();
+  renderShopTab('seeds');
+  saveGame();
+}
+
+function renderSellTab(body) {
+  let total = 0;
+  SEED_ORDER.forEach((id) => {
+    const crop = CROPS[id];
+    const count = inventory.produce[id];
+    total += count * crop.sellPrice;
+    const row = document.createElement('div');
+    row.className = 'shop-row';
+    row.innerHTML =
+      '<span class="shop-icon">' + crop.icon + '</span>' +
+      '<span class="shop-name">' + crop.name + '<span class="shop-desc">' + crop.sellPrice + ' 🪙 each</span></span>' +
+      '<span class="shop-meta">x' + count + '</span>' +
+      '<button class="shop-sell-btn" data-n="1"' + (count > 0 ? '' : ' disabled') + '>Sell 1</button>' +
+      '<button class="shop-sell-btn" data-n="all"' + (count > 0 ? '' : ' disabled') + '>Sell All</button>';
+    const buttons = row.querySelectorAll('button');
+    buttons[0].addEventListener('click', () => sellProduce(id, 1));
+    buttons[1].addEventListener('click', () => sellProduce(id, inventory.produce[id]));
+    body.appendChild(row);
+  });
+  const banner = document.createElement('div');
+  banner.className = 'shop-total-banner';
+  banner.textContent = 'Inventory value: ' + total + ' 🪙';
+  body.appendChild(banner);
+}
+
+function sellProduce(id, n) {
+  if (n <= 0 || inventory.produce[id] < n) return;
+  inventory.produce[id] -= n;
+  earn(CROPS[id].sellPrice * n);
+  renderShopTab('sell');
+  saveGame();
+}
+
+function renderUpgradesTab(body) {
+  UPGRADES.forEach((u) => {
+    const isBool = u.id === 'sprinkler';
+    const level = isBool ? (G.upgrades.sprinkler ? 1 : 0) : G.upgrades[u.id];
+    const maxLevel = u.levels.length;
+    const maxed = level >= maxLevel;
+    const nextCost = maxed ? null : u.levels[level];
+    const afford = !maxed && G.money >= nextCost;
+    const row = document.createElement('div');
+    row.className = 'shop-row';
+    row.innerHTML =
+      '<span class="shop-icon">' + u.icon + '</span>' +
+      '<span class="shop-name">' + u.name + '<span class="shop-desc">' + u.desc + '</span></span>' +
+      '<span class="shop-meta">Lv ' + level + '/' + maxLevel + '</span>' +
+      '<button class="shop-buy-btn"' + (maxed || !afford ? ' disabled' : '') + '>' + (maxed ? 'MAX' : nextCost + ' 🪙') + '</button>';
+    if (!maxed) row.querySelector('button').addEventListener('click', () => buyUpgrade(u.id));
+    body.appendChild(row);
+  });
+}
+
+function buyUpgrade(id) {
+  const u = UPGRADES.find((x) => x.id === id);
+  const isBool = id === 'sprinkler';
+  const level = isBool ? (G.upgrades.sprinkler ? 1 : 0) : G.upgrades[id];
+  if (level >= u.levels.length) return;
+  if (!spend(u.levels[level])) return;
+  if (isBool) {
+    G.upgrades.sprinkler = true;
+  } else {
+    G.upgrades[id]++;
+    if (id === 'boots') player.speed = [6, 7.5, 9][G.upgrades.boots];
+    else if (id === 'field') applyFieldExpansion(G.upgrades.field);
+  }
+  renderShopTab('upgrades');
+  saveGame();
+}
+
+function applyFieldExpansion(level) {
+  // Level 1 unlocks plots[4..7] ("plots 5-8"); level 2 unlocks plots[8..11] ("plots 9-12").
+  const start = level === 1 ? 4 : 8;
+  for (let i = start; i < start + 4 && i < plots.length; i++) {
+    if (plots[i].state === 'locked') {
+      plots[i].state = 'untilled';
+      updatePlotVisual(plots[i]);
+    }
+  }
+}
+
+function renderSpaceshipTab(body) {
+  SHIP_PARTS.forEach((part, i) => {
+    const row = document.createElement('div');
+    row.className = 'shop-row' + (i > G.partsOwned ? ' shop-row-later' : '');
+    let statusHtml;
+    if (i < G.partsOwned) {
+      statusHtml = '<span class="shop-owned">✓ Owned</span>';
+    } else if (i === G.partsOwned) {
+      const afford = G.money >= part.cost;
+      statusHtml = '<button class="shop-buy-btn"' + (afford ? '' : ' disabled') + '>Buy ' + part.cost + ' 🪙</button>';
+    } else {
+      statusHtml = '<span class="shop-locked">Requires previous part</span>';
+    }
+    row.innerHTML =
+      '<span class="shop-icon">' + part.icon + '</span>' +
+      '<span class="shop-name">' + part.name + '</span>' +
+      statusHtml;
+    if (i === G.partsOwned) {
+      const btn = row.querySelector('button');
+      if (btn) btn.addEventListener('click', buyPart);
+    }
+    body.appendChild(row);
+  });
+}
+
+function buyPart() {
+  const idx = G.partsOwned;
+  if (idx >= SHIP_PARTS.length) return;
+  if (!spend(SHIP_PARTS[idx].cost)) return;
+  G.partsOwned++;
+  updateShipVisual();
+  saveGame();
+  if (G.partsOwned >= SHIP_PARTS.length) {
+    closeShop();
+    startLaunchSequence();
+  } else {
+    renderShopTab('spaceship');
+  }
+}
+
+// ===== Spaceship: parts, ghost preview, launch cinematic, victory =====
+// Shared ghost-preview material for the "next part to buy" (per brief); one instance,
+// swapped onto meshes and swapped back rather than allocated per call.
+const GHOST_MAT = new THREE.MeshBasicMaterial({ wireframe: true, transparent: true, opacity: 0.35, color: 0x6ee7a0 });
+let shipGroup;
+let shipParts = [];       // Group per SHIP_PARTS index, built once at boot
+let engineRingMat;        // shared emissive material on the 5 engine rings (ramped during launch)
+let exhaustMesh;          // single scaling exhaust cone, not part of the owned/ghost progression
+let navLightMesh;         // nav module's blinking light (toggled by elapsed launch time)
+// Launch-only temps (assigned once in startLaunchSequence, read every frame in updateLaunch —
+// no per-frame allocation).
+const _launchTangentA = new THREE.Vector3();
+const _launchTangentB = new THREE.Vector3();
+const _launchCamTarget = new THREE.Vector3();
+const LAUNCH_DURATION = 8; // seconds, per brief's "~8s scripted"
+let _launchPuffAcc = 0; // accumulator driving periodic burst() puffs under the exhaust
+
+function addPartMesh(group, mesh) {
+  mesh.userData.origMat = mesh.material; // remembered so ghost mode can be swapped back to 'solid'
+  group.add(mesh);
+  return mesh;
+}
+
+function buildFrame() {
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x999999 });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 2, 8, 1, true), bodyMat);
+  body.position.y = 1;
+  addPartMesh(g, body);
+  const strutMat = new THREE.MeshLambertMaterial({ color: 0x777777 });
+  const strutGeo = new THREE.CylinderGeometry(0.05, 0.05, 2, 4);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const strut = new THREE.Mesh(strutGeo, strutMat);
+    strut.position.set(Math.cos(a) * 1.2, 1, Math.sin(a) * 1.2);
+    addPartMesh(g, strut);
+  }
+  const ringGeo = new THREE.TorusGeometry(1.2, 0.04, 6, 16);
+  [0.4, 1.6].forEach((y) => {
+    const ring = new THREE.Mesh(ringGeo, strutMat);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = y;
+    addPartMesh(g, ring);
+  });
+  return g; // lattice-look gray cylinder, 1.2r x 2h, base at local y=0.7 once added to shipGroup
+}
+
+function buildEngine() {
+  const g = new THREE.Group();
+  const coneMat = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
+  const coneGeo = new THREE.ConeGeometry(0.32, 0.8, 10);
+  const offsets = [[0, 0], [0.6, 0.6], [0.6, -0.6], [-0.6, 0.6], [-0.6, -0.6]];
+  offsets.forEach(([x, z]) => {
+    const cone = new THREE.Mesh(coneGeo, coneMat);
+    cone.position.set(x, 0.4, z);
+    cone.rotation.x = Math.PI; // nozzle opening faces down, toward the pad
+    addPartMesh(g, cone);
+  });
+  engineRingMat = new THREE.MeshLambertMaterial({ color: 0xff6a2a, emissive: 0xff6a2a, emissiveIntensity: 0.4 });
+  const ringGeo = new THREE.TorusGeometry(0.32, 0.05, 6, 12);
+  offsets.forEach(([x, z]) => {
+    const ring = new THREE.Mesh(ringGeo, engineRingMat);
+    ring.position.set(x, 0.15, z);
+    addPartMesh(g, ring);
+  });
+  return g; // dark cone cluster + orange emissive rings, sits below the frame
+}
+
+function buildFuelTank() {
+  const g = new THREE.Group();
+  const tankMat = new THREE.MeshLambertMaterial({ color: 0xb5502a });
+  const tankGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 10);
+  [1.35, -1.35].forEach((x) => {
+    const tank = new THREE.Mesh(tankGeo, tankMat);
+    tank.position.set(x, 1.1, 0);
+    addPartMesh(g, tank);
+  });
+  return g; // two rust-orange side cylinders flanking the frame
+}
+
+function buildCockpit() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshPhongMaterial({ color: 0xaee0ff, transparent: true, opacity: 0.8, shininess: 90 });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.85, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat);
+  dome.position.y = 2;
+  addPartMesh(g, dome);
+  return g; // light-blue glass sphere-cap on top of the frame
+}
+
+function buildNavigation() {
+  const g = new THREE.Group();
+  const dishMat = new THREE.MeshLambertMaterial({ color: 0xdddddd, side: THREE.DoubleSide });
+  const dish = new THREE.Mesh(new THREE.CircleGeometry(0.3, 12), dishMat);
+  dish.position.set(0.5, 2.55, 0);
+  dish.rotation.y = Math.PI / 2;
+  addPartMesh(g, dish);
+  const antennaMat = new THREE.MeshLambertMaterial({ color: 0xcccccc });
+  const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.6, 6), antennaMat);
+  antenna.position.set(0, 2.75, 0);
+  addPartMesh(g, antenna);
+  const navLightMat = new THREE.MeshLambertMaterial({ color: 0xff3333, emissive: 0xff0000, emissiveIntensity: 1 });
+  navLightMesh = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), navLightMat);
+  navLightMesh.position.set(0, 3.05, 0);
+  addPartMesh(g, navLightMesh);
+  return g; // small dish + antenna + blinking red light, topmost part
+}
+
+function buildShip() {
+  shipGroup = new THREE.Group();
+  placeOnSurface(shipGroup, world.padDir, 0, 0.3); // ship sits on the pad, pad top is at height ~0.3
+  scene.add(shipGroup);
+
+  shipParts = [buildFrame(), buildEngine(), buildFuelTank(), buildCockpit(), buildNavigation()];
+  shipParts.forEach((g) => shipGroup.add(g));
+
+  // Exhaust: a single scaling emissive cone (Task 9's particle system doesn't exist yet, per
+  // the brief). Not part of the ghost/owned progression -- hidden until launch starts.
+  const exhaustMat = new THREE.MeshBasicMaterial({ color: 0xffaa33, transparent: true, opacity: 0.7 });
+  exhaustMesh = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.2, 10), exhaustMat);
+  exhaustMesh.position.y = -0.2;
+  exhaustMesh.rotation.x = Math.PI;
+  exhaustMesh.visible = false;
+  shipGroup.add(exhaustMesh);
+
+  updateShipVisual();
+}
+
+function setPartMode(group, mode) { // 'solid' | 'ghost' | 'hidden'
+  group.visible = mode !== 'hidden';
+  if (mode === 'hidden') return;
+  group.traverse((obj) => {
+    if (obj.isMesh) obj.material = mode === 'ghost' ? GHOST_MAT : obj.userData.origMat;
+  });
+}
+
+function updateShipVisual() {
+  for (let i = 0; i < shipParts.length; i++) {
+    const mode = i < G.partsOwned ? 'solid' : (i === G.partsOwned ? 'ghost' : 'hidden');
+    setPartMode(shipParts[i], mode);
+  }
+}
+
+// Undoes every one-way mutation updateLaunch/startLaunchSequence makes to the ship, so
+// Play Again after a victory doesn't leave the ghost ship + exhaust + engine glow from the
+// previous run floating mid-launch. Mirrors buildShip's initial placement/state exactly.
+function resetShipToPad() {
+  placeOnSurface(shipGroup, world.padDir, 0, 0.3); // undoes updateLaunch's liftoff position + wobble
+  exhaustMesh.visible = false;
+  exhaustMesh.scale.set(0.01, 0.01, 0.01);
+  exhaustMesh.material.opacity = 0.7; // matches buildShip's initial exhaustMat opacity
+  engineRingMat.emissiveIntensity = 0.4; // matches buildEngine's initial value
+  navLightMesh.visible = true; // updateLaunch's blink can leave this false
+}
+
+function startLaunchSequence() {
+  G.state = 'launch'; // player input & updateCamera stop: the main loop only calls update(dt)
+                       // for 'playing'/'shop', so this state drives itself from render()'s hook
+  G.launchT = 0;
+  document.getElementById('hud').style.display = 'none';
+
+  // The run is over: buyPart()'s saveGame() for the final part just wrote a save with all 5
+  // parts owned, which would soft-lock a reload during launch/victory (Spaceship tab shows
+  // everything owned, but launch can never re-trigger). Clear it now; Play Again clears
+  // state via resetGame() regardless, so there is nothing left worth resuming.
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+
+  exhaustMesh.visible = true;
+  exhaustMesh.scale.set(0.01, 0.01, 0.01);
+
+  const fade = document.getElementById('launch-fade');
+  fade.style.transition = 'none';
+  fade.style.opacity = '0';
+
+  // Tangent basis perpendicular to padDir, used both to frame the side-view camera and for
+  // the liftoff wobble. Computed once here (not per frame).
+  _launchTangentA.set(0, 1, 0).cross(world.padDir);
+  if (_launchTangentA.lengthSq() < 1e-6) _launchTangentA.set(1, 0, 0).cross(world.padDir);
+  _launchTangentA.normalize();
+  _launchTangentB.crossVectors(world.padDir, _launchTangentA).normalize();
+  _launchPuffAcc = 0;
+
+  const padPos = _v1.copy(world.padDir).multiplyScalar(PLANET_R + 0.3);
+  _launchCamTarget.copy(padPos)
+    .addScaledVector(_launchTangentA, 11)
+    .addScaledVector(world.padDir, 6);
+}
+
+// Drives the ~8s launch cinematic; called from render() each frame while G.state === 'launch'.
+// camera.up stays pinned to world.padDir throughout since updateCamera never runs in this state.
+function updateLaunch(dt) {
+  G.launchT += dt;
+  const t = G.launchT;
+
+  camera.position.lerp(_launchCamTarget, 1 - Math.pow(0.0008, dt));
+  camera.up.copy(world.padDir);
+  camera.lookAt(shipGroup.position);
+
+  // Engine glow + exhaust ramp over the first 2s, then hold steady.
+  const glow = Math.min(t / 2, 1);
+  engineRingMat.emissiveIntensity = 0.4 + glow * 1.8;
+  exhaustMesh.scale.set(1, 0.4 + glow * 2.2, 1);
+  exhaustMesh.material.opacity = 0.3 + glow * 0.5;
+
+  // Liftoff: ship eases outward along padDir starting at t=1s, with tangential wobble that
+  // decays as it climbs.
+  const liftT = Math.max(0, t - 1);
+  const liftFrac = Math.min(liftT / 6, 1);
+  const dist = liftFrac * liftFrac * 34;
+  const wobbleDecay = Math.max(0, 1 - liftFrac);
+  _v1.copy(world.padDir).multiplyScalar(PLANET_R + 0.3 + dist);
+  _v1.addScaledVector(_launchTangentA, Math.sin(t * 5) * 0.12 * wobbleDecay);
+  _v1.addScaledVector(_launchTangentB, Math.cos(t * 4) * 0.08 * wobbleDecay);
+  shipGroup.position.copy(_v1);
+
+  // Liftoff exhaust puffs: periodic burst() under the engines (the exhaust cone itself
+  // stays, per brief — this just adds particle polish alongside it).
+  _launchPuffAcc += dt;
+  if (_launchPuffAcc >= 0.12) {
+    _launchPuffAcc -= 0.12;
+    burst(_burstV1.copy(shipGroup.position).addScaledVector(world.padDir, -0.4), 0xffaa33, 12);
+  }
+
+  // Blinking nav light, driven purely by elapsed launch time (allocation-free).
+  navLightMesh.visible = Math.floor(t / 0.35) % 2 === 0;
+
+  // Fade to white over the last 2s, then reveal the victory screen.
+  if (t >= 6) {
+    const fadeT = Math.min((t - 6) / 2, 1);
+    document.getElementById('launch-fade').style.opacity = String(fadeT);
+  }
+  if (t >= LAUNCH_DURATION) showVictory();
+}
+
+function showVictory() {
+  G.state = 'victory';
+  const fade = document.getElementById('launch-fade');
+  fade.style.transition = 'opacity 1s ease';
+  fade.style.opacity = '0'; // white flash eases back out, revealing the victory overlay beneath
+
+  document.getElementById('victory-stats').innerHTML =
+    'Days survived: ' + (G.day || 1) + '<br>' +
+    'Total money earned: ' + G.stats.earned + ' 🪙<br>' +
+    'Aliens defeated: ' + G.stats.kills + '<br>' +
+    'Harvests: ' + G.stats.harvests;
+
+  document.getElementById('victory-screen').style.display = 'flex';
+}
+
+function setupShopUI() {
+  document.getElementById('shop-close-btn').addEventListener('click', closeShop);
+  document.querySelectorAll('.shop-tab').forEach((btn) => {
+    btn.addEventListener('click', () => renderShopTab(btn.dataset.tab));
+  });
+}
+
+function setupVictoryUI() {
+  document.getElementById('victory-replay-btn').addEventListener('click', () => {
+    document.getElementById('victory-screen').style.display = 'none';
+    resetGame();
+    returnToMenu(); // hides the HUD (menu convention, see boot()) and shows the start screen
+  });
+}
+
+// ===== Combat: raygun, bullet pool, player HP & respawn =====
+// Enemy shape expected by aim-assist / updateBullets (Task 8 must match this):
+//   { pos: THREE.Vector3, radius: number, alive: bool, hostileProjectile?: bool }
+const enemies = []; // empty until Task 8 populates it; bullets already collide against it
+
+// Real damageEnemy implementation lives in the Aliens section below (hoisted, so this
+// forward reference from updateBullets resolves fine at call time).
+
+function gunStats() {
+  return {
+    damage: [10, 16, 24][G.upgrades.gunDmg],
+    cooldown: [0.35, 0.27, 0.2][G.upgrades.gunRate],
+  };
+}
+
+// ----- Bullet pool: 60 pooled meshes, pre-allocated once. One shared material for
+// friendly tracers, one for hostile (alien spitter) shots; pool entries are reused,
+// never reallocated, to keep updateBullets/shootAt allocation-free. -----
+const BULLET_COUNT = 60;
+const BULLET_SPEED = 45;
+const BULLET_LIFE = 2;
+const bulletGeo = new THREE.SphereGeometry(0.12, 8, 8);
+const bulletMat = new THREE.MeshBasicMaterial({ color: 0x8dffb0 });
+const hostileBulletMat = new THREE.MeshBasicMaterial({ color: 0xff5c6a });
+let bullets = [];
+
+function makeGlowTexture(color) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, color);
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(canvas);
+}
+
+// Muzzle flash: single shared additive sprite, fades over ~80ms. Restarting the
+// flash on rapid-fire simply resets its timer — acceptable per brief ("keep minimal").
+const MUZZLE_FLASH_DURATION = 0.08;
+const muzzleFlashMat = new THREE.SpriteMaterial({ map: makeGlowTexture('rgba(190,255,210,1)'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 });
+const muzzleFlashMesh = new THREE.Sprite(muzzleFlashMat);
+muzzleFlashMesh.scale.set(0.6, 0.6, 1);
+muzzleFlashMesh.visible = false;
+let _muzzleFlashT = -1;
+
+function spawnMuzzleFlash(pos) {
+  muzzleFlashMesh.position.copy(pos);
+  muzzleFlashMesh.visible = true;
+  muzzleFlashMat.opacity = 1;
+  _muzzleFlashT = 0;
+}
+function updateMuzzleFlash(dt) {
+  if (_muzzleFlashT < 0) return;
+  _muzzleFlashT += dt;
+  if (_muzzleFlashT >= MUZZLE_FLASH_DURATION) {
+    muzzleFlashMesh.visible = false;
+    _muzzleFlashT = -1;
+  } else {
+    muzzleFlashMat.opacity = 1 - _muzzleFlashT / MUZZLE_FLASH_DURATION;
+  }
+}
+
+// Hit spark: delegates to the pooled burst() particle system (Task 9) instead of the old
+// single shared sprite — lets multiple simultaneous hits each show their own spark.
+function spawnHitSpark(pos) {
+  burst(pos, 0xd8ffe0, 9);
+}
+
+function buildCombat() {
+  for (let i = 0; i < BULLET_COUNT; i++) {
+    const mesh = new THREE.Mesh(bulletGeo, bulletMat);
+    mesh.visible = false;
+    scene.add(mesh);
+    bullets.push({
+      mesh,
+      pos: new THREE.Vector3(),
+      vel: new THREE.Vector3(),
+      life: 0,
+      active: false,
+      hostile: false,
+      damage: 0,
+    });
+  }
+  scene.add(muzzleFlashMesh);
+}
+
+function findFreeBullet() {
+  for (let i = 0; i < bullets.length; i++) if (!bullets[i].active) return bullets[i];
+  return null; // pool exhausted (shouldn't happen at 60 bullets / current fire rates)
+}
+function deactivateBullet(b) {
+  b.active = false;
+  b.mesh.visible = false;
+}
+
+// Generic pool spawn shared by the player's shootAt() and (later) alien hostile shots.
+function spawnBullet(origin, target, damage, hostile) {
+  const b = findFreeBullet();
+  if (!b) return null;
+  b.pos.copy(origin);
+  b.vel.subVectors(target, origin);
+  if (b.vel.lengthSq() < 1e-6) b.vel.set(0, 0, 1);
+  b.vel.normalize().multiplyScalar(BULLET_SPEED);
+  b.life = BULLET_LIFE;
+  b.active = true;
+  b.hostile = !!hostile;
+  b.damage = damage;
+  b.mesh.material = hostile ? hostileBulletMat : bulletMat;
+  b.mesh.visible = true;
+  b.mesh.position.copy(b.pos);
+  return b;
+}
+
+// Combat-only scratch vectors, separate from _v1/_v2 to avoid aliasing hazards with
+// the player/camera code that also reuses those across the same update() frame.
+const _combatV1 = new THREE.Vector3(), _combatV2 = new THREE.Vector3();
+
+let _gunCooldownT = 0;
+function shootAt(point) {
+  if (_gunCooldownT > 0) return;
+  _combatV1.copy(player.pos).addScaledVector(playerUp(_combatV2), 1.0); // muzzle: player's chest
+  const stats = gunStats();
+  const b = spawnBullet(_combatV1, point, stats.damage, false);
+  if (!b) return;
+  _gunCooldownT = stats.cooldown;
+  spawnMuzzleFlash(b.pos);
+}
+
+function updateBullets(dt) {
+  _gunCooldownT = Math.max(0, _gunCooldownT - dt);
+  updateMuzzleFlash(dt);
+  // Hostile bullets test against this hurt-box center (player's chest).
+  _combatV1.copy(player.pos).addScaledVector(playerUp(_combatV2), 0.75);
+
+  for (let i = 0; i < bullets.length; i++) {
+    const b = bullets[i];
+    if (!b.active) continue;
+    b.pos.addScaledVector(b.vel, dt);
+    b.life -= dt;
+    b.mesh.position.copy(b.pos);
+
+    if (b.pos.length() < PLANET_R + 0.2) { // hit the surface
+      spawnHitSpark(b.pos);
+      deactivateBullet(b);
+      continue;
+    }
+    if (b.life <= 0) {
+      deactivateBullet(b);
+      continue;
+    }
+
+    if (b.hostile) {
+      if (b.pos.distanceTo(_combatV1) < 1) {
+        damagePlayer(b.damage);
+        spawnHitSpark(b.pos);
+        deactivateBullet(b);
+      }
+    } else {
+      // Star event: friendly bullets can burst the shooting star, same sphere-test pattern
+      // as enemies below. All clicks shoot now, so no pick routing is needed for this.
+      if (star && b.pos.distanceTo(star.pos) < star.radius + 0.12) {
+        burstStar();
+        deactivateBullet(b);
+        continue;
+      }
+      for (let j = 0; j < enemies.length; j++) {
+        const en = enemies[j];
+        if (!en.alive) continue;
+        if (b.pos.distanceTo(en.pos) < (en.hitRadius || en.radius) + 0.12) {
+          damageEnemy(en, b.damage, b.vel);
+          spawnHitSpark(b.pos);
+          deactivateBullet(b);
+          break;
+        }
+      }
+    }
+  }
+}
+
+// Aim assist: projects alive enemies to screen space; a click within 36px of an
+// enemy's projected position shoots at that enemy directly instead of whatever the
+// world raycast would have hit. enemies[] is empty until Task 8, so this is a
+// harmless no-op until then.
+const AIM_ASSIST_PX = 56;
+function findAimAssistTarget(e) {
+  if (enemies.length === 0) return null;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  let best = null, bestD = AIM_ASSIST_PX;
+  for (let i = 0; i < enemies.length; i++) {
+    const en = enemies[i];
+    if (!en.alive) continue;
+    _combatV1.copy(en.pos).project(camera);
+    if (_combatV1.z > 1) continue; // behind camera
+    const sx = (_combatV1.x * 0.5 + 0.5) * rect.width;
+    const sy = (1 - (_combatV1.y * 0.5 + 0.5)) * rect.height;
+    const d = Math.hypot(sx - cx, sy - cy);
+    if (d < bestD) { bestD = d; best = en; }
+  }
+  return best;
+}
+
+// ===== Aliens: 8 variants (all hover-flyers), raid director, coin/produce pickups =====
+// ALIENS table — hp/speed/dmg/coins verbatim from the task brief; radius/hbY (health-bar
+// height) are implementation details. alt = per-variant hover altitude above the surface
+// (every alien flies; pos = dir × (PLANET_R + alt + bob)).
+const ALIENS = {
+  grunt:        { id: 'grunt',        hp: 25,  speed: 3.5, dmg: 8,  coins: 4,  radius: 0.6,  hbY: 2.0, alt: 1.2 },
+  hopper:       { id: 'hopper',       hp: 10,  speed: 6,   dmg: 5,  coins: 3,  radius: 0.45, hbY: 1.3, alt: 1.0 },
+  raider:       { id: 'raider',       hp: 20,  speed: 5,   dmg: 0,  coins: 8,  radius: 0.55, hbY: 1.7, alt: 1.5 },
+  spitter:      { id: 'spitter',      hp: 22,  speed: 2.5, dmg: 6,  coins: 6,  radius: 0.55, hbY: 1.4, alt: 2.5 },
+  brute:        { id: 'brute',        hp: 120, speed: 1.8, dmg: 20, coins: 15, radius: 0.9,  hbY: 1.9, alt: 1.4 },
+  shieldbearer: { id: 'shieldbearer', hp: 40,  speed: 3,   dmg: 12, coins: 10, radius: 0.6,  hbY: 1.7, alt: 1.2 },
+  summoner:     { id: 'summoner',     hp: 50,  speed: 2,   dmg: 0,  coins: 18, radius: 0.7,  hbY: 0.9, alt: 2.0 },
+  ufo:          { id: 'ufo',          hp: 60,  speed: 4,   dmg: 0,  coins: 25, radius: 1.0,  hbY: 0.8, alt: 6.0 },
+};
+const ALIEN_BOB_FREQ = 2.0, ALIEN_BOB_AMP = 0.15; // gentle hover bob shared by all variants
+
+// Alien-only scratch temps, separate from _v1/_v2 (player/camera) and _combatV1/_combatV2
+// (bullets) to stay aliasing-safe per multiple simultaneous in-flight vectors per frame.
+const _alienV1 = new THREE.Vector3(), _alienV2 = new THREE.Vector3(), _alienV3 = new THREE.Vector3(), _alienV4 = new THREE.Vector3();
+const _alienM1 = new THREE.Matrix4();
+
+// Orients a flyer mesh so local +Y = up (away from planet center, i.e. alien.dir) and
+// local +Z = tangent (direction of travel) — direct orthonormal-basis construction
+// (right = up × tangent); tangent is always projected ⊥ up by callers before passing.
+function orientFlyer(mesh, up, tangent) {
+  const right = _alienV4.crossVectors(up, tangent).normalize();
+  _alienM1.makeBasis(right, up, tangent);
+  mesh.quaternion.setFromRotationMatrix(_alienM1);
+}
+
+// Sets pos/mesh.position from the alien's dir + hover altitude + gentle bob (per-alien
+// phase stored at spawn; allocation-free).
+function placeFlyer(alien) {
+  const bob = Math.sin(G.time * ALIEN_BOB_FREQ + alien.bobPhase) * ALIEN_BOB_AMP;
+  alien.pos.copy(alien.dir).multiplyScalar(PLANET_R + alien.alt + bob);
+  alien.mesh.position.copy(alien.pos);
+}
+
+// Shared flyer movement + placement: rotates alien.dir toward moveTargetDir (if given) at
+// angular speed def.speed / (PLANET_R + alt) rad/s, then re-derives pos/mesh.position.
+// Mesh orientation is only touched while actively moving (moveTargetDir truthy) — when
+// idle/attacking we deliberately leave the mesh's last orientation alone rather than
+// snapping to the minimal-rotation quaternion, which would visibly "untwist" the model.
+function flyerTick(alien, def, moveTargetDir, dt) {
+  if (moveTargetDir) {
+    const axis = _alienV4.crossVectors(alien.dir, moveTargetDir);
+    if (axis.lengthSq() > 1e-8) {
+      axis.normalize();
+      const step = Math.min(def.speed * dt / (PLANET_R + alien.alt), alien.dir.angleTo(moveTargetDir));
+      alien.dir.applyAxisAngle(axis, step);
+      alien.dir.normalize();
+    }
+  }
+  placeFlyer(alien);
+  if (moveTargetDir) {
+    const dot = moveTargetDir.dot(alien.dir);
+    _alienV2.copy(moveTargetDir).addScaledVector(alien.dir, -dot);
+    if (_alienV2.lengthSq() > 1e-6) {
+      _alienV2.normalize();
+      orientFlyer(alien.mesh, alien.dir, _alienV2);
+    }
+  }
+}
+
+// Rotates a raw direction vector (summoner/ufo drift, pickup magnet) toward targetDir at
+// `speed` surface-equivalent units/sec — shortest-arc rotation on a bare Vector3.
+function stepDirTowards(dir, targetDir, speed, dt) {
+  const axis = _alienV4.crossVectors(dir, targetDir);
+  if (axis.lengthSq() < 1e-8) return;
+  axis.normalize();
+  const step = Math.min(speed * dt / PLANET_R, dir.angleTo(targetDir));
+  dir.applyAxisAngle(axis, step);
+  dir.normalize();
+}
+
+// Hover melee: 3D distance from the alien's center to the player's chest point
+// (player.pos + up×0.75) — the low hover altitudes keep the existing ranges reachable.
+function tryMeleeAttack(alien, range, dmg, cooldown, dt) {
+  alien.atkT -= dt;
+  _alienV3.copy(player.pos).addScaledVector(playerUp(_alienV1), 0.75);
+  if (alien.pos.distanceTo(_alienV3) <= range && alien.atkT <= 0) {
+    damagePlayer(dmg);
+    alien.atkT = cooldown;
+  }
+}
+
+// Nearest plot (by great-circle angle from alienDir) matching pred; used for raider/brute
+// "nearest growing/ready or planted plot" and ufo "above a growing/ready plot" targeting.
+function nearestPlot(alienDir, pred) {
+  let best = null, bestD = Infinity;
+  for (let i = 0; i < plots.length; i++) {
+    const p = plots[i];
+    if (!pred(p)) continue;
+    const d = alienDir.angleTo(p.dir);
+    if (d < bestD) { bestD = d; best = p; }
+  }
+  return best;
+}
+
+// Mimics interactPlot's 'ready' (harvest) branch state reset, reused by raider steal /
+// brute smash / ufo abduction — plot stays (still tilled), just goes back to 'empty'.
+function resetPlotToEmpty(plot) {
+  plot.state = 'empty';
+  plot.cropId = null;
+  plot.growth = 0;
+  plot.watered = false;
+  plot.redried = false;
+  updatePlotVisual(plot);
+}
+
+// ----- Hit-flash: per-alien cloned materials (cloned at spawn, ONE clone per canonical
+// material identity — parts sharing a canonical material share the same clone) so one
+// alien can flash white without tinting its siblings and without tripling material count. -----
+const ALIEN_FLASH_DURATION = 0.12;
+const _flashCloneMap = new Map(); // canonical material -> per-alien clone; cleared per tagFlashable call
+function tagFlashable(alien) {
+  alien.flashMats = [];
+  _flashCloneMap.clear();
+  alien.mesh.traverse((o) => {
+    if (o.isMesh && o.material && o.material.emissive) {
+      let mat = _flashCloneMap.get(o.material);
+      if (!mat) {
+        mat = o.material.clone();
+        _flashCloneMap.set(o.material, mat);
+        alien.flashMats.push({ mat, baseHex: mat.emissive.getHex(), baseIntensity: mat.emissiveIntensity || 0 });
+      }
+      o.material = mat;
+    }
+  });
+  _flashCloneMap.clear();
+}
+function triggerFlash(alien) {
+  alien.flashT = ALIEN_FLASH_DURATION;
+  for (const fm of alien.flashMats) {
+    fm.mat.emissive.setHex(0xffffff);
+    fm.mat.emissiveIntensity = 1;
+  }
+}
+function updateFlash(alien, dt) {
+  if (alien.flashT <= 0) return;
+  alien.flashT -= dt;
+  if (alien.flashT <= 0) {
+    for (const fm of alien.flashMats) {
+      fm.mat.emissive.setHex(fm.baseHex);
+      fm.mat.emissiveIntensity = fm.baseIntensity;
+    }
+  }
+}
+
+// ----- Health bar: canvas-texture sprite, redrawn only when hp changes (not per frame). -----
+function makeHealthBarSprite() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64; canvas.height = 10;
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(1.1, 0.17, 1);
+  sprite.userData.canvas = canvas;
+  sprite.userData.ctx = canvas.getContext('2d');
+  sprite.userData.tex = tex;
+  return sprite;
+}
+function redrawHealthBar(alien) {
+  const { canvas, ctx, tex } = alien.hpSprite.userData;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const pct = Math.max(0, alien.hp / alien.maxHp);
+  ctx.fillStyle = pct > 0.5 ? '#6ee7a0' : pct > 0.25 ? '#ffd76a' : '#ff5c6a';
+  ctx.fillRect(1, 1, (canvas.width - 2) * pct, canvas.height - 2);
+  tex.needsUpdate = true;
+}
+
+// ----- Low-poly mesh builds (r128 primitives only — no CapsuleGeometry, added post-r128).
+// All geometries and canonical materials are module-scope singletons shared across every
+// spawn; tagFlashable clones the emissive-capable materials once per alien (one clone per
+// canonical material identity) so hit-flash stays per-alien without per-part duplication. -----
+const alienGeo = {
+  gruntBody: new THREE.CylinderGeometry(0.35, 0.35, 0.7, 10),
+  gruntCap: new THREE.SphereGeometry(0.35, 10, 8),
+  gruntStalk: new THREE.CylinderGeometry(0.03, 0.03, 0.35, 6),
+  gruntEye: new THREE.SphereGeometry(0.08, 8, 8),
+  hopperBall: new THREE.SphereGeometry(0.4, 12, 10),
+  hopperLeg: new THREE.ConeGeometry(0.14, 0.5, 6),
+  raiderBody: new THREE.CylinderGeometry(0.22, 0.28, 1.0, 8),
+  raiderHead: new THREE.SphereGeometry(0.24, 10, 8),
+  raiderSack: new THREE.SphereGeometry(0.28, 8, 8),
+  spitterCone: new THREE.ConeGeometry(0.4, 1.1, 10),
+  spitterEye: new THREE.SphereGeometry(0.13, 8, 8),
+  bruteBox1: new THREE.BoxGeometry(0.9, 0.5, 0.6),
+  bruteBox2: new THREE.BoxGeometry(0.75, 0.5, 0.55),
+  bruteBox3: new THREE.BoxGeometry(0.55, 0.45, 0.5),
+  shieldBody: new THREE.CylinderGeometry(0.32, 0.32, 0.7, 10),
+  shieldHead: new THREE.SphereGeometry(0.3, 10, 8),
+  shieldPlate: new THREE.BoxGeometry(0.55, 0.9, 0.1),
+  summonerDome: new THREE.SphereGeometry(0.45, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+  summonerTentacle: new THREE.CylinderGeometry(0.03, 0.01, 0.6, 4),
+  ufoDome: new THREE.SphereGeometry(0.35, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+  ufoSaucer: new THREE.CylinderGeometry(0.9, 0.9, 0.2, 16),
+  ufoBeam: new THREE.ConeGeometry(0.5, 6, 12, 1, true),
+};
+const alienMat = {
+  gruntBody: new THREE.MeshLambertMaterial({ color: 0x3fae5c }),
+  gruntEye: new THREE.MeshLambertMaterial({ color: 0x111111, emissive: 0x6effa0, emissiveIntensity: 0.8 }),
+  hopperBody: new THREE.MeshLambertMaterial({ color: 0xe8d94a }),
+  hopperLeg: new THREE.MeshLambertMaterial({ color: 0xb8952a }),
+  raiderBody: new THREE.MeshLambertMaterial({ color: 0x8a4ae0 }),
+  raiderSack: new THREE.MeshLambertMaterial({ color: 0x6a3a1a }),
+  spitterBody: new THREE.MeshLambertMaterial({ color: 0x7a8a3a }),
+  spitterEye: new THREE.MeshLambertMaterial({ color: 0x111111, emissive: 0xd8ff4a, emissiveIntensity: 0.8 }),
+  bruteBody: new THREE.MeshLambertMaterial({ color: 0xb8342a }),
+  shieldBody: new THREE.MeshLambertMaterial({ color: 0x3a6ae0 }),
+  shieldPlate: new THREE.MeshLambertMaterial({ color: 0x9fd0ff, emissive: 0x4aa0ff, emissiveIntensity: 0.3 }),
+  summonerBody: new THREE.MeshLambertMaterial({ color: 0xe86ad0, transparent: true, opacity: 0.85, emissive: 0xff6ad0, emissiveIntensity: 0.25 }),
+  summonerTentacle: new THREE.MeshLambertMaterial({ color: 0xff9ae0, transparent: true, opacity: 0.6 }),
+  ufoDome: new THREE.MeshPhongMaterial({ color: 0x88ccff, transparent: true, opacity: 0.7, shininess: 80 }),
+  ufoSaucer: new THREE.MeshLambertMaterial({ color: 0xbbbbbb }),
+  // MeshBasicMaterial has no emissive, so tagFlashable never clones the beam — it stays
+  // truly shared across all UFOs (per-UFO state is just the beam mesh's .visible flag).
+  ufoBeam: new THREE.MeshBasicMaterial({ color: 0x66ffee, transparent: true, opacity: 0.35, depthWrite: false }),
+};
+
+function buildGruntMesh() {
+  const g = new THREE.Group();
+  const cyl = new THREE.Mesh(alienGeo.gruntBody, alienMat.gruntBody);
+  cyl.position.y = 0.75;
+  g.add(cyl);
+  const capTop = new THREE.Mesh(alienGeo.gruntCap, alienMat.gruntBody);
+  capTop.position.y = 1.1;
+  g.add(capTop);
+  const capBot = new THREE.Mesh(alienGeo.gruntCap, alienMat.gruntBody);
+  capBot.position.y = 0.4;
+  g.add(capBot);
+  [-0.12, 0.12].forEach((x) => {
+    const stalk = new THREE.Mesh(alienGeo.gruntStalk, alienMat.gruntBody);
+    stalk.position.set(x, 1.5, 0.05);
+    g.add(stalk);
+    const eye = new THREE.Mesh(alienGeo.gruntEye, alienMat.gruntEye);
+    eye.position.set(x, 1.68, 0.05);
+    g.add(eye);
+  });
+  return g;
+}
+function buildHopperMesh() {
+  const g = new THREE.Group();
+  const ball = new THREE.Mesh(alienGeo.hopperBall, alienMat.hopperBody);
+  ball.position.y = 0.7;
+  g.add(ball);
+  [-0.25, 0.25].forEach((x) => {
+    const leg = new THREE.Mesh(alienGeo.hopperLeg, alienMat.hopperLeg);
+    leg.position.set(x, 0.25, 0);
+    g.add(leg);
+  });
+  return g;
+}
+function buildRaiderMesh() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(alienGeo.raiderBody, alienMat.raiderBody);
+  body.position.y = 0.6;
+  g.add(body);
+  const head = new THREE.Mesh(alienGeo.raiderHead, alienMat.raiderBody);
+  head.position.y = 1.25;
+  g.add(head);
+  const sack = new THREE.Mesh(alienGeo.raiderSack, alienMat.raiderSack);
+  sack.position.set(0, 0.85, -0.3);
+  sack.scale.set(1, 1.2, 0.8);
+  g.add(sack);
+  return g;
+}
+function buildSpitterMesh() {
+  const g = new THREE.Group();
+  const cone = new THREE.Mesh(alienGeo.spitterCone, alienMat.spitterBody);
+  cone.position.y = 0.65;
+  g.add(cone);
+  const eye = new THREE.Mesh(alienGeo.spitterEye, alienMat.spitterEye);
+  eye.position.set(0, 0.95, 0.32);
+  g.add(eye);
+  g.userData.muzzle = eye;
+  return g;
+}
+function buildBruteMesh() {
+  const g = new THREE.Group();
+  const box1 = new THREE.Mesh(alienGeo.bruteBox1, alienMat.bruteBody);
+  box1.position.y = 0.3;
+  g.add(box1);
+  const box2 = new THREE.Mesh(alienGeo.bruteBox2, alienMat.bruteBody);
+  box2.position.y = 0.8;
+  g.add(box2);
+  const box3 = new THREE.Mesh(alienGeo.bruteBox3, alienMat.bruteBody);
+  box3.position.y = 1.25;
+  g.add(box3);
+  return g;
+}
+function buildShieldbearerMesh() {
+  const g = new THREE.Group();
+  const cyl = new THREE.Mesh(alienGeo.shieldBody, alienMat.shieldBody);
+  cyl.position.y = 0.75;
+  g.add(cyl);
+  const head = new THREE.Mesh(alienGeo.shieldHead, alienMat.shieldBody);
+  head.position.y = 1.2;
+  g.add(head);
+  const shield = new THREE.Mesh(alienGeo.shieldPlate, alienMat.shieldPlate);
+  shield.position.set(0, 0.75, 0.35); // local +Z = "front" (orientFlyer aligns +Z to travel dir)
+  g.add(shield);
+  return g;
+}
+function buildSummonerMesh() {
+  const g = new THREE.Group();
+  const dome = new THREE.Mesh(alienGeo.summonerDome, alienMat.summonerBody);
+  g.add(dome);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    const t = new THREE.Mesh(alienGeo.summonerTentacle, alienMat.summonerTentacle);
+    t.position.set(Math.cos(a) * 0.25, -0.3, Math.sin(a) * 0.25);
+    g.add(t);
+  }
+  return g;
+}
+function buildUfoMesh() {
+  const g = new THREE.Group();
+  const dome = new THREE.Mesh(alienGeo.ufoDome, alienMat.ufoDome);
+  dome.position.y = 0.15;
+  g.add(dome);
+  const saucer = new THREE.Mesh(alienGeo.ufoSaucer, alienMat.ufoSaucer);
+  g.add(saucer);
+  const beam = new THREE.Mesh(alienGeo.ufoBeam, alienMat.ufoBeam);
+  beam.rotation.x = Math.PI; // flip so the open end points down, toward the planet
+  beam.position.y = -3;
+  beam.visible = false;
+  g.add(beam);
+  g.userData.beam = beam;
+  return g;
+}
+function buildAlienMesh(typeId) {
+  switch (typeId) {
+    case 'grunt': return buildGruntMesh();
+    case 'hopper': return buildHopperMesh();
+    case 'raider': return buildRaiderMesh();
+    case 'spitter': return buildSpitterMesh();
+    case 'brute': return buildBruteMesh();
+    case 'shieldbearer': return buildShieldbearerMesh();
+    case 'summoner': return buildSummonerMesh();
+    case 'ufo': return buildUfoMesh();
+  }
+}
+
+// ----- Teleport-in flash: small pool of transient additive sprites (raid spawns can burst
+// several aliens on the same frame, so a single shared instance wouldn't show them all). -----
+const teleportFlashMat = new THREE.SpriteMaterial({ map: makeGlowTexture('rgba(120,255,160,1)'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+let teleportFlashes = [];
+function spawnTeleportFlash(pos) {
+  const sprite = new THREE.Sprite(teleportFlashMat.clone());
+  sprite.position.copy(pos);
+  sprite.scale.set(0.1, 0.1, 1);
+  scene.add(sprite);
+  teleportFlashes.push({ sprite, t: 0 });
+}
+function updateTeleportFlashes(dt) {
+  for (let i = teleportFlashes.length - 1; i >= 0; i--) {
+    const f = teleportFlashes[i];
+    f.t += dt;
+    const p = Math.min(f.t / 0.4, 1);
+    f.sprite.scale.set(0.1 + p * 1.4, 0.1 + p * 1.4, 1);
+    f.sprite.material.opacity = 1 - p;
+    if (p >= 1) {
+      scene.remove(f.sprite);
+      teleportFlashes.splice(i, 1);
+    }
+  }
+}
+
+// ----- Spawning -----
+function randomSpawnDir() {
+  const playerDir = new THREE.Vector3();
+  playerUp(playerDir);
+  let dir, tries = 0;
+  do { dir = randomSurfaceDir(); tries++; } while (dir.angleTo(playerDir) < Math.PI / 4 && tries < 30);
+  return dir;
+}
+
+function spawnAlien(typeId, dir) {
+  const def = ALIENS[typeId];
+  const spawnDir = (dir || randomSpawnDir()).clone().normalize();
+  const hp = Math.round(def.hp * (1 + 0.15 * G.partsOwned));
+  const alien = {
+    type: typeId, def, hp, maxHp: hp, alive: true,
+    radius: def.radius, hitRadius: def.radius * 1.6, pos: new THREE.Vector3(),
+    mesh: buildAlienMesh(typeId),
+    state: 'walk', atkT: 0, flashT: 0, flashMats: [],
+    fromRaid: false,
+    // Unified hover-flyer locomotion: every variant is dir + alt (+ per-alien bob phase).
+    dir: spawnDir.clone(),
+    alt: def.alt,
+    bobPhase: Math.random() * Math.PI * 2,
+  };
+  if (typeId === 'hopper') { alien.hopDir = new THREE.Vector3(); alien.hopT = 0; alien.state = 'pause'; }
+  else if (typeId === 'raider') { alien.targetPlot = null; alien.carrying = null; }
+  else if (typeId === 'spitter') { alien.atkT = 2.5; }
+  else if (typeId === 'brute') { alien.targetPlot = null; alien.windupT = 0; }
+  else if (typeId === 'summoner') { alien.spawnT = 6; alien.minions = []; }
+  else if (typeId === 'ufo') { alien.targetPlot = null; alien.beamT = 0; alien.state = 'seek'; }
+
+  tagFlashable(alien);
+
+  alien.hpSprite = makeHealthBarSprite();
+  alien.hpSprite.position.y = def.hbY;
+  alien.mesh.add(alien.hpSprite);
+  redrawHealthBar(alien);
+
+  const worldPos = spawnDir.clone().multiplyScalar(PLANET_R + def.alt);
+  alien.pos.copy(worldPos);
+  alien.mesh.position.copy(worldPos);
+  alien.mesh.quaternion.setFromUnitVectors(_Y, spawnDir);
+
+  scene.add(alien.mesh);
+  pickables.push(alien.mesh);
+  enemies.push(alien);
+  spawnTeleportFlash(worldPos);
+  return alien;
+}
+
+function spawnMinionNear(dir, fromRaid) {
+  const offset = randomSurfaceDir();
+  const axis = new THREE.Vector3().crossVectors(dir, offset);
+  if (axis.lengthSq() < 1e-6) axis.set(1, 0, 0);
+  axis.normalize();
+  const spawnDir = dir.clone().applyAxisAngle(axis, (1 + Math.random() * 1.5) / PLANET_R);
+  const g = spawnAlien('grunt', spawnDir);
+  g.fromRaid = !!fromRaid;
+  return g;
+}
+
+// ----- Death / removal -----
+function removeAlienFromWorld(alien) {
+  alien.alive = false;
+  scene.remove(alien.mesh);
+  const idx = pickables.indexOf(alien.mesh);
+  if (idx !== -1) pickables.splice(idx, 1);
+  const ei = enemies.indexOf(alien);
+  if (ei !== -1) enemies.splice(ei, 1);
+}
+// Per-variant death burst accent colors (mirrors each alien's primary body material hue).
+const ALIEN_DEATH_COLOR = {
+  grunt: 0x3fae5c, hopper: 0xe8d94a, raider: 0x8a4ae0, spitter: 0x7a8a3a,
+  brute: 0xb8342a, shieldbearer: 0x3a6ae0, summoner: 0xe86ad0, ufo: 0x88ccff,
+};
+function killAlien(alien) {
+  if (!alien.alive) return;
+  dropCoins(alien.pos, alien.def.coins);
+  if (alien.type === 'raider' && alien.carrying) {
+    dropProducePickup(alien.pos, alien.carrying);
+  }
+  burst(alien.pos, ALIEN_DEATH_COLOR[alien.type] || 0x6ee7a0, 26);
+  G.stats.kills++;
+  removeAlienFromWorld(alien);
+}
+function killAlienSilently(alien) { // raider escaped with its loot — no coins, no kill credit
+  if (!alien.alive) return;
+  removeAlienFromWorld(alien);
+}
+
+function damageEnemy(enemy, n, bulletVel) {
+  if (!enemy.alive) return;
+  if (enemy.type === 'shieldbearer' && bulletVel) {
+    const fwd = _alienV1.set(0, 0, 1).applyQuaternion(enemy.mesh.quaternion).normalize();
+    const bv = _alienV2.copy(bulletVel).normalize();
+    if (bv.dot(fwd) < -0.5) { // frontal 120° arc: spark, no damage
+      spawnHitSpark(enemy.pos);
+      return;
+    }
+  }
+  enemy.hp -= n;
+  triggerFlash(enemy);
+  redrawHealthBar(enemy);
+  if (enemy.hp <= 0) killAlien(enemy);
+}
+
+// ----- Per-variant behavior (all hover-flyers) -----
+function updateGruntLike(alien, dt) { // grunt + shieldbearer: fly at player, melee in range
+  const def = alien.def;
+  const targetDir = playerUp(_alienV3);
+  const dist = alien.dir.angleTo(targetDir) * PLANET_R;
+  // Stop threshold (1.1, tangential) must sit inside the melee range (1.5, 3D to
+  // chest): hovering at alt 1.2 (+/-0.15 bob) above a 0.75 chest leaves a radial gap
+  // up to 0.6, so tangential must be <= sqrt(1.5^2 - 0.6^2) ~= 1.37 for hits to land.
+  // Settling at ~1.15 keeps the 3D distance ~1.30 < 1.5 even at worst bob.
+  const moveDir = dist > 1.1 ? targetDir : null;
+  flyerTick(alien, def, moveDir, dt);
+  tryMeleeAttack(alien, 1.5, def.dmg, 1.0, dt);
+}
+
+function updateHopper(alien, dt) { // hop-bursts become air dash-bursts, same timings
+  const def = alien.def;
+  alien.hopT -= dt;
+  if (alien.state === 'pause') {
+    if (alien.hopT <= 0) {
+      const targetDir = playerUp(_alienV3);
+      const zigzag = (Math.random() * 2 - 1) * (Math.PI * 40 / 180);
+      alien.hopDir.copy(targetDir).applyAxisAngle(alien.dir, zigzag).normalize();
+      alien.state = 'hop';
+      alien.hopT = 0.4;
+    }
+    flyerTick(alien, def, null, dt);
+  } else {
+    flyerTick(alien, def, alien.hopDir, dt);
+    if (alien.hopT <= 0) { alien.state = 'pause'; alien.hopT = 0.5; }
+  }
+  tryMeleeAttack(alien, 1.3, def.dmg, 1.0, dt);
+}
+
+function updateRaider(alien, dt) {
+  const def = alien.def;
+  if (alien.state === 'walk') {
+    if (!alien.targetPlot) {
+      alien.targetPlot = nearestPlot(alien.dir, (p) => p.state === 'growing' || p.state === 'ready');
+    }
+    if (alien.targetPlot) {
+      const dist = alien.dir.angleTo(alien.targetPlot.dir) * PLANET_R;
+      if (dist > 1.0) {
+        flyerTick(alien, def, alien.targetPlot.dir, dt);
+      } else { // hovering ~alt (1.5u) above the plot: grab from the air
+        flyerTick(alien, def, null, dt);
+        alien.state = 'grab';
+        alien.grabT = 1.0;
+      }
+    } else {
+      flyerTick(alien, def, null, dt); // nothing to steal right now
+    }
+  } else if (alien.state === 'grab') {
+    flyerTick(alien, def, null, dt);
+    alien.grabT -= dt;
+    if (alien.grabT <= 0) {
+      const plot = alien.targetPlot;
+      if (plot && (plot.state === 'growing' || plot.state === 'ready')) {
+        alien.carrying = plot.cropId;
+        resetPlotToEmpty(plot);
+      }
+      alien.state = 'ascend';
+      alien.ascendT = 0;
+    }
+  } else if (alien.state === 'ascend') { // climbs +12u above hover alt over 3s, then despawns
+    alien.ascendT += dt;
+    const h = alien.alt + Math.min(alien.ascendT / 3, 1) * 12;
+    alien.pos.copy(alien.dir).multiplyScalar(PLANET_R + h);
+    alien.mesh.position.copy(alien.pos);
+    alien.mesh.quaternion.setFromUnitVectors(_Y, alien.dir);
+    if (alien.ascendT >= 3) killAlienSilently(alien);
+  }
+}
+
+function updateSpitter(alien, dt) {
+  const def = alien.def;
+  const targetDir = playerUp(_alienV3);
+  const dist = alien.dir.angleTo(targetDir) * PLANET_R; // surface-angle distance band, as before
+  let moveDir = null;
+  if (dist < 8) moveDir = _alienV2.copy(alien.dir).multiplyScalar(2).sub(targetDir).normalize(); // retreat
+  else if (dist > 12) moveDir = targetDir; // close in
+  flyerTick(alien, def, moveDir, dt);
+
+  alien.atkT -= dt;
+  if (alien.atkT <= 0) {
+    const muzzle = _alienV3.copy(alien.dir).multiplyScalar(0.9).add(alien.pos); // lob from hover height
+    const chest = playerUp(_alienV2).multiplyScalar(0.75).add(player.pos);
+    spawnBullet(muzzle, chest, def.dmg, true);
+    alien.atkT = 2.5;
+  }
+}
+
+function updateBrute(alien, dt) {
+  const def = alien.def;
+  // Melee override: player within 2u (3D distance to chest point).
+  _alienV3.copy(player.pos).addScaledVector(playerUp(_alienV1), 0.75);
+  if (alien.pos.distanceTo(_alienV3) <= 2) {
+    flyerTick(alien, def, null, dt);
+    tryMeleeAttack(alien, 2, def.dmg, 1.2, dt);
+    return;
+  }
+
+  if (alien.state === 'walk') {
+    if (!alien.targetPlot) {
+      alien.targetPlot = nearestPlot(alien.dir, (p) => p.state === 'growing' || p.state === 'ready');
+    }
+    if (alien.targetPlot) {
+      const dist = alien.dir.angleTo(alien.targetPlot.dir) * PLANET_R;
+      if (dist > 1.2) {
+        flyerTick(alien, def, alien.targetPlot.dir, dt);
+      } else { // hovers above the plot, winds up, smashes from the air
+        flyerTick(alien, def, null, dt);
+        alien.state = 'windup';
+        alien.windupT = 1.5;
+      }
+    } else {
+      flyerTick(alien, def, null, dt);
+    }
+  } else if (alien.state === 'windup') {
+    flyerTick(alien, def, null, dt);
+    alien.windupT -= dt;
+    if (alien.windupT <= 0) {
+      const plot = alien.targetPlot;
+      if (plot && (plot.state === 'growing' || plot.state === 'ready')) {
+        resetPlotToEmpty(plot);
+        burst(_burstV1.copy(plot.dir).multiplyScalar(PLANET_R + 0.4), 0xffb060, 24);
+      }
+      alien.targetPlot = null;
+      alien.state = 'walk';
+    }
+  }
+}
+
+function updateSummoner(alien, dt) {
+  const def = alien.def;
+  stepDirTowards(alien.dir, world.houseDir, def.speed, dt);
+  placeFlyer(alien);
+  alien.mesh.quaternion.setFromUnitVectors(_Y, alien.dir);
+
+  alien.spawnT -= dt;
+  if (alien.spawnT <= 0) {
+    alien.spawnT = 6;
+    alien.minions = alien.minions.filter((m) => m.alive);
+    // Same 12-alive cap as startRaid — at cap the summoner just waits for its next tick.
+    if (alien.minions.length < 3 && countAliveEnemies() < 12) {
+      alien.minions.push(spawnMinionNear(alien.dir, alien.fromRaid));
+    }
+  }
+}
+
+function updateUfo(alien, dt) {
+  const def = alien.def;
+  if (alien.state === 'seek') {
+    if (!alien.targetPlot) {
+      alien.targetPlot = nearestPlot(alien.dir, (p) => p.state === 'growing' || p.state === 'ready');
+    }
+    if (alien.targetPlot) {
+      stepDirTowards(alien.dir, alien.targetPlot.dir, def.speed, dt);
+      const dist = alien.dir.angleTo(alien.targetPlot.dir) * PLANET_R;
+      if (dist < 0.3) {
+        alien.state = 'beam';
+        alien.beamT = 4;
+        alien.mesh.userData.beam.visible = true;
+      }
+    } else {
+      stepDirTowards(alien.dir, world.houseDir, def.speed * 0.3, dt);
+    }
+  } else if (alien.state === 'beam') {
+    alien.beamT -= dt;
+    if (alien.beamT <= 0) {
+      const plot = alien.targetPlot;
+      if (plot && (plot.state === 'growing' || plot.state === 'ready')) resetPlotToEmpty(plot);
+      alien.mesh.userData.beam.visible = false;
+      alien.targetPlot = null;
+      alien.state = 'seek';
+    }
+  }
+  placeFlyer(alien);
+  alien.mesh.quaternion.setFromUnitVectors(_Y, alien.dir);
+}
+
+// Backward iteration: raider ascend-despawn (killAlienSilently) and other mid-loop removals
+// splice `enemies` in place, which would skip an element under forward iteration.
+function updateEnemies(dt) {
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const alien = enemies[i];
+    if (!alien.alive) continue;
+    updateFlash(alien, dt);
+    switch (alien.type) {
+      case 'grunt': case 'shieldbearer': updateGruntLike(alien, dt); break;
+      case 'hopper': updateHopper(alien, dt); break;
+      case 'raider': updateRaider(alien, dt); break;
+      case 'spitter': updateSpitter(alien, dt); break;
+      case 'brute': updateBrute(alien, dt); break;
+      case 'summoner': updateSummoner(alien, dt); break;
+      case 'ufo': updateUfo(alien, dt); break;
+    }
+  }
+}
+
+// ----- Pickups: coins (kills) + produce (raider drops) -----
+const coinGeo = new THREE.OctahedronGeometry(0.18, 0);
+const coinMat = new THREE.MeshLambertMaterial({ color: 0xffd76a, emissive: 0xffaa22, emissiveIntensity: 0.3 });
+let pickups = [];
+
+function dropCoins(pos, total) {
+  const baseDir = pos.clone().normalize();
+  const count = Math.max(1, Math.min(4, Math.round(total / 6)));
+  const per = Math.floor(total / count);
+  const remainder = total - per * count;
+  const upHelper = Math.abs(baseDir.y) < 0.9 ? _Y : new THREE.Vector3(1, 0, 0);
+  for (let i = 0; i < count; i++) {
+    const value = per + (i < remainder ? 1 : 0);
+    const perp = new THREE.Vector3().crossVectors(baseDir, upHelper).normalize();
+    perp.applyAxisAngle(baseDir, Math.random() * Math.PI * 2);
+    const coinDir = baseDir.clone().applyAxisAngle(perp, (0.3 + Math.random() * 0.5) / PLANET_R).normalize();
+    const mesh = new THREE.Mesh(coinGeo, coinMat);
+    mesh.position.copy(coinDir).multiplyScalar(PLANET_R + 0.3);
+    scene.add(mesh);
+    pickups.push({ kind: 'coin', value, mesh, dir: coinDir });
+  }
+}
+
+function dropProducePickup(pos, cropId) {
+  const dir = pos.clone().normalize();
+  const crop = CROPS[cropId];
+  const mat = new THREE.SpriteMaterial({ map: makeIconTexture(crop.icon), transparent: true, depthTest: false });
+  const mesh = new THREE.Sprite(mat);
+  mesh.scale.set(0.6, 0.6, 1);
+  mesh.position.copy(dir).multiplyScalar(PLANET_R + 0.3);
+  scene.add(mesh);
+  pickups.push({ kind: 'produce', id: cropId, mesh, dir });
+}
+
+function collectPickup(p) {
+  if (p.kind === 'coin') earn(p.value);
+  else if (p.kind === 'produce') { inventory.produce[p.id]++; toast('+1 ' + CROPS[p.id].name); }
+  else if (p.kind === 'seed') { inventory.seeds[p.id]++; toast('+1 ' + CROPS[p.id].name + ' seed'); updateSeedBar(); }
+}
+
+function updatePickups(dt) {
+  for (let i = pickups.length - 1; i >= 0; i--) {
+    const p = pickups[i];
+    const dist = playerUp(_alienV1).angleTo(p.dir) * PLANET_R;
+    if (dist < 3) stepDirTowards(p.dir, playerUp(_alienV2), 10, dt);
+    p.mesh.position.copy(p.dir).multiplyScalar(PLANET_R + 0.3);
+    if (p.kind === 'coin') p.mesh.rotation.y += dt * 5;
+    if (dist < 1.2) {
+      collectPickup(p);
+      scene.remove(p.mesh);
+      pickups.splice(i, 1);
+    }
+  }
+}
+
+// ----- Raid director -----
+G.raid = { next: 75, active: false };
+
+function unlockedPool() {
+  const pool = ['grunt', 'hopper'];
+  if (G.partsOwned >= 1) pool.push('raider', 'spitter');
+  if (G.partsOwned >= 2) pool.push('brute', 'shieldbearer');
+  if (G.partsOwned >= 4) pool.push('summoner', 'ufo');
+  return pool;
+}
+
+// Single source of truth for the 12-alive cap, shared by startRaid and summoner minions.
+function countAliveEnemies() {
+  let n = 0;
+  for (let i = 0; i < enemies.length; i++) if (enemies[i].alive) n++;
+  return n;
+}
+
+function startRaid() {
+  G.raid.active = true;
+  const pool = unlockedPool();
+  const want = Math.min(2 + 2 * G.partsOwned, 12);
+  const room = Math.max(0, 12 - countAliveEnemies());
+  const n = Math.min(want, room);
+  for (let i = 0; i < n; i++) {
+    const typeId = pool[Math.floor(Math.random() * pool.length)];
+    const alien = spawnAlien(typeId);
+    alien.fromRaid = true;
+  }
+}
+
+function updateRaidDirector(dt) {
+  if (G.state !== 'playing') return; // paused during shop; already-spawned aliens keep updating via updateEnemies
+  if (!G.raid.active) {
+    const prev = G.raid.next;
+    G.raid.next -= dt;
+    if (prev > 5 && G.raid.next <= 5) showBanner('⚠ Alien raid incoming!');
+    if (G.raid.next <= 0) startRaid();
+  } else {
+    const anyLeft = enemies.some((e) => e.alive && e.fromRaid);
+    if (!anyLeft) {
+      G.raid.active = false;
+      G.raid.next = 60 + Math.random() * 60;
+      toast('The skies are quiet again... for now.');
+      saveGame();
+    }
+  }
+}
+
+// ===== Star event: periodic shootable shooting star (Task 9) =====
+// A single active `star` (or null) — no pick routing needed since all clicks already shoot;
+// the marked comment in updateBullets does a plain sphere test against star.pos, same as
+// enemies. Spawn/despawn are rare, so they allocate freely per codebase convention (see
+// spawnAlien/dropCoins); the per-frame tick (updateStarEvent) only mutates existing fields.
+const STAR_ORBIT_R = 30;
+const STAR_DURATION = 15;
+const STAR_HIT_RADIUS = 1.2;
+let star = null; // { t, startDir, axis, totalAngle, pos, radius }
+let starNextT = 100 + Math.random() * 80;
+const _starV1 = new THREE.Vector3();
+
+const starGlowMat = new THREE.SpriteMaterial({ map: makeGlowTexture('rgba(255,250,200,1)'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+const starMesh = new THREE.Sprite(starGlowMat);
+starMesh.scale.set(1.6, 1.6, 1);
+starMesh.visible = false;
+const starLight = new THREE.PointLight(0xfff6c0, 0, 20);
+
+function buildStarEvent() {
+  scene.add(starMesh);
+  scene.add(starLight);
+}
+
+// Random direction well above the horizon, so the star's arc reads as "across the sky".
+function randomSkyDir(out) {
+  const theta = Math.random() * Math.PI * 2;
+  const elevation = 0.3 + Math.random() * 0.9; // radians above horizon
+  const y = Math.sin(elevation), r = Math.cos(elevation);
+  return out.set(r * Math.cos(theta), y, r * Math.sin(theta));
+}
+
+function spawnStar() {
+  const start = randomSkyDir(new THREE.Vector3());
+  const end = randomSkyDir(new THREE.Vector3());
+  const axis = new THREE.Vector3().crossVectors(start, end);
+  if (axis.lengthSq() < 1e-6) axis.set(0, 1, 0).cross(start).normalize();
+  else axis.normalize();
+  star = {
+    t: 0,
+    startDir: start, axis, totalAngle: start.angleTo(end),
+    pos: start.clone().multiplyScalar(STAR_ORBIT_R),
+    radius: STAR_HIT_RADIUS,
+  };
+  starMesh.position.copy(star.pos);
+  starMesh.visible = true;
+  starMesh.material.opacity = 0;
+  starLight.position.copy(star.pos);
+  starLight.intensity = 0;
+  showBanner('💫 A shooting star!');
+}
+
+function updateStarEvent(dt) {
+  if (G.state !== 'playing') return;
+  if (!star) {
+    starNextT -= dt;
+    if (starNextT <= 0) spawnStar();
+    return;
+  }
+
+  star.t += dt;
+  _starV1.copy(star.startDir).applyAxisAngle(star.axis, star.totalAngle * Math.min(star.t / STAR_DURATION, 1)).multiplyScalar(STAR_ORBIT_R);
+  star.pos.copy(_starV1);
+  starMesh.position.copy(star.pos);
+  starLight.position.copy(star.pos);
+
+  // Fade envelope: ease in over the first second, hold, ease out over the last 2s; a soft
+  // twinkle (sine pulse) rides on top while visible.
+  const fadeIn = Math.min(star.t / 1, 1);
+  const fadeOut = Math.min((STAR_DURATION - star.t) / 2, 1);
+  const envelope = Math.max(0, Math.min(fadeIn, fadeOut));
+  const twinkle = 0.85 + 0.15 * Math.sin(star.t * 9);
+  starMesh.material.opacity = envelope * twinkle;
+  const scale = 1.6 * (0.85 + 0.15 * envelope);
+  starMesh.scale.set(scale, scale, 1);
+  starLight.intensity = envelope * 1.5;
+
+  if (star.t >= STAR_DURATION) despawnStar(); // ignored — fades out and despawns
+}
+
+function burstStar() {
+  if (!star) return;
+  burst(star.pos, 0xfff6c0, 46);
+  dropStarLoot(star.pos);
+  despawnStar();
+}
+
+function despawnStar() {
+  star = null;
+  starMesh.visible = false;
+  starLight.intensity = 0;
+  starNextT = 100 + Math.random() * 80;
+}
+
+// 3 coin pickups (10-25 each) + 30% chance of a melon/pumpkin seed pickup, scattered on the
+// surface below the star — reuses dropCoins' surface-scatter geometry inline since dropCoins
+// itself groups coins by total value rather than guaranteeing an exact count.
+function dropStarLoot(pos) {
+  const baseDir = pos.clone().normalize();
+  const upHelper = Math.abs(baseDir.y) < 0.9 ? _Y : new THREE.Vector3(1, 0, 0);
+  for (let i = 0; i < 3; i++) {
+    const value = 10 + Math.floor(Math.random() * 16); // 10-25
+    const perp = new THREE.Vector3().crossVectors(baseDir, upHelper).normalize();
+    perp.applyAxisAngle(baseDir, Math.random() * Math.PI * 2);
+    const coinDir = baseDir.clone().applyAxisAngle(perp, (0.3 + Math.random() * 0.6) / PLANET_R).normalize();
+    const mesh = new THREE.Mesh(coinGeo, coinMat);
+    mesh.position.copy(coinDir).multiplyScalar(PLANET_R + 0.3);
+    scene.add(mesh);
+    pickups.push({ kind: 'coin', value, mesh, dir: coinDir });
+  }
+  if (Math.random() < 0.3) {
+    const seedId = Math.random() < 0.5 ? 'melon' : 'pumpkin';
+    dropSeedPickup(baseDir.clone().multiplyScalar(PLANET_R + 0.3), seedId);
+  }
+}
+
+function dropSeedPickup(pos, cropId) {
+  const dir = pos.clone().normalize();
+  const crop = CROPS[cropId];
+  const mat = new THREE.SpriteMaterial({ map: makeIconTexture(crop.icon, '#ffe873'), transparent: true, depthTest: false });
+  const mesh = new THREE.Sprite(mat);
+  mesh.scale.set(0.55, 0.55, 1);
+  mesh.position.copy(dir).multiplyScalar(PLANET_R + 0.3);
+  scene.add(mesh);
+  pickups.push({ kind: 'seed', id: cropId, mesh, dir });
+}
+
+// ----- Player HP: damage, regen, downed/respawn flow -----
+function flashHurtVignette() {
+  const el = document.getElementById('hurt-vignette');
+  el.style.transition = 'none';
+  el.style.opacity = '1';
+  void el.offsetWidth; // force reflow so the transition below actually animates 1 -> 0
+  el.style.transition = 'opacity 0.4s ease';
+  el.style.opacity = '0';
+}
+
+function damagePlayer(n) {
+  if (G.state === 'downed') return; // already down; ignore further hits until respawn completes
+  player.hp = Math.max(0, player.hp - n);
+  player.lastHurt = G.time;
+  flashHurtVignette();
+  updateHUD();
+  if (player.hp <= 0) downPlayer();
+}
+
+function updatePlayerRegen(dt) {
+  if (player.hp < player.maxHp && (G.time - player.lastHurt) > 5) {
+    player.hp = Math.min(player.maxHp, player.hp + 5 * dt);
+    updateHUD();
+  }
+}
+
+function downPlayer() {
+  G.state = 'downed';
+  document.getElementById('downed-screen').style.display = 'flex';
+  setTimeout(() => {
+    G.money = Math.floor(G.money * 0.9);
+    movePlayerToDir(world.houseDoorDir);
+    player.hp = player.maxHp;
+    updateHUD();
+    document.getElementById('downed-screen').style.display = 'none';
+    G.state = 'playing';
+  }, 3000);
+}
+
+// ----- Picking: raycast mouse -> nearest world point (plot/door/enemy/planet all just
+// give a surface point to shoot at; the sole caller below never needs which one it hit) -----
+function pickWorld(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  _ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  _ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  _raycaster.setFromCamera(_ndc, camera);
+  const hits = _raycaster.intersectObjects(pickables, true);
+  return hits.length === 0 ? null : hits[0].point;
+}
+
+const _farPoint = new THREE.Vector3();
+window.addEventListener('mousedown', (e) => {
+  if (e.button !== 0 || G.state !== 'playing' || cam.dragging) return;
+
+  // Left click always shoots — farm/house interaction moved to focus+Space (see
+  // updateFocus/interactPlot/tryOpenShopDoor). Aim assist runs before the world
+  // raycast: a click near an alive enemy's screen position shoots at it directly.
+  const assistTarget = findAimAssistTarget(e);
+  if (assistTarget) { shootAt(assistTarget.pos); return; }
+
+  let point = pickWorld(e); // plot/door/enemy meshes stay in pickables just to give a surface point to shoot at
+  if (!point) { // clicked empty sky: unproject to a far point along the click ray
+    _raycaster.ray.at(60, _farPoint);
+    point = _farPoint;
+  }
+  shootAt(point);
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.repeat || G.state !== 'playing') return;
+  const idx = SEED_HOTKEYS.indexOf(e.code);
+  if (idx !== -1) {
+    G.selectedSeed = SEED_ORDER[idx];
+    updateSeedBar();
+  }
+  if (e.code === 'KeyE') tryOpenShopDoor();
+  if (e.code === 'Space') {
+    e.preventDefault(); // stop page scroll
+    if (G.focus) {
+      if (G.focus.kind === 'plot') interactPlot(G.focus.ref);
+      else if (G.focus.kind === 'door') tryOpenShopDoor();
+    }
+  }
+});
+
+// Esc priority: closing the shop beats closing help beats pausing beats resuming — only
+// one of these ever fires per keypress. P is a dedicated pause/resume toggle; it's
+// suppressed while the help panel is on top (e.g. opened from pause) so it can't resume
+// the game behind a still-visible help overlay.
+window.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  if (e.code === 'Escape') {
+    if (G.state === 'shop') closeShop();
+    else if (isHelpOpen()) closeHelp();
+    else if (G.state === 'playing') pauseGame();
+    else if (G.state === 'paused') resumeGame();
+  } else if (e.code === 'KeyP' && !isHelpOpen()) {
+    if (G.state === 'playing') pauseGame();
+    else if (G.state === 'paused') resumeGame();
+  }
+});
+
+// ===== Save / Load / Reset (Task 10) =====
+function saveGame() {
+  try {
+    const data = {
+      v: 1,
+      money: G.money,
+      day: G.day,
+      tod: G.tod,
+      time: G.time,
+      stats: G.stats,
+      upgrades: G.upgrades,
+      partsOwned: G.partsOwned,
+      inventory: inventory,
+      hp: player.hp,
+      plots: plots.map((p) => ({ state: p.state, cropId: p.cropId, growth: p.growth, watered: p.watered, redried: p.redried })),
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch (e) {
+    // Storage can throw (quota exceeded, private-browsing lockout, etc.); autosave is
+    // best-effort and must never crash the game.
+  }
+}
+
+function hasSave() {
+  // Validates (parse + version), not just key presence: a corrupt save must not
+  // produce a Continue button that silently does nothing. Purges bad saves so the
+  // start screen offers a clean fresh start instead.
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data || data.v !== 1) throw new Error('bad save');
+    return true;
+  } catch (e) {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e2) {}
+    return false;
+  }
+}
+
+// Discards a save that fails to parse, carries an unknown version, or otherwise blows up
+// while being applied — a corrupt/foreign save must never crash the game, so any error
+// here just deletes the key and falls back to a fresh start (returns null).
+function loadGame() {
+  let raw;
+  try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { return null; }
+  if (!raw) return null;
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e2) {}
+    return null;
+  }
+  if (!data || data.v !== 1) {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e2) {}
+    return null;
+  }
+  try {
+    applySaveData(data);
+    return data;
+  } catch (e) {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e2) {}
+    return null;
+  }
+}
+
+// Clears every runtime-only entity that's never persisted (live aliens, in-flight
+// bullets, ground pickups, the shooting star) — shared by loadGame's post-apply cleanup
+// and resetGame.
+function clearLiveEntities() {
+  for (let i = enemies.length - 1; i >= 0; i--) removeAlienFromWorld(enemies[i]);
+  for (let i = 0; i < bullets.length; i++) deactivateBullet(bullets[i]);
+  for (let i = 0; i < pickups.length; i++) scene.remove(pickups[i].mesh);
+  pickups.length = 0;
+  despawnStar();
+}
+
+// Applies a parsed save object onto live game state, then refreshes every derived visual
+// (plot meshes, ship ghost/solid parts, HUD, seed bar). Runtime-only state the save never
+// carried (live aliens/bullets/pickups/star, the raid timer, player position) is reset to
+// a fresh start regardless of what was happening when the save was written.
+function applySaveData(data) {
+  G.money = typeof data.money === 'number' ? data.money : 20;
+  G.day = typeof data.day === 'number' ? data.day : 1;
+  G.tod = typeof data.tod === 'number' ? data.tod : 0;
+  G.time = typeof data.time === 'number' ? data.time : 0;
+  G.stats = Object.assign({ harvests: 0, kills: 0, earned: 0 }, data.stats);
+  G.upgrades = Object.assign({ gunDmg: 0, gunRate: 0, boots: 0, field: 0, sprinkler: false }, data.upgrades);
+  G.partsOwned = typeof data.partsOwned === 'number' ? data.partsOwned : 0;
+  G.selectedSeed = 'wheat';
+  G._saveAcc = 0;
+
+  const savedInv = data.inventory || {};
+  inventory = {
+    seeds: Object.assign({ wheat: 0, berry: 0, carrot: 0, melon: 0, pumpkin: 0 }, savedInv.seeds),
+    produce: Object.assign({ wheat: 0, berry: 0, carrot: 0, melon: 0, pumpkin: 0 }, savedInv.produce),
+  };
+
+  player.hp = typeof data.hp === 'number' ? data.hp : player.maxHp;
+  player.speed = [6, 7.5, 9][G.upgrades.boots] || 6;
+
+  const savedPlots = Array.isArray(data.plots) ? data.plots : [];
+  for (let i = 0; i < plots.length; i++) {
+    const sp = savedPlots[i];
+    const plot = plots[i];
+    if (sp) {
+      plot.state = sp.state;
+      plot.cropId = sp.cropId && cropMats[sp.cropId] ? sp.cropId : null;
+      plot.growth = typeof sp.growth === 'number' ? sp.growth : 0;
+      plot.watered = !!sp.watered;
+      plot.redried = !!sp.redried;
+      if (plot.cropId) assignCropVisual(plot);
+    }
+    updatePlotVisual(plot);
+  }
+
+  updateShipVisual();
+  updateHUD();
+  updateSeedBar();
+  updateDayInfo();
+
+  // Everything below is deliberately NOT part of the save: live combat state, the
+  // shooting star, the raid timer, and the player's position all start fresh.
+  clearLiveEntities();
+  G.raid = { next: 75, active: false };
+  movePlayerToDir(world.houseDoorDir);
+}
+
+// Restores pristine new-game state without a page reload. Used by both Reset Save
+// buttons (start screen + pause) and the victory screen's Play Again.
+function resetGame() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+
+  G.money = 20;
+  G.day = 1;
+  G.tod = 0;
+  G.time = 0;
+  G.selectedSeed = 'wheat';
+  G.stats = { harvests: 0, kills: 0, earned: 0 };
+  G.upgrades = { gunDmg: 0, gunRate: 0, boots: 0, field: 0, sprinkler: false };
+  G.partsOwned = 0;
+  G.shopTab = 'seeds';
+  G.focus = null;
+  G._saveAcc = 0;
+
+  inventory = {
+    seeds: { wheat: 2, berry: 0, carrot: 0, melon: 0, pumpkin: 0 },
+    produce: { wheat: 0, berry: 0, carrot: 0, melon: 0, pumpkin: 0 },
+  };
+
+  for (let i = 0; i < plots.length; i++) {
+    const plot = plots[i];
+    plot.state = i < 4 ? 'untilled' : 'locked';
+    plot.cropId = null;
+    plot.growth = 0;
+    plot.watered = false;
+    plot.redried = false;
+    updatePlotVisual(plot);
+  }
+
+  player.hp = player.maxHp;
+  player.speed = 6;
+  movePlayerToDir(world.houseDoorDir);
+
+  clearLiveEntities();
+  G.raid = { next: 75, active: false };
+
+  resetShipToPad();
+  updateShipVisual();
+  updateHUD();
+  updateSeedBar();
+  updateDayInfo();
+
+  document.getElementById('continue-btn').style.display = 'none';
+}
+
+// ===== Start / Pause / Help screens (Task 10) =====
+function pauseGame() {
+  if (G.state !== 'playing') return;
+  G.state = 'paused';
+  document.getElementById('pause-screen').style.display = 'flex';
+}
+function resumeGame() {
+  if (G.state !== 'paused') return;
+  G.state = 'playing';
+  document.getElementById('pause-screen').style.display = 'none';
+}
+
+function isHelpOpen() {
+  return document.getElementById('help-panel').style.display === 'flex';
+}
+function openHelp(from) {
+  G.helpFrom = from;
+  document.getElementById(from === 'pause' ? 'pause-screen' : 'start-screen').style.display = 'none';
+  document.getElementById('help-panel').style.display = 'flex';
+}
+function closeHelp() {
+  document.getElementById('help-panel').style.display = 'none';
+  document.getElementById(G.helpFrom === 'pause' ? 'pause-screen' : 'start-screen').style.display = 'flex';
+  G.helpFrom = null;
+}
+
+function returnToMenu() {
+  G.state = 'menu';
+  document.getElementById('pause-screen').style.display = 'none';
+  document.getElementById('help-panel').style.display = 'none';
+  document.getElementById('start-screen').style.display = 'flex';
+  document.getElementById('continue-btn').style.display = 'none';
+  document.getElementById('start-confirm').style.display = 'none';
+  document.getElementById('hud').style.display = 'none';
+}
+
+function enterPlaying() {
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('hud').style.display = '';
+  G.state = 'playing';
+}
+
+function setupStartUI() {
+  const startBtn = document.getElementById('start-btn');
+  const continueBtn = document.getElementById('continue-btn');
+  const confirmRow = document.getElementById('start-confirm');
+  const resetLink = document.getElementById('reset-save-link');
+
+  continueBtn.style.display = hasSave() ? '' : 'none';
+
+  startBtn.addEventListener('click', () => {
+    if (hasSave()) {
+      confirmRow.style.display = 'flex';
+    } else {
+      resetGame();
+      enterPlaying();
+    }
+  });
+  document.getElementById('confirm-overwrite-yes').addEventListener('click', () => {
+    confirmRow.style.display = 'none';
+    resetGame();
+    enterPlaying();
+  });
+  document.getElementById('confirm-overwrite-no').addEventListener('click', () => {
+    confirmRow.style.display = 'none';
+  });
+  continueBtn.addEventListener('click', () => {
+    if (!loadGame()) { continueBtn.style.display = 'none'; return; } // shouldn't happen — button only shows when hasSave()
+    enterPlaying();
+  });
+  resetLink.addEventListener('click', () => {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+    continueBtn.style.display = 'none';
+    confirmRow.style.display = 'none';
+  });
+  document.getElementById('start-help-btn').addEventListener('click', () => openHelp('start'));
+}
+
+function setupPauseUI() {
+  document.getElementById('resume-btn').addEventListener('click', resumeGame);
+  document.getElementById('pause-help-btn').addEventListener('click', () => openHelp('pause'));
+  document.getElementById('pause-reset-btn').addEventListener('click', () => {
+    resetGame();
+    returnToMenu();
+  });
+}
+
+// Flavor text only (name/icon/blurb aren't part of ALIENS, which is stats-only) — mirrors
+// each variant's actual behavior from the Aliens section above (updateGruntLike, etc).
+const ALIEN_INFO = {
+  grunt:        { name: 'Grunt',        icon: '👾', blurb: 'Flies straight at you and melees in range.' },
+  hopper:       { name: 'Hopper',       icon: '🦗', blurb: 'Fast and fragile — darts in with erratic dash-bursts.' },
+  raider:       { name: 'Raider',       icon: '🥷', blurb: 'Steals a crop from your plots, then flees with it.' },
+  spitter:      { name: 'Spitter',      icon: '🐍', blurb: 'Keeps its distance and spits ranged shots.' },
+  brute:        { name: 'Brute',        icon: '👹', blurb: 'Slow but very tough — a heavy melee hit up close.' },
+  shieldbearer: { name: 'Shieldbearer', icon: '🛡️', blurb: 'Blocks frontal shots — hit it from the side or behind.' },
+  summoner:     { name: 'Summoner',     icon: '👽', blurb: 'Heads for your house, periodically summoning grunts.' },
+  ufo:          { name: 'UFO',          icon: '🛸', blurb: 'Locks onto a plot, then beams up the crop.' },
+};
+
+function buildHelpHtml() {
+  const cropRows = SEED_ORDER.map((id) => {
+    const c = CROPS[id];
+    return '<tr><td>' + c.icon + ' ' + c.name + '</td><td>' + c.growTime + 's</td><td>' + c.seedCost + ' 🪙</td><td>' + c.sellPrice + ' 🪙</td></tr>';
+  }).join('');
+
+  const alienCards = Object.keys(ALIEN_INFO).map((id) => {
+    const a = ALIEN_INFO[id];
+    return '<div class="help-alien-card"><span class="icon">' + a.icon + '</span><span class="name">' + a.name + '</span>' +
+      '<span class="blurb">' + a.blurb + '</span></div>';
+  }).join('');
+
+  return (
+    '<div class="help-section">' +
+      '<h3>CONTROLS</h3>' +
+      '<ul class="help-controls-list">' +
+        '<li>WASD / arrow keys — walk</li>' +
+        '<li>Click — shoot</li>' +
+        '<li>Space — interact with the highlighted plot/house</li>' +
+        '<li>Right-drag — look around</li>' +
+        '<li>1-5 — select seed &middot; E — open shop near the door</li>' +
+        '<li>Esc / P — pause</li>' +
+      '</ul>' +
+    '</div>' +
+    '<div class="help-section">' +
+      '<h3>CROPS</h3>' +
+      '<table class="help-table"><thead><tr><th>Crop</th><th>Grow time</th><th>Seed cost</th><th>Sell price</th></tr></thead>' +
+      '<tbody>' + cropRows + '</tbody></table>' +
+    '</div>' +
+    '<div class="help-section">' +
+      '<h3>ALIENS</h3>' +
+      '<div class="help-gallery">' + alienCards + '</div>' +
+    '</div>' +
+    '<div class="help-section">' +
+      '<h3>TIPS</h3>' +
+      '<ul class="help-tips-list">' +
+        '<li>Crops need watering twice — once at planting and once more partway through growth.</li>' +
+        '<li>Sell produce and buy seeds/upgrades at the house.</li>' +
+        '<li>Shooting stars drop bonus coins and sometimes seeds — shoot them before they fade.</li>' +
+        '<li>Buy spaceship parts in order — each one unlocks the next.</li>' +
+      '</ul>' +
+    '</div>'
+  );
+}
+
+function setupHelpUI() {
+  document.getElementById('help-close-btn').addEventListener('click', closeHelp);
+  document.getElementById('help-body').innerHTML = buildHelpHtml();
+}
+
+function boot() {
+  G.state = 'menu';
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  document.body.prepend(renderer.domElement);
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0f1e);
+  camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 500);
+  camera.position.set(0, PLANET_R + 8, PLANET_R + 14);
+  camera.lookAt(0, PLANET_R, 0);
+  buildWorld();
+  buildParticles();
+  buildPlayer();
+  pickables.push(world.planet, world.doorMesh);
+  buildPlots();
+  scene.add(highlightRing);
+  buildShip();
+  buildCombat();
+  buildStarEvent();
+  updateHUD();
+  updateDayInfo();
+  updateSeedBar();
+  setupShopUI();
+  setupVictoryUI();
+  setupStartUI();
+  setupPauseUI();
+  setupHelpUI();
+  document.getElementById('hud').style.display = 'none'; // hidden until Start/Continue leaves the menu
+  let last = performance.now();
+  (function loop(now) {
+    requestAnimationFrame(loop);
+    const dt = Math.min((now - last) / 1000, 0.05); last = now;
+    if (G.state === 'playing' || G.state === 'shop') update(dt);
+    render(dt);
+  })(performance.now());
+}
+
+// Populated by later tasks (crops, enemies, ship, etc.).
+function update(dt) {
+  G.time += dt;
+  updateDayNight(dt);
+  updatePlayer(dt);
+  updateCamera(dt);
+  updatePlots(dt);
+  updateFocus();
+  updateFocusVisual();
+  updateEnemies(dt);
+  updateBullets(dt);
+  updatePickups(dt);
+  updateTeleportFlashes(dt);
+  updateRaidDirector(dt);
+  updateStarEvent(dt);
+  updatePlayerRegen(dt);
+
+  if (G.state === 'playing') {
+    G._saveAcc += dt;
+    if (G._saveAcc >= 10) {
+      G._saveAcc = 0;
+      saveGame();
+    }
+  }
+}
+
+// Launch is driven from here (rather than a gate in update()/the loop) since it needs to run
+// every frame while G.state === 'launch', a state the loop deliberately excludes from update()
+// so player input and updateCamera stay frozen during the cinematic. updateParticles also
+// lives here (not in update()) so launch's liftoff puffs keep animating/fading even though
+// update() itself doesn't run during 'launch'.
+function render(dt) {
+  if (G.state === 'launch') updateLaunch(dt);
+  updateParticles(dt);
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  if (!renderer || !camera) return;
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof THREE === 'undefined') {
+    document.getElementById('no-internet').style.display = 'flex';
+    return; // boot() never runs
+  }
+  boot();
+});
+</script>
+</body>
+</html>
