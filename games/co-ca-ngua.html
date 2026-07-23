@@ -7,13 +7,14 @@
 <style>
 *{box-sizing:border-box}
 :root{
-    --cell: clamp(24px, min(calc((100vh - 210px) / 15), calc((100vw - 360px) / 15)), 44px);
+    --cell: clamp(26px, min(calc((100vh - 122px) / 15), calc((100vw - 332px) / 15)), 58px);
     --red:#e23b3b; --green:#2fbf4f; --yellow:#f0b400; --blue:#3b7fe2;
     --track:#d8b483; --track2:#c69a63;
 }
 body{
     margin:0;
-    min-height:100vh;
+    height:100vh;
+    overflow:hidden;
     font-family:'Segoe UI',system-ui,sans-serif;
     color:#fff;
     background:
@@ -47,9 +48,10 @@ body::before{
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:10px;
-    padding:14px 12px;
-    min-height:100vh;
+    gap:8px;
+    padding:8px 12px;
+    height:100vh;
+    overflow:hidden;
 }
 .header{
     display:flex;
@@ -92,24 +94,33 @@ body::before{
 .btn-primary{background:linear-gradient(135deg,#f0b400,#e07000);color:#fff}
 .btn-secondary{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.18)}
 .status{
-    display:flex;align-items:center;justify-content:center;gap:12px;
-    font-size:18px;font-weight:900;text-align:center;
-    padding:8px 20px;border-radius:14px;min-height:44px;
-    background:linear-gradient(135deg,rgba(0,0,0,.28),rgba(0,0,0,.18));
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    font-size:16px;font-weight:900;text-align:center;
+    padding:10px 16px;border-radius:14px;min-height:44px;
+    background:linear-gradient(135deg,rgba(0,0,0,.30),rgba(0,0,0,.20));
     border:2px solid var(--turn,rgba(255,255,255,.3));
     box-shadow:0 8px 22px rgba(0,0,0,.3);
     transition:border-color .3s;
 }
-.status .dot{width:16px;height:16px;border-radius:50%;box-shadow:0 0 12px currentColor}
+.status .dot{width:15px;height:15px;flex:none;border-radius:50%;box-shadow:0 0 12px currentColor}
 .main{
-    width:min(1180px,100%);
+    width:100%;
+    flex:1;
+    min-height:0;
     display:grid;
-    grid-template-columns:220px auto;
-    gap:16px;
-    align-items:start;
+    grid-template-columns:250px auto;
+    gap:18px;
+    align-items:center;
     justify-content:center;
 }
-.hud{display:flex;flex-direction:column;gap:10px}
+.leftpanel{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    align-self:center;
+    max-height:100%;
+}
+.hud{display:flex;flex-direction:column;gap:8px}
 .player-card{
     display:flex;align-items:center;gap:10px;
     padding:10px 12px;border-radius:16px;
@@ -160,12 +171,6 @@ body::before{
 .cell.base-green{background:rgba(47,191,79,.26)}
 .cell.base-yellow{background:rgba(240,180,0,.26)}
 .cell.base-blue{background:rgba(59,127,226,.28)}
-.base-corner{outline:2px solid rgba(255,255,255,.12);outline-offset:-2px}
-.slot{
-    width:78%;height:78%;border-radius:50%;
-    border:2px dashed rgba(255,255,255,.55);
-    background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.18),transparent 65%);
-}
 /* Track */
 .cell.track{
     background:
@@ -208,10 +213,10 @@ body::before{
 .horse{
     position:absolute;
     z-index:20;
-    width:calc(var(--cell)*.82);height:calc(var(--cell)*.82);
+    width:calc(var(--cell)*.9);height:calc(var(--cell)*.9);
     border-radius:50%;
     display:flex;align-items:center;justify-content:center;
-    font-size:calc(var(--cell)*.5);
+    font-size:calc(var(--cell)*.72);
     cursor:default;user-select:none;
     box-shadow:0 6px 14px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.35);
     transition:filter .15s ease;
@@ -227,19 +232,25 @@ body::before{
 }
 .horse.movable:hover{filter:brightness(1.12)}
 /* Dice */
-.dice-area{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center}
+.dice-area{
+    display:flex;align-items:center;gap:14px;justify-content:center;
+    padding:12px;border-radius:16px;
+    background:linear-gradient(180deg,rgba(122,59,18,.5),rgba(74,36,8,.5));
+    border:2px solid rgba(255,255,255,.14);
+    box-shadow:0 12px 26px rgba(0,0,0,.3);
+}
 .die{
-    width:66px;height:66px;border-radius:14px;
+    width:64px;height:64px;flex:none;border-radius:14px;
     background:linear-gradient(145deg,#fff,#e6e6e6);
     color:#1a1a1a;
     display:flex;align-items:center;justify-content:center;
-    font-size:56px;line-height:1;
+    font-size:54px;line-height:1;
     box-shadow:0 10px 22px rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.8);
     user-select:none;
 }
 .die.rolling{animation:diceTumble .6s ease-in-out}
-.roll-btn{font-size:16px;padding:13px 24px}
-.hint{font-size:13px;opacity:.85;text-align:center;min-height:18px}
+.roll-btn{font-size:15px;padding:12px 16px;flex:1}
+.hint{font-size:12.5px;opacity:.85;text-align:center;min-height:16px;line-height:1.35}
 /* Effects */
 .dust{
     position:fixed;pointer-events:none;z-index:60;
@@ -333,9 +344,11 @@ body::before{
 .message.good{background:rgba(34,197,94,.95)}
 @keyframes slideDown{from{opacity:0;transform:translate(-50%,-18px)}to{opacity:1;transform:translate(-50%,0)}}
 @media (max-width:900px){
-    :root{--cell:clamp(20px, calc((100vw - 30px)/15), 40px);}
-    .main{grid-template-columns:1fr;gap:10px}
-    .hud{flex-direction:row;flex-wrap:wrap;justify-content:center;order:2}
+    :root{--cell:clamp(18px, min(calc((100vh - 210px)/15), calc((100vw - 20px)/15)), 40px);}
+    .main{grid-template-columns:1fr;gap:8px;align-content:center}
+    .leftpanel{order:2;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:center;max-height:none}
+    .leftpanel .status{flex:1 1 100%}
+    .hud{flex-direction:row;flex-wrap:wrap;justify-content:center}
     .player-card{flex:1 1 150px}
     .board-wrap{order:1}
 }
@@ -356,23 +369,24 @@ body::before{
         </div>
     </div>
 
-    <div class="status" id="turnStatus">
-        <div class="dot"></div>
-        <span>Lượt: ĐỎ — hãy gieo xúc xắc</span>
-    </div>
-
     <div class="main">
-        <div class="hud" id="hud"></div>
+        <div class="leftpanel">
+            <div class="status" id="turnStatus">
+                <div class="dot"></div>
+                <span>Lượt: ĐỎ — hãy gieo xúc xắc</span>
+            </div>
+            <div class="dice-area">
+                <div class="die" id="dieFace">🎲</div>
+                <button class="btn btn-primary roll-btn" id="rollBtn">🎲 Gieo</button>
+            </div>
+            <div class="hint" id="hint">Cần gieo được 6 để đưa ngựa ra khỏi chuồng.</div>
+            <div class="hud" id="hud"></div>
+        </div>
 
         <div class="board-wrap">
             <div class="board-frame">
                 <div class="board" id="board"></div>
             </div>
-            <div class="dice-area">
-                <div class="die" id="dieFace">🎲</div>
-                <button class="btn btn-primary roll-btn" id="rollBtn">🎲 Gieo xúc xắc</button>
-            </div>
-            <div class="hint" id="hint">Cần gieo được 6 để đưa ngựa ra khỏi chuồng.</div>
         </div>
     </div>
 
@@ -445,22 +459,42 @@ const START_INDEX = [0, 13, 26, 39];               // red, green, yellow, blue
 const SAFE_INDICES = new Set([0,13,26,39, 8,21,34,47]);
 
 const COLORS = [
-    {key:'red',    label:'ĐỎ',   emoji:'🔴', css:'var(--red)'},
-    {key:'green',  label:'XANH LÁ', emoji:'🟢', css:'var(--green)'},
-    {key:'yellow', label:'VÀNG',  emoji:'🟡', css:'var(--yellow)'},
-    {key:'blue',   label:'XANH DƯƠNG', emoji:'🔵', css:'var(--blue)'}
+    {key:'red',    label:'ĐỎ',   emoji:'🔴', css:'var(--red)',    horse:'🐎'},
+    {key:'green',  label:'XANH LÁ', emoji:'🟢', css:'var(--green)', horse:'🐴'},
+    {key:'yellow', label:'VÀNG',  emoji:'🟡', css:'var(--yellow)', horse:'🏇'},
+    {key:'blue',   label:'XANH DƯƠNG', emoji:'🔵', css:'var(--blue)',  horse:'🦄'}
 ];
 
-const HORSE = '🐎';
+// Inner paddock zones (rows/cols inclusive) where a color's stabled horses scatter.
+const STABLE_ZONES = [
+    {r:[1,4], c:[1,4]},     // red   top-left
+    {r:[1,4], c:[10,13]},   // green top-right
+    {r:[10,13], c:[10,13]}, // yellow bottom-right
+    {r:[10,13], c:[1,4]}    // blue  bottom-left
+];
+function randomStableCells(ci){
+    const z = STABLE_ZONES[ci];
+    const cells = [];
+    for(let r=z.r[0];r<=z.r[1];r++) for(let c=z.c[0];c<=z.c[1];c++) cells.push([r,c]);
+    for(let i=cells.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [cells[i],cells[j]]=[cells[j],cells[i]]; }
+    return cells.slice(0,4);
+}
 const DIE_FACES = ['⚀','⚁','⚂','⚃','⚄','⚅'];
 const MOVE_MS = 520;
 
 /* ─────────────────────────────  STATE  ───────────────────────────── */
 function freshPlayers(){
-    return COLORS.map((c,i)=>({
-        colorIdx:i,
-        horses:[0,1,2,3].map(id=>({id, state:'stable', step:-1}))
-    }));
+    return COLORS.map((c,i)=>{
+        const cells = randomStableCells(i);
+        return {
+            colorIdx:i,
+            horses:[0,1,2,3].map(id=>({
+                id, state:'stable', step:-1,
+                stableCell: cells[id],
+                stableOff: {x:(Math.random()*30-15), y:(Math.random()*30-15)}
+            }))
+        };
+    });
 }
 let players = freshPlayers();
 let currentPlayer = 0;
@@ -470,6 +504,7 @@ let phase = 'roll';        // 'roll' | 'move'
 let currentMoves = [];
 let busy = false;
 let gameOver = false;
+let hiddenHorse = null;    // horse currently animating as a floating clone
 
 const board = document.getElementById('board');
 const hud = document.getElementById('hud');
@@ -505,7 +540,6 @@ function createBoard(){
             const key = r+','+c;
             const ri = ringMap.get(key);
             const lane = laneMap.get(key);
-            const slot = slotMap.get(key);
             const bc = baseColorAt(r,c);
 
             if(ri!==undefined){
@@ -524,12 +558,6 @@ function createBoard(){
                 if(r===7 && c===7) cell.classList.add('hub');
             }else if(bc>=0){
                 cell.classList.add('base','base-'+COLORS[bc].key);
-                if(slot){
-                    cell.classList.add('base-corner');
-                    const s = document.createElement('div');
-                    s.className = 'slot';
-                    cell.appendChild(s);
-                }
             }
 
             cell.addEventListener('click',()=>onCellClick(r,c));
@@ -544,8 +572,12 @@ function getCell(r,c){
 
 /* ─────────────────────────────  POSITIONS  ───────────────────────────── */
 function posToCell(ci, horse){
-    if(horse.state==='stable') return STABLE_SLOTS[ci][horse.id];
-    const s = horse.step;
+    if(horse.state==='stable') return horse.stableCell || STABLE_SLOTS[ci][horse.id];
+    return stepCell(ci, horse.step);
+}
+
+// Board cell [r,c] for a color at a given forward step (0..56).
+function stepCell(ci, s){
     if(s<=50) return RING[(START_INDEX[ci]+s)%52];
     return HOME_LANES[ci][s-51];
 }
@@ -563,6 +595,7 @@ function renderHorses(){
     // group by cell for stacking offsets
     const groups = new Map();
     players.forEach((p,ci)=>p.horses.forEach(h=>{
+        if(h===hiddenHorse) return;            // being animated as a floating clone
         const [r,c] = posToCell(ci,h);
         const k = r+','+c;
         if(!groups.has(k)) groups.set(k,[]);
@@ -574,23 +607,30 @@ function renderHorses(){
         list.forEach((it,idx)=>{
             const el = document.createElement('div');
             el.className = 'horse '+COLORS[it.ci].key;
-            el.textContent = HORSE;
+            el.textContent = COLORS[it.ci].horse;
             el.dataset.pi = it.ci;
             el.dataset.id = it.h.id;
-            // stacking spread
-            if(n>1){
+
+            if(it.h.state==='stable'){
+                // scattered inside the paddock
+                const off = it.h.stableOff || {x:0,y:0};
+                el.style.left = (50 + off.x) + '%';
+                el.style.top  = (50 + off.y) + '%';
+                el.style.transform = 'translate(-50%,-50%)';
+            }else if(n>1){
                 const ang = (idx/n)*Math.PI*2;
                 const rad = 22;   // % of cell
                 el.style.left = (50 + Math.cos(ang)*rad*(n>2?1:0.6)) + '%';
                 el.style.top  = (50 + Math.sin(ang)*rad*(n>2?1:0.6)) + '%';
                 el.style.transform = 'translate(-50%,-50%)';
-                el.style.width = 'calc(var(--cell)*.6)';
-                el.style.height = 'calc(var(--cell)*.6)';
-                el.style.fontSize = 'calc(var(--cell)*.38)';
+                el.style.width = 'calc(var(--cell)*.66)';
+                el.style.height = 'calc(var(--cell)*.66)';
+                el.style.fontSize = 'calc(var(--cell)*.5)';
             }else{
                 el.style.left = '50%'; el.style.top = '50%';
                 el.style.transform = 'translate(-50%,-50%)';
             }
+
             const isMovable = !gameOver && !busy && phase==='move' &&
                 it.ci===currentPlayer &&
                 currentMoves.some(m=>m.horse===it.h);
@@ -613,7 +653,7 @@ function updateHUD(){
         card.className = 'player-card'+(ci===currentPlayer && !gameOver?' active':'');
         card.style.setProperty('--pc', COLORS[ci].css);
         card.innerHTML = `
-            <div class="avatar">${HORSE}</div>
+            <div class="avatar">${COLORS[ci].horse}</div>
             <div class="info">
                 <div class="pname">${COLORS[ci].emoji} ${COLORS[ci].label}</div>
                 <div class="pstat"><span>🏠 Chuồng: <b>${stableN}</b></span><span>🏁 Về đích: <b>${finishN}</b></span></div>
@@ -721,86 +761,127 @@ function onHorseClick(ci, horse){
     moveHorse(ci, horse, m.toStep, m.toState);
 }
 
+// Center of a board cell in viewport coordinates.
+function cellCenter([r,c]){
+    const rect = getCell(r,c).getBoundingClientRect();
+    return {x:rect.left+rect.width/2, y:rect.top+rect.height/2};
+}
+
 function moveHorse(ci, horse, toStep, toState){
     busy = true;
     currentMoves = [];
     hintEl.textContent = '';
 
-    const [fr, fc] = posToCell(ci, horse);
-    const fromCell = getCell(fr, fc);
-    const fromRect = fromCell.getBoundingClientRect();
+    const fromStable = horse.state==='stable';
+    const start = cellCenter(posToCell(ci, horse));
 
-    // Peek captures BEFORE moving (destination ring index)
+    // Build the sequence of cell centers the horse gallops through, one block at a time.
+    const waypoints = [];
+    if(fromStable){
+        waypoints.push(cellCenter(stepCell(ci, 0)));           // pop out to the start cell
+    }else{
+        for(let s=horse.step+1; s<=toStep; s++){
+            waypoints.push(cellCenter(stepCell(ci, s)));
+        }
+    }
+
+    // Hide the real horse and gallop a floating clone through each block.
+    hiddenHorse = horse;
+    renderHorses();
+    const clone = document.createElement('div');
+    clone.className = 'horse '+COLORS[ci].key+' tumble-clone';
+    clone.textContent = COLORS[ci].horse;
+    clone.style.width = 'calc(var(--cell)*.9)';
+    clone.style.height = 'calc(var(--cell)*.9)';
+    clone.style.fontSize = 'calc(var(--cell)*.72)';
+    clone.style.borderRadius = '50%';
+    clone.style.display = 'flex';
+    clone.style.alignItems = 'center';
+    clone.style.justifyContent = 'center';
+    clone.style.left = start.x+'px';
+    clone.style.top = start.y+'px';
+    clone.style.zIndex = 80;
+    document.body.appendChild(clone);
+
+    gallopAlong(clone, start, waypoints, ()=>{
+        clone.remove();
+        hiddenHorse = null;
+        finalizeMove(ci, horse, toStep, toState);
+    });
+}
+
+// Animate a floating clone hopping block-by-block through the waypoints.
+function gallopAlong(el, start, pts, done){
+    const n = pts.length;
+    if(n===0){ done(); return; }
+    const cell = getCell(0,0).getBoundingClientRect().width || 40;
+    const hop = Math.min(cell*0.55, 22);
+    const perBlock = 150;
+
+    const kf = [{transform:'translate(-50%,-50%)', offset:0}];
+    let prev = start;
+    for(let i=0;i<n;i++){
+        const cur = pts[i];
+        const midX = (prev.x+cur.x)/2 - start.x;
+        const midY = (prev.y+cur.y)/2 - start.y - hop;
+        const endX = cur.x - start.x;
+        const endY = cur.y - start.y;
+        kf.push({transform:`translate(calc(-50% + ${midX}px),calc(-50% + ${midY}px)) scale(1.12)`, offset:(i+0.5)/n});
+        kf.push({transform:`translate(calc(-50% + ${endX}px),calc(-50% + ${endY}px)) scale(1)`, offset:(i+1)/n});
+        prev = cur;
+    }
+
+    const anim = el.animate(kf, {duration:n*perBlock, easing:'linear', fill:'both'});
+
+    // one hoof-beat + dust per block landing
+    for(let i=0;i<n;i++){
+        setTimeout(()=>{
+            Sound.step();
+            const p = pts[i];
+            dustAt(p.x, p.y);
+        }, (i+1)*perBlock - 20);
+    }
+
+    anim.onfinish = ()=>{ anim.cancel(); done(); };
+}
+
+function finalizeMove(ci, horse, toStep, toState){
+    // Peek captures at the destination, then apply move + captures.
     const captured = collectCaptures(ci, toStep);
-
-    // Apply movement
     horse.step = toStep;
     horse.state = toState;
-
-    // Apply captures (send home)
     captured.forEach(cap=>{ cap.h.state='stable'; cap.h.step=-1; });
 
     renderHorses();
     updateHUD();
 
-    const [tr, tc] = posToCell(ci, horse);
-    const toCell = getCell(tr, tc);
-    const toRect = toCell.getBoundingClientRect();
+    const dest = cellCenter(posToCell(ci, horse));
 
-    // Hop animation on the mover
-    const movedEl = toCell.querySelector(`.horse[data-pi="${ci}"][data-id="${horse.id}"]`);
-    if(movedEl){
-        const dx = fromRect.left - toRect.left;
-        const dy = fromRect.top - toRect.top;
-        const dist = Math.hypot(dx,dy);
-        const hop = Math.max(20, dist*0.28);
-        movedEl.style.zIndex = 45;
-        const anim = movedEl.animate([
-            {transform:`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(1)`, offset:0, easing:'cubic-bezier(.3,0,.5,1)'},
-            {transform:`translate(calc(-50% + ${dx*0.5}px),calc(-50% + ${dy*0.5 - hop}px)) scale(1.22)`, offset:0.5},
-            {transform:`translate(-50%,-50%) scaleX(1.15) scaleY(.85)`, offset:0.85},
-            {transform:`translate(-50%,-50%) scale(1)`, offset:1}
-        ],{duration:MOVE_MS, easing:'cubic-bezier(.25,.9,.25,1)', fill:'both'});
-        anim.onfinish = ()=>{ movedEl.style.zIndex=''; anim.cancel(); };
-    }
-
-    // Dust puffs along the way
-    dustAt(toRect.left+toRect.width/2, toRect.top+toRect.height/2);
-
-    // Sounds + capture visuals
     if(captured.length){
         Sound.capture();
         shakeBoard();
         captured.forEach(cap=>{
-            const [sr, sc] = STABLE_SLOTS[cap.ci][cap.h.id];
-            const stableRect = getCell(sr,sc).getBoundingClientRect();
-            tumbleHome(COLORS[cap.ci].key,
-                toRect.left+toRect.width/2, toRect.top+toRect.height/2,
-                stableRect.left+stableRect.width/2, stableRect.top+stableRect.height/2);
+            const stable = cellCenter(posToCell(cap.ci, cap.h));
+            tumbleHome(COLORS[cap.ci].key, COLORS[cap.ci].horse, dest.x, dest.y, stable.x, stable.y);
         });
         showMessage(`${COLORS[ci].emoji} ${COLORS[ci].label} ăn ${captured.length} ngựa!`,'good');
-    }else{
-        Sound.move();
     }
 
     if(toState==='finish'){
         Sound.finish();
-        sparkleAt(toRect.left+toRect.width/2, toRect.top+toRect.height/2);
+        sparkleAt(dest.x, dest.y);
     }
 
-    // Resolve turn after the hop settles
-    setTimeout(()=>{
-        busy = false;
-        if(checkWin(ci)){ endGame(ci); return; }
-        if(dieValue===6){
-            phase = 'roll';   // bonus roll, same player
-            updateTurnStatus();
-            hintEl.textContent = 'Gieo được 6 — bạn được đi thêm một lượt!';
-        }else{
-            nextTurn();
-        }
-        renderHorses();
-    }, MOVE_MS);
+    busy = false;
+    if(checkWin(ci)){ endGame(ci); return; }
+    if(dieValue===6){
+        phase = 'roll';   // bonus roll, same player
+        updateTurnStatus();
+        hintEl.textContent = 'Gieo được 6 — bạn được đi thêm một lượt!';
+    }else{
+        nextTurn();
+    }
+    renderHorses();
 }
 
 // Opponent horses standing on the destination ring cell (excluding safe cells / home lanes).
@@ -838,13 +919,12 @@ function nextTurn(){
 
 function onCellClick(r,c){
     if(gameOver || busy || phase!=='move') return;
-    const key = r+','+c;
-    // allow clicking a destination cell to move the (single) horse targeting it
-    const target = currentMoves.find(m=>{
-        const [mr,mc] = posToCell(currentPlayer, {state:m.toState==='finish'?'track':'track', step:m.toStep, id:m.horse.id});
+    // Clicking a highlighted destination cell moves the horse heading there.
+    const m = currentMoves.find(mv=>{
+        const [mr,mc] = stepCell(currentPlayer, mv.toStep);
         return mr===r && mc===c;
     });
-    // (kept simple: primary interaction is clicking the horse itself)
+    if(m) moveHorse(currentPlayer, m.horse, m.toStep, m.toState);
 }
 
 /* ─────────────────────────────  EFFECTS  ───────────────────────────── */
@@ -878,10 +958,10 @@ function sparkleAt(x,y){
     });
 }
 
-function tumbleHome(colorKey, x0,y0, x1,y1){
+function tumbleHome(colorKey, emoji, x0,y0, x1,y1){
     const clone = document.createElement('div');
     clone.className = 'horse '+colorKey+' tumble-clone';
-    clone.textContent = HORSE;
+    clone.textContent = emoji;
     clone.style.left = x0+'px'; clone.style.top = y0+'px';
     document.body.appendChild(clone);
     const anim = clone.animate([
@@ -998,12 +1078,17 @@ const Sound = (()=>{
                 noise({dur:0.05,gain:0.16,type:'bandpass',freq:1800+Math.random()*1200,q:1.4,when:i*0.07});
             tone({freq:520,type:'triangle',dur:0.08,gain:0.08,slideTo:760,when:0.28});
         },
-        // galloping hooves
+        // galloping hooves (full phrase)
         move(){
             [0,0.09,0.17].forEach((w,i)=>{
                 tone({freq:150-i*10,type:'sine',dur:0.09,gain:0.14,slideTo:80,when:w});
                 noise({dur:0.05,gain:0.05,type:'lowpass',freq:600,when:w});
             });
+        },
+        // single hoof-beat, played once per block while galloping
+        step(){
+            tone({freq:150,type:'sine',dur:0.07,gain:0.12,slideTo:85});
+            noise({dur:0.04,gain:0.045,type:'lowpass',freq:600});
         },
         // whinny + thud on capture
         capture(){
