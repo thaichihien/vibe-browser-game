@@ -796,12 +796,6 @@ function beginMovePhase(){
     updateTurnStatus();
     renderHorses();
     markDestinations();
-
-    if(currentMoves.length===1){
-        // only one legal option → auto-play for smoother flow
-        const m = currentMoves[0];
-        setTimeout(()=>{ if(phase==='move' && !busy) moveHorse(currentPlayer, m.horse, m.toStep, m.toState); }, 420);
-    }
 }
 
 function onHorseClick(ci, horse){
