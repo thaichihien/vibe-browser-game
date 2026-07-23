@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cờ Cá Ngựa - Horse Racing</title>
+<style>
+*{box-sizing:border-box}
+:root{
+    --cell: clamp(24px, min(calc((100vh - 210px) / 15), calc((100vw - 360px) / 15)), 44px);
+    --red:#e23b3b; --green:#2fbf4f; --yellow:#f0b400; --blue:#3b7fe2;
+    --track:#d8b483; --track2:#c69a63;
+}
+body{
+    margin:0;
+    min-height:100vh;
+    font-family:'Segoe UI',system-ui,sans-serif;
+    color:#fff;
+    background:
+      radial-gradient(circle at 15% 12%, rgba(255,255,255,.05), transparent 30%),
+      radial-gradient(circle at 85% 15%, rgba(240,180,0,.10), transparent 32%),
+      linear-gradient(180deg,#3f7d33 0%,#2f6b2e 40%,#1f4d1f 100%);
+}
+/* Race-day bunting + turf texture */
+body::before{
+    content:'';
+    position:fixed; inset:0; z-index:-2;
+    background:
+      repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 3px, transparent 3px 46px),
+      repeating-linear-gradient(0deg, rgba(0,0,0,.05) 0 3px, transparent 3px 46px);
+    pointer-events:none;
+}
+.bunting{
+    position:fixed; top:0; left:0; right:0; height:26px; z-index:-1;
+    background:
+      repeating-linear-gradient(90deg,
+        var(--red) 0 40px, var(--yellow) 40px 80px,
+        var(--green) 80px 120px, var(--blue) 120px 160px);
+    opacity:.35;
+    clip-path:polygon(0 0,100% 0,100% 55%,
+        97% 100%,94% 55%,91% 100%,88% 55%,85% 100%,82% 55%,79% 100%,76% 55%,73% 100%,70% 55%,
+        67% 100%,64% 55%,61% 100%,58% 55%,55% 100%,52% 55%,49% 100%,46% 55%,43% 100%,40% 55%,
+        37% 100%,34% 55%,31% 100%,28% 55%,25% 100%,22% 55%,19% 100%,16% 55%,13% 100%,10% 55%,
+        7% 100%,4% 55%,1% 100%,0 55%);
+}
+.container{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    padding:14px 12px;
+    min-height:100vh;
+}
+.header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    width:min(1180px,100%);
+    gap:16px;
+    flex-wrap:wrap;
+}
+.title{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:8px 18px;
+    border-radius:18px;
+    background:linear-gradient(135deg,#7a3b12,#4a2408);
+    border:2px solid rgba(255,255,255,.20);
+    box-shadow:0 12px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.10);
+}
+.title .flag{font-size:40px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))}
+.title h1{
+    margin:0;
+    font-size:clamp(20px,3vw,32px);
+    font-weight:900;
+    letter-spacing:1px;
+    color:#ffe9c2;
+    text-shadow:0 3px 10px rgba(0,0,0,.45);
+}
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{
+    border:none;cursor:pointer;
+    padding:9px 14px;border-radius:13px;
+    font-weight:800;font-size:14px;
+    transition:transform .16s ease, box-shadow .16s ease, filter .16s ease;
+    box-shadow:0 8px 20px rgba(0,0,0,.28);
+}
+.btn:hover{transform:translateY(-2px) scale(1.02)}
+.btn:active{transform:translateY(0) scale(.98)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;filter:grayscale(.4)}
+.btn-primary{background:linear-gradient(135deg,#f0b400,#e07000);color:#fff}
+.btn-secondary{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.18)}
+.status{
+    display:flex;align-items:center;justify-content:center;gap:12px;
+    font-size:18px;font-weight:900;text-align:center;
+    padding:8px 20px;border-radius:14px;min-height:44px;
+    background:linear-gradient(135deg,rgba(0,0,0,.28),rgba(0,0,0,.18));
+    border:2px solid var(--turn,rgba(255,255,255,.3));
+    box-shadow:0 8px 22px rgba(0,0,0,.3);
+    transition:border-color .3s;
+}
+.status .dot{width:16px;height:16px;border-radius:50%;box-shadow:0 0 12px currentColor}
+.main{
+    width:min(1180px,100%);
+    display:grid;
+    grid-template-columns:220px auto;
+    gap:16px;
+    align-items:start;
+    justify-content:center;
+}
+.hud{display:flex;flex-direction:column;gap:10px}
+.player-card{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 12px;border-radius:16px;
+    background:linear-gradient(180deg,rgba(17,24,39,.82),rgba(15,23,42,.82));
+    border:2px solid rgba(255,255,255,.10);
+    box-shadow:0 12px 26px rgba(0,0,0,.3);
+    transition:transform .2s, border-color .2s, box-shadow .2s;
+}
+.player-card.active{transform:scale(1.04);border-color:var(--pc);box-shadow:0 0 0 2px var(--pc),0 14px 30px rgba(0,0,0,.4)}
+.player-card .avatar{
+    width:44px;height:44px;flex:none;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:26px;
+    background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.35),transparent 60%),var(--pc);
+    border:3px solid rgba(255,255,255,.7);
+    box-shadow:0 4px 10px rgba(0,0,0,.35);
+}
+.player-card .info{flex:1;min-width:0}
+.player-card .pname{font-weight:900;font-size:15px}
+.player-card .pstat{font-size:12px;opacity:.85;display:flex;gap:10px;margin-top:2px}
+.player-card .pstat b{color:#ffe9c2}
+.board-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+.board-frame{
+    position:relative;
+    padding:14px;
+    border-radius:22px;
+    background:linear-gradient(135deg,#3f7d33,#2c5c22);
+    border:4px solid #b98a4e;
+    box-shadow:0 26px 56px rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.10), inset 0 -4px 12px rgba(0,0,0,.30);
+}
+.board-frame::before{content:'🏁';position:absolute;left:-10px;top:-14px;font-size:38px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}
+.board-frame::after{content:'🏇';position:absolute;right:-10px;bottom:-14px;font-size:36px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}
+.board{
+    position:relative;
+    display:grid;
+    grid-template-columns:repeat(15,var(--cell));
+    grid-template-rows:repeat(15,var(--cell));
+    gap:0;
+    background:transparent;
+}
+.cell{
+    position:relative;
+    width:var(--cell);height:var(--cell);
+    display:flex;align-items:center;justify-content:center;
+}
+/* Base paddocks (colored corners) */
+.cell.base{background:rgba(255,255,255,.04)}
+.cell.base-red{background:rgba(226,59,59,.28)}
+.cell.base-green{background:rgba(47,191,79,.26)}
+.cell.base-yellow{background:rgba(240,180,0,.26)}
+.cell.base-blue{background:rgba(59,127,226,.28)}
+.base-corner{outline:2px solid rgba(255,255,255,.12);outline-offset:-2px}
+.slot{
+    width:78%;height:78%;border-radius:50%;
+    border:2px dashed rgba(255,255,255,.55);
+    background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.18),transparent 65%);
+}
+/* Track */
+.cell.track{
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.10), rgba(0,0,0,.06)),
+      linear-gradient(135deg,var(--track),var(--track2));
+    border:1px solid rgba(90,60,25,.55);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+}
+.cell.track.start-red{background:linear-gradient(135deg,#f08a8a,var(--red))}
+.cell.track.start-green{background:linear-gradient(135deg,#8ce6a0,var(--green))}
+.cell.track.start-yellow{background:linear-gradient(135deg,#ffe08a,var(--yellow))}
+.cell.track.start-blue{background:linear-gradient(135deg,#9ec2f5,var(--blue))}
+.cell.track.safe::after{
+    content:'⭐';position:absolute;font-size:calc(var(--cell)*.5);opacity:.85;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.4));pointer-events:none;
+}
+.cell.track.start::after{
+    content:'🚩';position:absolute;font-size:calc(var(--cell)*.5);opacity:.9;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.4));pointer-events:none;
+}
+/* Home lanes */
+.cell.lane-red{background:linear-gradient(135deg,#f26d6d,#c62828)}
+.cell.lane-green{background:linear-gradient(135deg,#57cf72,#1f9e3a)}
+.cell.lane-yellow{background:linear-gradient(135deg,#ffcf47,#d99c00)}
+.cell.lane-blue{background:linear-gradient(135deg,#6aa0ee,#255fc0)}
+.cell.lane{border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)}
+.cell.finish-cell::after{
+    content:'🏆';position:absolute;font-size:calc(var(--cell)*.55);opacity:.55;pointer-events:none;
+}
+/* Center goal */
+.cell.center{
+    background:
+      conic-gradient(from 45deg,#111 0 25%,#fff 0 50%,#111 0 75%,#fff 0);
+    background-size:calc(var(--cell)*.5) calc(var(--cell)*.5);
+    border:2px solid rgba(255,255,255,.4);
+}
+.cell.center.hub{background:radial-gradient(circle,#ffe9c2,#b98a4e);border-radius:8px}
+.cell.center.hub::after{content:'🏁';position:absolute;font-size:calc(var(--cell)*.7)}
+/* Horses */
+.horse{
+    position:absolute;
+    z-index:20;
+    width:calc(var(--cell)*.82);height:calc(var(--cell)*.82);
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:calc(var(--cell)*.5);
+    cursor:default;user-select:none;
+    box-shadow:0 6px 14px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.35);
+    transition:filter .15s ease;
+}
+.horse.red{background:radial-gradient(circle at 35% 28%,#ff9a9a,#b31414);border:3px solid #ffd5d5}
+.horse.green{background:radial-gradient(circle at 35% 28%,#8ff0a6,#127a2b);border:3px solid #cdf5d6}
+.horse.yellow{background:radial-gradient(circle at 35% 28%,#ffe28a,#c79000);border:3px solid #fff0c2}
+.horse.blue{background:radial-gradient(circle at 35% 28%,#a9c9f7,#1c56b8);border:3px solid #d3e2fb}
+.horse.movable{
+    cursor:pointer;
+    animation:bob .6s ease-in-out infinite;
+    box-shadow:0 0 0 4px rgba(255,255,255,.85),0 8px 18px rgba(0,0,0,.45);
+}
+.horse.movable:hover{filter:brightness(1.12)}
+/* Dice */
+.dice-area{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center}
+.die{
+    width:66px;height:66px;border-radius:14px;
+    background:linear-gradient(145deg,#fff,#e6e6e6);
+    color:#1a1a1a;
+    display:flex;align-items:center;justify-content:center;
+    font-size:56px;line-height:1;
+    box-shadow:0 10px 22px rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.8);
+    user-select:none;
+}
+.die.rolling{animation:diceTumble .6s ease-in-out}
+.roll-btn{font-size:16px;padding:13px 24px}
+.hint{font-size:13px;opacity:.85;text-align:center;min-height:18px}
+/* Effects */
+.dust{
+    position:fixed;pointer-events:none;z-index:60;
+    width:10px;height:10px;border-radius:50%;
+    background:radial-gradient(circle at 40% 35%,rgba(224,200,150,.95),rgba(180,150,90,.5) 60%,transparent 75%);
+    transform:translate(-50%,-50%);
+    animation:dustPuff var(--dur,.9s) ease-out forwards;
+}
+.tumble-clone{position:fixed;pointer-events:none;z-index:70;transform:translate(-50%,-50%)}
+.sparkle{position:fixed;pointer-events:none;z-index:65;font-size:22px;transform:translate(-50%,-50%);animation:sparklePop 1s ease-out forwards}
+.confetti{position:fixed;top:-20px;pointer-events:none;z-index:2500;width:10px;height:14px;border-radius:2px;animation:confettiFall var(--dur,2.6s) linear forwards}
+.board-frame.shaking{animation:boardShake .5s cubic-bezier(.36,.07,.19,.97)}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes diceTumble{
+    0%{transform:rotate(0) scale(1)}
+    25%{transform:rotate(160deg) scale(1.18)}
+    50%{transform:rotate(320deg) scale(.9)}
+    75%{transform:rotate(200deg) scale(1.12)}
+    100%{transform:rotate(360deg) scale(1)}
+}
+@keyframes dustPuff{
+    0%{opacity:.9;transform:translate(-50%,-50%) scale(.4)}
+    100%{opacity:0;transform:translate(calc(-50% + var(--dx,0px)),calc(-50% + var(--dy,-24px))) scale(2.1)}
+}
+@keyframes sparklePop{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(0)}
+    30%{opacity:1;transform:translate(-50%,-50%) scale(1.3) rotate(20deg)}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(1) rotate(-10deg)}
+}
+@keyframes confettiFall{
+    0%{opacity:1;transform:translateY(0) rotate(0)}
+    100%{opacity:.9;transform:translateY(105vh) rotate(720deg)}
+}
+@keyframes boardShake{
+    10%{transform:translate(-6px,-3px) rotate(-.8deg)}
+    30%{transform:translate(7px,3px) rotate(.8deg)}
+    50%{transform:translate(-6px,3px) rotate(-.6deg)}
+    70%{transform:translate(5px,-2px) rotate(.5deg)}
+    100%{transform:translate(0,0)}
+}
+/* Overlays */
+.overlay{
+    position:fixed;inset:0;z-index:2000;
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at center, rgba(0,0,0,.55), rgba(0,0,0,.82));
+    backdrop-filter:blur(6px);
+    opacity:0;visibility:hidden;transition:opacity .35s ease;
+}
+.overlay.show{opacity:1;visibility:visible}
+.overlay-card{
+    text-align:center;padding:34px 42px;border-radius:26px;
+    background:linear-gradient(160deg,rgba(31,41,55,.96),rgba(15,23,42,.96));
+    border:2px solid rgba(255,255,255,.16);
+    box-shadow:0 30px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.1);
+    transform:translateY(24px) scale(.92);transition:transform .4s cubic-bezier(.2,.9,.2,1.2);
+    max-width:min(92vw,420px);
+}
+.overlay.show .overlay-card{transform:translateY(0) scale(1)}
+.overlay-emoji{font-size:72px;line-height:1;animation:trophyPop .7s cubic-bezier(.2,.9,.2,1.4);filter:drop-shadow(0 8px 18px rgba(0,0,0,.5))}
+.overlay-card h2{margin:14px 0 8px;font-size:30px;font-weight:900;text-shadow:0 3px 10px rgba(0,0,0,.4)}
+.overlay-card p{margin:0 0 22px;font-size:16px;line-height:1.5;color:#e5e7eb}
+.overlay-card .btn{font-size:17px;padding:14px 26px}
+@keyframes trophyPop{0%{transform:scale(0) rotate(-30deg);opacity:0}60%{transform:scale(1.3) rotate(10deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+.rules-card{
+    position:relative;text-align:left;max-width:min(92vw,540px);max-height:82vh;overflow-y:auto;
+    padding:26px 30px;border-radius:22px;
+    background:linear-gradient(160deg,rgba(31,41,55,.97),rgba(15,23,42,.97));
+    border:2px solid rgba(255,255,255,.16);
+    box-shadow:0 30px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.1);
+    transform:translateY(24px) scale(.94);transition:transform .4s cubic-bezier(.2,.9,.2,1.2);
+}
+.overlay.show .rules-card{transform:translateY(0) scale(1)}
+.rules-card h3{margin:0 8px 14px 0;color:#ffe0a3;font-size:22px}
+.rules-card ul{margin:0 0 20px;padding-left:22px;line-height:1.7}
+.rules-card li{margin-bottom:7px}
+.rules-card li b{color:#ffe0a3}
+.rules-card .btn{width:100%;font-size:16px}
+.rules-close{
+    position:absolute;top:14px;right:16px;border:none;
+    background:rgba(255,255,255,.1);color:#fff;width:34px;height:34px;border-radius:50%;
+    font-size:15px;font-weight:900;cursor:pointer;transition:background .2s, transform .2s;
+}
+.rules-close:hover{background:rgba(255,255,255,.24);transform:rotate(90deg)}
+.message{
+    position:fixed;top:34px;left:50%;transform:translateX(-50%);
+    padding:12px 20px;border-radius:14px;font-weight:900;z-index:1500;
+    backdrop-filter:blur(10px);animation:slideDown .3s ease;box-shadow:0 12px 28px rgba(0,0,0,.35);
+}
+.message.info{background:rgba(59,130,246,.95)}
+.message.warn{background:rgba(240,140,0,.95)}
+.message.good{background:rgba(34,197,94,.95)}
+@keyframes slideDown{from{opacity:0;transform:translate(-50%,-18px)}to{opacity:1;transform:translate(-50%,0)}}
+@media (max-width:900px){
+    :root{--cell:clamp(20px, calc((100vw - 30px)/15), 40px);}
+    .main{grid-template-columns:1fr;gap:10px}
+    .hud{flex-direction:row;flex-wrap:wrap;justify-content:center;order:2}
+    .player-card{flex:1 1 150px}
+    .board-wrap{order:1}
+}
+</style>
+</head>
+<body>
+<div class="bunting"></div>
+<div class="container">
+    <div class="header">
+        <div class="title">
+            <div class="flag">🏇</div>
+            <h1>CỜ CÁ NGỰA</h1>
+        </div>
+        <div class="controls">
+            <button class="btn btn-secondary" id="soundBtn">🔊 Âm thanh</button>
+            <button class="btn btn-secondary" id="toggleRules">📖 Luật chơi</button>
+            <button class="btn btn-primary" id="restartBtn">🔄 Chơi lại</button>
+        </div>
+    </div>
+
+    <div class="status" id="turnStatus">
+        <div class="dot"></div>
+        <span>Lượt: ĐỎ — hãy gieo xúc xắc</span>
+    </div>
+
+    <div class="main">
+        <div class="hud" id="hud"></div>
+
+        <div class="board-wrap">
+            <div class="board-frame">
+                <div class="board" id="board"></div>
+            </div>
+            <div class="dice-area">
+                <div class="die" id="dieFace">🎲</div>
+                <button class="btn btn-primary roll-btn" id="rollBtn">🎲 Gieo xúc xắc</button>
+            </div>
+            <div class="hint" id="hint">Cần gieo được 6 để đưa ngựa ra khỏi chuồng.</div>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay">
+        <div class="overlay-card">
+            <div class="overlay-emoji" id="overEmoji">🏆</div>
+            <h2 id="overTitle">Chiến thắng!</h2>
+            <p id="overReason"></p>
+            <button class="btn btn-primary" id="playAgainBtn">🔄 Chơi lại</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="rulesModal">
+        <div class="rules-card">
+            <button class="rules-close" id="rulesClose" aria-label="Đóng">✕</button>
+            <h3>📜 Luật Cờ Cá Ngựa</h3>
+            <ul>
+                <li>Bốn người chơi 🔴 🟢 🟡 🔵 lần lượt gieo một con xúc xắc và đua 4 con ngựa 🐎 về đích.</li>
+                <li><b>Xuất chuồng:</b> phải gieo đúng <b>6</b> mới đưa được một ngựa ra ô xuất phát.</li>
+                <li><b>Gieo 6 được đi thêm</b> một lượt. Gieo <b>6 ba lần liên tiếp</b> thì mất lượt.</li>
+                <li>Mỗi lượt di chuyển một con ngựa tiến số ô bằng mặt xúc xắc.</li>
+                <li><b>Ăn quân:</b> đáp lên ô có ngựa đối phương thì ngựa đó bị đá về chuồng.</li>
+                <li><b>Ô an toàn</b> (ô xuất phát 🚩 và ô sao ⭐) không thể bị ăn.</li>
+                <li>Ngựa cùng màu có thể đứng chung ô.</li>
+                <li><b>Về đích:</b> phải gieo đúng số ô còn lại; nếu dư thì không đi được con đó.</li>
+                <li>Ai đưa cả <b>4 ngựa về đích</b> trước sẽ thắng! 🏆</li>
+            </ul>
+            <button class="btn btn-primary" id="rulesOk">Đã hiểu 👍</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ─────────────────────────────  GEOMETRY  ───────────────────────────── */
+const GRID = 15;
+
+// Main ring: 52 cells, clockwise, index 0 = Red's start cell.
+const RING = [
+    [6,1],[6,2],[6,3],[6,4],[6,5],           // 0-4
+    [5,6],[4,6],[3,6],[2,6],[1,6],[0,6],     // 5-10
+    [0,7],                                    // 11
+    [0,8],[1,8],[2,8],[3,8],[4,8],[5,8],     // 12-17
+    [6,9],[6,10],[6,11],[6,12],[6,13],[6,14],// 18-23
+    [7,14],[8,14],                           // 24-25
+    [8,13],[8,12],[8,11],[8,10],[8,9],       // 26-30
+    [9,8],[10,8],[11,8],[12,8],[13,8],[14,8],// 31-36
+    [14,7],[14,6],                           // 37-38
+    [13,6],[12,6],[11,6],[10,6],[9,6],       // 39-43
+    [8,5],[8,4],[8,3],[8,2],[8,1],[8,0],     // 44-49
+    [7,0],[6,0]                              // 50-51
+];
+
+// Home lanes (6 cells each), ordered outward → center. Last cell = finish.
+const HOME_LANES = [
+    [[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]],       // red
+    [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]],       // green
+    [[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]],   // yellow
+    [[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]]    // blue
+];
+
+// Stable slots (4 per color).
+const STABLE_SLOTS = [
+    [[1,1],[1,4],[4,1],[4,4]],           // red   (top-left)
+    [[1,10],[1,13],[4,10],[4,13]],       // green (top-right)
+    [[10,10],[10,13],[13,10],[13,13]],   // yellow(bottom-right)
+    [[10,1],[10,4],[13,1],[13,4]]        // blue  (bottom-left)
+];
+
+const START_INDEX = [0, 13, 26, 39];               // red, green, yellow, blue
+const SAFE_INDICES = new Set([0,13,26,39, 8,21,34,47]);
+
+const COLORS = [
+    {key:'red',    label:'ĐỎ',   emoji:'🔴', css:'var(--red)'},
+    {key:'green',  label:'XANH LÁ', emoji:'🟢', css:'var(--green)'},
+    {key:'yellow', label:'VÀNG',  emoji:'🟡', css:'var(--yellow)'},
+    {key:'blue',   label:'XANH DƯƠNG', emoji:'🔵', css:'var(--blue)'}
+];
+
+const HORSE = '🐎';
+const DIE_FACES = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+const MOVE_MS = 520;
+
+/* ─────────────────────────────  STATE  ───────────────────────────── */
+function freshPlayers(){
+    return COLORS.map((c,i)=>({
+        colorIdx:i,
+        horses:[0,1,2,3].map(id=>({id, state:'stable', step:-1}))
+    }));
+}
+let players = freshPlayers();
+let currentPlayer = 0;
+let dieValue = null;
+let sixStreak = 0;
+let phase = 'roll';        // 'roll' | 'move'
+let currentMoves = [];
+let busy = false;
+let gameOver = false;
+
+const board = document.getElementById('board');
+const hud = document.getElementById('hud');
+const rollBtn = document.getElementById('rollBtn');
+const dieFace = document.getElementById('dieFace');
+const hintEl = document.getElementById('hint');
+
+/* ─────────────────────────────  BOARD BUILD  ───────────────────────────── */
+const ringMap = new Map();   // "r,c" -> ring index
+RING.forEach(([r,c],i)=>ringMap.set(r+','+c, i));
+const laneMap = new Map();    // "r,c" -> {ci, idx}
+HOME_LANES.forEach((lane,ci)=>lane.forEach(([r,c],idx)=>laneMap.set(r+','+c, {ci, idx})));
+const slotMap = new Map();    // "r,c" -> {ci, id}
+STABLE_SLOTS.forEach((slots,ci)=>slots.forEach(([r,c],id)=>slotMap.set(r+','+c, {ci, id})));
+
+function baseColorAt(r,c){
+    if(r<=5 && c<=5) return 0;      // red top-left
+    if(r<=5 && c>=9) return 1;      // green top-right
+    if(r>=9 && c>=9) return 2;      // yellow bottom-right
+    if(r>=9 && c<=5) return 3;      // blue bottom-left
+    return -1;
+}
+
+function createBoard(){
+    board.innerHTML = '';
+    for(let r=0;r<GRID;r++){
+        for(let c=0;c<GRID;c++){
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.row = r;
+            cell.dataset.col = c;
+
+            const key = r+','+c;
+            const ri = ringMap.get(key);
+            const lane = laneMap.get(key);
+            const slot = slotMap.get(key);
+            const bc = baseColorAt(r,c);
+
+            if(ri!==undefined){
+                cell.classList.add('track');
+                const startCi = START_INDEX.indexOf(ri);
+                if(startCi>=0){
+                    cell.classList.add('start','start-'+COLORS[startCi].key);
+                }else if(SAFE_INDICES.has(ri)){
+                    cell.classList.add('safe');
+                }
+            }else if(lane){
+                cell.classList.add('lane','lane-'+COLORS[lane.ci].key);
+                if(lane.idx===5) cell.classList.add('finish-cell');
+            }else if(r>=6 && r<=8 && c>=6 && c<=8){
+                cell.classList.add('center');
+                if(r===7 && c===7) cell.classList.add('hub');
+            }else if(bc>=0){
+                cell.classList.add('base','base-'+COLORS[bc].key);
+                if(slot){
+                    cell.classList.add('base-corner');
+                    const s = document.createElement('div');
+                    s.className = 'slot';
+                    cell.appendChild(s);
+                }
+            }
+
+            cell.addEventListener('click',()=>onCellClick(r,c));
+            board.appendChild(cell);
+        }
+    }
+}
+
+function getCell(r,c){
+    return board.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+}
+
+/* ─────────────────────────────  POSITIONS  ───────────────────────────── */
+function posToCell(ci, horse){
+    if(horse.state==='stable') return STABLE_SLOTS[ci][horse.id];
+    const s = horse.step;
+    if(s<=50) return RING[(START_INDEX[ci]+s)%52];
+    return HOME_LANES[ci][s-51];
+}
+
+// Absolute ring index of a horse on the shared track (null if in home lane).
+function ringIndexOf(ci, step){
+    if(step>50) return null;
+    return (START_INDEX[ci]+step)%52;
+}
+
+/* ─────────────────────────────  RENDER  ───────────────────────────── */
+function renderHorses(){
+    board.querySelectorAll('.horse').forEach(h=>h.remove());
+
+    // group by cell for stacking offsets
+    const groups = new Map();
+    players.forEach((p,ci)=>p.horses.forEach(h=>{
+        const [r,c] = posToCell(ci,h);
+        const k = r+','+c;
+        if(!groups.has(k)) groups.set(k,[]);
+        groups.get(k).push({ci,h,r,c});
+    }));
+
+    groups.forEach(list=>{
+        const n = list.length;
+        list.forEach((it,idx)=>{
+            const el = document.createElement('div');
+            el.className = 'horse '+COLORS[it.ci].key;
+            el.textContent = HORSE;
+            el.dataset.pi = it.ci;
+            el.dataset.id = it.h.id;
+            // stacking spread
+            if(n>1){
+                const ang = (idx/n)*Math.PI*2;
+                const rad = 22;   // % of cell
+                el.style.left = (50 + Math.cos(ang)*rad*(n>2?1:0.6)) + '%';
+                el.style.top  = (50 + Math.sin(ang)*rad*(n>2?1:0.6)) + '%';
+                el.style.transform = 'translate(-50%,-50%)';
+                el.style.width = 'calc(var(--cell)*.6)';
+                el.style.height = 'calc(var(--cell)*.6)';
+                el.style.fontSize = 'calc(var(--cell)*.38)';
+            }else{
+                el.style.left = '50%'; el.style.top = '50%';
+                el.style.transform = 'translate(-50%,-50%)';
+            }
+            const isMovable = !gameOver && !busy && phase==='move' &&
+                it.ci===currentPlayer &&
+                currentMoves.some(m=>m.horse===it.h);
+            if(isMovable) el.classList.add('movable');
+            el.addEventListener('click',(e)=>{
+                e.stopPropagation();
+                onHorseClick(it.ci, it.h);
+            });
+            getCell(it.r,it.c).appendChild(el);
+        });
+    });
+}
+
+function updateHUD(){
+    hud.innerHTML = '';
+    players.forEach((p,ci)=>{
+        const stableN = p.horses.filter(h=>h.state==='stable').length;
+        const finishN = p.horses.filter(h=>h.state==='finish').length;
+        const card = document.createElement('div');
+        card.className = 'player-card'+(ci===currentPlayer && !gameOver?' active':'');
+        card.style.setProperty('--pc', COLORS[ci].css);
+        card.innerHTML = `
+            <div class="avatar">${HORSE}</div>
+            <div class="info">
+                <div class="pname">${COLORS[ci].emoji} ${COLORS[ci].label}</div>
+                <div class="pstat"><span>🏠 Chuồng: <b>${stableN}</b></span><span>🏁 Về đích: <b>${finishN}</b></span></div>
+            </div>`;
+        hud.appendChild(card);
+    });
+}
+
+function updateTurnStatus(){
+    const st = document.getElementById('turnStatus');
+    const col = COLORS[currentPlayer];
+    st.style.setProperty('--turn', col.css);
+    st.querySelector('.dot').style.color = col.css;
+    st.querySelector('.dot').style.background = col.css;
+    let txt;
+    if(gameOver) txt = 'Ván đấu kết thúc';
+    else if(phase==='roll') txt = `Lượt: ${col.label} — hãy gieo xúc xắc`;
+    else txt = `Lượt: ${col.label} — chọn ngựa để đi (${dieValue})`;
+    st.querySelector('span').textContent = txt;
+    rollBtn.disabled = !(phase==='roll' && !busy && !gameOver);
+}
+
+/* ─────────────────────────────  RULES ENGINE  ───────────────────────────── */
+function getEligibleMoves(ci, die){
+    const moves = [];
+    players[ci].horses.forEach(horse=>{
+        if(horse.state==='finish') return;
+        if(horse.state==='stable'){
+            if(die===6) moves.push({horse, toStep:0, toState:'track'});
+            return;
+        }
+        // on track / home lane
+        const target = horse.step + die;
+        if(target < 56) moves.push({horse, toStep:target, toState:'track'});
+        else if(target === 56) moves.push({horse, toStep:56, toState:'finish'});
+        // target > 56 : overshoot, not eligible
+    });
+    return moves;
+}
+
+function rollDie(){
+    if(phase!=='roll' || busy || gameOver) return;
+    busy = true;
+    updateTurnStatus();
+    Sound.roll();
+
+    dieFace.classList.remove('rolling');
+    void dieFace.offsetWidth;
+    dieFace.classList.add('rolling');
+
+    // shuffle faces during the tumble
+    let ticks = 0;
+    const spin = setInterval(()=>{
+        dieFace.textContent = DIE_FACES[Math.floor(Math.random()*6)];
+        if(++ticks>=8) clearInterval(spin);
+    }, 60);
+
+    setTimeout(()=>{
+        dieValue = 1 + Math.floor(Math.random()*6);
+        dieFace.textContent = DIE_FACES[dieValue-1];
+        sixStreak = (dieValue===6) ? sixStreak+1 : 0;
+        busy = false;
+
+        if(sixStreak===3){
+            showMessage('Ba lần 6 liên tiếp — mất lượt! 🎲🎲🎲','warn');
+            sixStreak = 0;
+            nextTurn();
+            return;
+        }
+        beginMovePhase();
+    }, 620);
+}
+
+function beginMovePhase(){
+    currentMoves = getEligibleMoves(currentPlayer, dieValue);
+
+    if(currentMoves.length===0){
+        const bonus = dieValue===6;
+        showMessage(bonus ? 'Không có nước đi — gieo lại (6)!' : 'Không có nước đi hợp lệ','info');
+        if(bonus){
+            phase = 'roll';
+            updateTurnStatus();
+        }else{
+            setTimeout(nextTurn, 650);
+        }
+        return;
+    }
+
+    phase = 'move';
+    hintEl.textContent = 'Chọn con ngựa sáng để di chuyển.';
+    updateTurnStatus();
+    renderHorses();
+
+    if(currentMoves.length===1){
+        // only one legal option → auto-play for smoother flow
+        const m = currentMoves[0];
+        setTimeout(()=>{ if(phase==='move' && !busy) moveHorse(currentPlayer, m.horse, m.toStep, m.toState); }, 420);
+    }
+}
+
+function onHorseClick(ci, horse){
+    if(gameOver || busy || phase!=='move' || ci!==currentPlayer) return;
+    const m = currentMoves.find(mv=>mv.horse===horse);
+    if(!m){ showMessage('Con ngựa này chưa thể đi','info'); return; }
+    moveHorse(ci, horse, m.toStep, m.toState);
+}
+
+function moveHorse(ci, horse, toStep, toState){
+    busy = true;
+    currentMoves = [];
+    hintEl.textContent = '';
+
+    const [fr, fc] = posToCell(ci, horse);
+    const fromCell = getCell(fr, fc);
+    const fromRect = fromCell.getBoundingClientRect();
+
+    // Peek captures BEFORE moving (destination ring index)
+    const captured = collectCaptures(ci, toStep);
+
+    // Apply movement
+    horse.step = toStep;
+    horse.state = toState;
+
+    // Apply captures (send home)
+    captured.forEach(cap=>{ cap.h.state='stable'; cap.h.step=-1; });
+
+    renderHorses();
+    updateHUD();
+
+    const [tr, tc] = posToCell(ci, horse);
+    const toCell = getCell(tr, tc);
+    const toRect = toCell.getBoundingClientRect();
+
+    // Hop animation on the mover
+    const movedEl = toCell.querySelector(`.horse[data-pi="${ci}"][data-id="${horse.id}"]`);
+    if(movedEl){
+        const dx = fromRect.left - toRect.left;
+        const dy = fromRect.top - toRect.top;
+        const dist = Math.hypot(dx,dy);
+        const hop = Math.max(20, dist*0.28);
+        movedEl.style.zIndex = 45;
+        const anim = movedEl.animate([
+            {transform:`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(1)`, offset:0, easing:'cubic-bezier(.3,0,.5,1)'},
+            {transform:`translate(calc(-50% + ${dx*0.5}px),calc(-50% + ${dy*0.5 - hop}px)) scale(1.22)`, offset:0.5},
+            {transform:`translate(-50%,-50%) scaleX(1.15) scaleY(.85)`, offset:0.85},
+            {transform:`translate(-50%,-50%) scale(1)`, offset:1}
+        ],{duration:MOVE_MS, easing:'cubic-bezier(.25,.9,.25,1)', fill:'both'});
+        anim.onfinish = ()=>{ movedEl.style.zIndex=''; anim.cancel(); };
+    }
+
+    // Dust puffs along the way
+    dustAt(toRect.left+toRect.width/2, toRect.top+toRect.height/2);
+
+    // Sounds + capture visuals
+    if(captured.length){
+        Sound.capture();
+        shakeBoard();
+        captured.forEach(cap=>{
+            const [sr, sc] = STABLE_SLOTS[cap.ci][cap.h.id];
+            const stableRect = getCell(sr,sc).getBoundingClientRect();
+            tumbleHome(COLORS[cap.ci].key,
+                toRect.left+toRect.width/2, toRect.top+toRect.height/2,
+                stableRect.left+stableRect.width/2, stableRect.top+stableRect.height/2);
+        });
+        showMessage(`${COLORS[ci].emoji} ${COLORS[ci].label} ăn ${captured.length} ngựa!`,'good');
+    }else{
+        Sound.move();
+    }
+
+    if(toState==='finish'){
+        Sound.finish();
+        sparkleAt(toRect.left+toRect.width/2, toRect.top+toRect.height/2);
+    }
+
+    // Resolve turn after the hop settles
+    setTimeout(()=>{
+        busy = false;
+        if(checkWin(ci)){ endGame(ci); return; }
+        if(dieValue===6){
+            phase = 'roll';   // bonus roll, same player
+            updateTurnStatus();
+            hintEl.textContent = 'Gieo được 6 — bạn được đi thêm một lượt!';
+        }else{
+            nextTurn();
+        }
+        renderHorses();
+    }, MOVE_MS);
+}
+
+// Opponent horses standing on the destination ring cell (excluding safe cells / home lanes).
+function collectCaptures(ci, toStep){
+    const ring = ringIndexOf(ci, toStep);
+    if(ring===null || SAFE_INDICES.has(ring)) return [];
+    const out = [];
+    players.forEach((p,pi)=>{
+        if(pi===ci) return;
+        p.horses.forEach(h=>{
+            if(h.state==='track' && ringIndexOf(pi, h.step)===ring){
+                out.push({ci:pi, h});
+            }
+        });
+    });
+    return out;
+}
+
+function checkWin(ci){
+    return players[ci].horses.every(h=>h.state==='finish');
+}
+
+function nextTurn(){
+    currentPlayer = (currentPlayer+1)%4;
+    sixStreak = 0;
+    dieValue = null;
+    phase = 'roll';
+    currentMoves = [];
+    dieFace.textContent = '🎲';
+    hintEl.textContent = 'Cần gieo được 6 để đưa ngựa ra khỏi chuồng.';
+    updateTurnStatus();
+    updateHUD();
+    renderHorses();
+}
+
+function onCellClick(r,c){
+    if(gameOver || busy || phase!=='move') return;
+    const key = r+','+c;
+    // allow clicking a destination cell to move the (single) horse targeting it
+    const target = currentMoves.find(m=>{
+        const [mr,mc] = posToCell(currentPlayer, {state:m.toState==='finish'?'track':'track', step:m.toStep, id:m.horse.id});
+        return mr===r && mc===c;
+    });
+    // (kept simple: primary interaction is clicking the horse itself)
+}
+
+/* ─────────────────────────────  EFFECTS  ───────────────────────────── */
+function dustAt(x,y){
+    for(let i=0;i<7;i++){
+        const d = document.createElement('div');
+        d.className = 'dust';
+        const ang = Math.random()*Math.PI*2;
+        const dist = 12 + Math.random()*26;
+        d.style.left = x+'px'; d.style.top = y+'px';
+        d.style.setProperty('--dx', (Math.cos(ang)*dist).toFixed(0)+'px');
+        d.style.setProperty('--dy', (Math.sin(ang)*dist - 10).toFixed(0)+'px');
+        d.style.setProperty('--dur', (0.6+Math.random()*0.5).toFixed(2)+'s');
+        const s = 0.6+Math.random()*1.1;
+        d.style.width = (10*s)+'px'; d.style.height = (10*s)+'px';
+        document.body.appendChild(d);
+        setTimeout(()=>d.remove(),1200);
+    }
+}
+
+function sparkleAt(x,y){
+    ['✨','🌟','🎉'].forEach((em,i)=>{
+        const s = document.createElement('div');
+        s.className = 'sparkle';
+        s.textContent = em;
+        s.style.left = (x+(Math.random()-0.5)*30)+'px';
+        s.style.top = (y+(Math.random()-0.5)*30)+'px';
+        s.style.animationDelay = (i*0.08)+'s';
+        document.body.appendChild(s);
+        setTimeout(()=>s.remove(),1200);
+    });
+}
+
+function tumbleHome(colorKey, x0,y0, x1,y1){
+    const clone = document.createElement('div');
+    clone.className = 'horse '+colorKey+' tumble-clone';
+    clone.textContent = HORSE;
+    clone.style.left = x0+'px'; clone.style.top = y0+'px';
+    document.body.appendChild(clone);
+    const anim = clone.animate([
+        {transform:'translate(-50%,-50%) rotate(0) scale(1)', offset:0},
+        {transform:`translate(calc(-50% + ${(x1-x0)*0.5}px),calc(-50% + ${(y1-y0)*0.5 - 40}px)) rotate(360deg) scale(1.1)`, offset:0.5},
+        {transform:`translate(calc(-50% + ${x1-x0}px),calc(-50% + ${y1-y0}px)) rotate(900deg) scale(.6)`, offset:1}
+    ],{duration:700, easing:'cubic-bezier(.4,0,.5,1)', fill:'both'});
+    anim.onfinish = ()=>clone.remove();
+    // dust at landing
+    setTimeout(()=>dustAt(x1,y1), 650);
+}
+
+function shakeBoard(){
+    const frame = document.querySelector('.board-frame');
+    frame.classList.remove('shaking');
+    void frame.offsetWidth;
+    frame.classList.add('shaking');
+    setTimeout(()=>frame.classList.remove('shaking'),520);
+    Sound.rumble();
+}
+
+function confettiBurst(){
+    const cols = ['#e23b3b','#2fbf4f','#f0b400','#3b7fe2','#ffffff','#ff8a00'];
+    for(let i=0;i<120;i++){
+        const c = document.createElement('div');
+        c.className = 'confetti';
+        c.style.left = Math.random()*100+'vw';
+        c.style.background = cols[Math.floor(Math.random()*cols.length)];
+        c.style.setProperty('--dur',(2+Math.random()*2.2).toFixed(2)+'s');
+        c.style.animationDelay = (Math.random()*0.8).toFixed(2)+'s';
+        c.style.transform = `rotate(${Math.random()*360}deg)`;
+        document.body.appendChild(c);
+        setTimeout(()=>c.remove(),4600);
+    }
+}
+
+/* ─────────────────────────────  GAME END  ───────────────────────────── */
+function endGame(ci){
+    gameOver = true;
+    phase = 'roll';
+    currentMoves = [];
+    renderHorses();
+    updateHUD();
+    updateTurnStatus();
+
+    const col = COLORS[ci];
+    document.getElementById('overEmoji').textContent = col.emoji;
+    document.getElementById('overTitle').textContent = `${col.emoji} ${col.label} CHIẾN THẮNG! 🏆`;
+    document.getElementById('overReason').textContent = `Cả 4 chú ngựa của ${col.label} đã về đích đầu tiên!`;
+    document.getElementById('overlay').classList.add('show');
+    confettiBurst();
+    Sound.win();
+}
+
+/* ─────────────────────────────  SOUND (Web Audio, synth)  ───────────────────────────── */
+const Sound = (()=>{
+    let ac=null, master=null;
+    let muted = localStorage.getItem('coCaNgua.muted')==='1';
+    function ensure(){
+        if(!ac){
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if(!AC) return null;
+            ac = new AC();
+            master = ac.createGain();
+            master.gain.value = 0.85;
+            master.connect(ac.destination);
+        }
+        if(ac.state==='suspended') ac.resume();
+        return ac;
+    }
+    function tone({freq=440,type='sine',dur=0.15,gain=0.2,attack=0.006,release=null,slideTo=null,when=0}){
+        if(muted || !ensure()) return;
+        const t0 = ac.currentTime + when;
+        const osc = ac.createOscillator(), g = ac.createGain();
+        osc.type=type; osc.frequency.setValueAtTime(freq,t0);
+        if(slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(1,slideTo),t0+dur);
+        const rel = release ?? dur;
+        g.gain.setValueAtTime(0.0001,t0);
+        g.gain.exponentialRampToValueAtTime(gain,t0+attack);
+        g.gain.exponentialRampToValueAtTime(0.0001,t0+rel);
+        osc.connect(g); g.connect(master);
+        osc.start(t0); osc.stop(t0+rel+0.03);
+    }
+    function noise({dur=0.2,gain=0.2,type='bandpass',freq=1000,q=1,freqTo=null,when=0}){
+        if(muted || !ensure()) return;
+        const t0 = ac.currentTime + when;
+        const frames = Math.floor(ac.sampleRate*dur);
+        const buf = ac.createBuffer(1,frames,ac.sampleRate);
+        const data = buf.getChannelData(0);
+        for(let i=0;i<frames;i++) data[i]=Math.random()*2-1;
+        const src = ac.createBufferSource(); src.buffer=buf;
+        const filter = ac.createBiquadFilter();
+        filter.type=type; filter.Q.value=q;
+        filter.frequency.setValueAtTime(freq,t0);
+        if(freqTo) filter.frequency.exponentialRampToValueAtTime(Math.max(1,freqTo),t0+dur);
+        const g = ac.createGain();
+        g.gain.setValueAtTime(gain,t0);
+        g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+        src.connect(filter); filter.connect(g); g.connect(master);
+        src.start(t0); src.stop(t0+dur+0.03);
+    }
+    return {
+        ensure,
+        get muted(){ return muted; },
+        toggle(){
+            muted=!muted;
+            localStorage.setItem('coCaNgua.muted', muted?'1':'0');
+            if(!muted){ ensure(); this.roll(); }
+            return muted;
+        },
+        // dice rattle
+        roll(){
+            for(let i=0;i<4;i++)
+                noise({dur:0.05,gain:0.16,type:'bandpass',freq:1800+Math.random()*1200,q:1.4,when:i*0.07});
+            tone({freq:520,type:'triangle',dur:0.08,gain:0.08,slideTo:760,when:0.28});
+        },
+        // galloping hooves
+        move(){
+            [0,0.09,0.17].forEach((w,i)=>{
+                tone({freq:150-i*10,type:'sine',dur:0.09,gain:0.14,slideTo:80,when:w});
+                noise({dur:0.05,gain:0.05,type:'lowpass',freq:600,when:w});
+            });
+        },
+        // whinny + thud on capture
+        capture(){
+            tone({freq:680,type:'sawtooth',dur:0.28,gain:0.14,slideTo:1150});
+            tone({freq:1150,type:'sawtooth',dur:0.22,gain:0.10,slideTo:520,when:0.14});
+            noise({dur:0.22,gain:0.24,type:'lowpass',freq:420,freqTo:90});
+        },
+        finish(){
+            [784,1046].forEach((f,i)=>tone({freq:f,type:'triangle',dur:0.3,gain:0.14,when:i*0.1}));
+        },
+        rumble(){
+            noise({dur:0.4,gain:0.28,type:'lowpass',freq:240,freqTo:60});
+            tone({freq:90,type:'sine',dur:0.36,gain:0.18,slideTo:45});
+        },
+        win(){
+            const notes=[523.25,659.25,783.99,1046.5,1318.5];
+            notes.forEach((f,i)=>{
+                tone({freq:f,type:'triangle',dur:0.45,gain:0.16,when:i*0.12});
+                tone({freq:f*2,type:'sine',dur:0.35,gain:0.05,when:i*0.12});
+            });
+            noise({dur:0.9,gain:0.10,type:'highpass',freq:3000,when:0.1});
+        }
+    };
+})();
+
+function updateSoundUI(){
+    document.getElementById('soundBtn').textContent = Sound.muted ? '🔇 Âm: TẮT' : '🔊 Âm: BẬT';
+}
+
+/* ─────────────────────────────  MESSAGE  ───────────────────────────── */
+function showMessage(text,type='info'){
+    document.querySelectorAll('.message').forEach(m=>m.remove());
+    const msg = document.createElement('div');
+    msg.className = 'message '+type;
+    msg.textContent = text;
+    document.body.appendChild(msg);
+    setTimeout(()=>{
+        msg.style.opacity='0';
+        msg.style.transform='translate(-50%,-10px)';
+        setTimeout(()=>msg.remove(),300);
+    },1700);
+}
+
+/* ─────────────────────────────  CONTROLS  ───────────────────────────── */
+function restart(){
+    players = freshPlayers();
+    currentPlayer = 0;
+    dieValue = null;
+    sixStreak = 0;
+    phase = 'roll';
+    currentMoves = [];
+    busy = false;
+    gameOver = false;
+    dieFace.textContent = '🎲';
+    document.getElementById('overlay').classList.remove('show');
+    renderHorses();
+    updateHUD();
+    updateTurnStatus();
+    hintEl.textContent = 'Cần gieo được 6 để đưa ngựa ra khỏi chuồng.';
+    showMessage('Ván mới — chúc may mắn! 🏇','info');
+}
+
+rollBtn.addEventListener('click', rollDie);
+document.getElementById('restartBtn').addEventListener('click', restart);
+document.getElementById('playAgainBtn').addEventListener('click', restart);
+
+const rulesModal = document.getElementById('rulesModal');
+document.getElementById('toggleRules').addEventListener('click',()=>rulesModal.classList.add('show'));
+document.getElementById('rulesClose').addEventListener('click',()=>rulesModal.classList.remove('show'));
+document.getElementById('rulesOk').addEventListener('click',()=>rulesModal.classList.remove('show'));
+rulesModal.addEventListener('click',(e)=>{ if(e.target===rulesModal) rulesModal.classList.remove('show'); });
+document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') rulesModal.classList.remove('show'); });
+
+document.getElementById('soundBtn').addEventListener('click',()=>{
+    Sound.toggle();
+    updateSoundUI();
+});
+
+/* ─────────────────────────────  INIT  ───────────────────────────── */
+createBoard();
+renderHorses();
+updateHUD();
+updateTurnStatus();
+updateSoundUI();
+</script>
+</body>
+</html>
