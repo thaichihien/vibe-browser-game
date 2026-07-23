@@ -388,7 +388,6 @@ function buildHouse() {
     new THREE.MeshLambertMaterial({ color: 0x3a2a1a })
   );
   door.position.set(0, 0.8, 1.51);
-  door.userData.pick = { kind: 'door' };
   houseGroup.add(door);
   world.doorMesh = door;
 
@@ -1022,7 +1021,6 @@ function buildPlotGroup(plot, quat) {
   ready.position.y = 0.25 + 0.3;
   group.add(ready);
 
-  group.userData.pick = { kind: 'plot', ref: plot };
   scene.add(group);
 
   plot._meshes = { soil, lockedRing, untilledRing, plusSprite, waterSprite, sprout, mid, midBud, ready };
@@ -1532,11 +1530,29 @@ function updateShipVisual() {
   }
 }
 
+// Undoes every one-way mutation updateLaunch/startLaunchSequence makes to the ship, so
+// Play Again after a victory doesn't leave the ghost ship + exhaust + engine glow from the
+// previous run floating mid-launch. Mirrors buildShip's initial placement/state exactly.
+function resetShipToPad() {
+  placeOnSurface(shipGroup, world.padDir, 0, 0.3); // undoes updateLaunch's liftoff position + wobble
+  exhaustMesh.visible = false;
+  exhaustMesh.scale.set(0.01, 0.01, 0.01);
+  exhaustMesh.material.opacity = 0.7; // matches buildShip's initial exhaustMat opacity
+  engineRingMat.emissiveIntensity = 0.4; // matches buildEngine's initial value
+  navLightMesh.visible = true; // updateLaunch's blink can leave this false
+}
+
 function startLaunchSequence() {
   G.state = 'launch'; // player input & updateCamera stop: the main loop only calls update(dt)
                        // for 'playing'/'shop', so this state drives itself from render()'s hook
   G.launchT = 0;
   document.getElementById('hud').style.display = 'none';
+
+  // The run is over: buyPart()'s saveGame() for the final part just wrote a save with all 5
+  // parts owned, which would soft-lock a reload during launch/victory (Spaceship tab shows
+  // everything owned, but launch can never re-trigger). Clear it now; Play Again clears
+  // state via resetGame() regardless, so there is nothing left worth resuming.
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
 
   exhaustMesh.visible = true;
   exhaustMesh.scale.set(0.01, 0.01, 0.01);
@@ -2253,7 +2269,6 @@ function spawnAlien(typeId, dir) {
   alien.pos.copy(worldPos);
   alien.mesh.position.copy(worldPos);
   alien.mesh.quaternion.setFromUnitVectors(_Y, spawnDir);
-  alien.mesh.userData.pick = { kind: 'enemy', ref: alien };
 
   scene.add(alien.mesh);
   pickables.push(alien.mesh);
@@ -2573,7 +2588,7 @@ function updatePickups(dt) {
 }
 
 // ----- Raid director -----
-G.raid = { next: 75, active: false, count: 0 };
+G.raid = { next: 75, active: false };
 
 function unlockedPool() {
   const pool = ['grunt', 'hopper'];
@@ -2596,7 +2611,6 @@ function startRaid() {
   const want = Math.min(2 + 2 * G.partsOwned, 12);
   const room = Math.max(0, 12 - countAliveEnemies());
   const n = Math.min(want, room);
-  G.raid.count = n;
   for (let i = 0; i < n; i++) {
     const typeId = pool[Math.floor(Math.random() * pool.length)];
     const alien = spawnAlien(typeId);
@@ -2615,7 +2629,6 @@ function updateRaidDirector(dt) {
     const anyLeft = enemies.some((e) => e.alive && e.fromRaid);
     if (!anyLeft) {
       G.raid.active = false;
-      G.raid.count = 0;
       G.raid.next = 60 + Math.random() * 60;
       toast('The skies are quiet again... for now.');
       saveGame();
@@ -2788,25 +2801,15 @@ function downPlayer() {
   }, 3000);
 }
 
-// ----- Picking: raycast mouse -> plot / door / planet('space') -----
+// ----- Picking: raycast mouse -> nearest world point (plot/door/enemy/planet all just
+// give a surface point to shoot at; the sole caller below never needs which one it hit) -----
 function pickWorld(e) {
   const rect = renderer.domElement.getBoundingClientRect();
   _ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
   _ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
   _raycaster.setFromCamera(_ndc, camera);
   const hits = _raycaster.intersectObjects(pickables, true);
-  if (hits.length === 0) return { kind: 'space', ref: null, point: null };
-  const point = hits[0].point;
-  let obj = hits[0].object;
-  while (obj) {
-    const pick = obj.userData.pick;
-    if (pick) {
-      if (pick.kind === 'space') return { kind: 'space', ref: null, point };
-      return { kind: pick.kind, ref: pick.ref !== undefined ? pick.ref : obj, point };
-    }
-    obj = obj.parent;
-  }
-  return { kind: 'space', ref: null, point };
+  return hits.length === 0 ? null : hits[0].point;
 }
 
 const _farPoint = new THREE.Vector3();
@@ -2819,8 +2822,7 @@ window.addEventListener('mousedown', (e) => {
   const assistTarget = findAimAssistTarget(e);
   if (assistTarget) { shootAt(assistTarget.pos); return; }
 
-  const hit = pickWorld(e); // plot/door meshes stay in pickables just to give a surface point to shoot at
-  let point = hit.point;
+  let point = pickWorld(e); // plot/door/enemy meshes stay in pickables just to give a surface point to shoot at
   if (!point) { // clicked empty sky: unproject to a far point along the click ray
     _raycaster.ray.at(60, _farPoint);
     point = _farPoint;
@@ -2986,7 +2988,7 @@ function applySaveData(data) {
   // Everything below is deliberately NOT part of the save: live combat state, the
   // shooting star, the raid timer, and the player's position all start fresh.
   clearLiveEntities();
-  G.raid = { next: 75, active: false, count: 0 };
+  G.raid = { next: 75, active: false };
   movePlayerToDir(world.houseDoorDir);
 }
 
@@ -3027,8 +3029,9 @@ function resetGame() {
   movePlayerToDir(world.houseDoorDir);
 
   clearLiveEntities();
-  G.raid = { next: 75, active: false, count: 0 };
+  G.raid = { next: 75, active: false };
 
+  resetShipToPad();
   updateShipVisual();
   updateHUD();
   updateSeedBar();
@@ -3201,7 +3204,6 @@ function boot() {
   buildWorld();
   buildParticles();
   buildPlayer();
-  world.planet.userData.pick = { kind: 'space' };
   pickables.push(world.planet, world.doorMesh);
   buildPlots();
   scene.add(highlightRing);
