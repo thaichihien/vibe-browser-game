@@ -23,7 +23,7 @@ A good-looking 3D version of classic Cờ thú (Dou Shou Qi) with low-poly anima
 - **Rivers**: two 2×3 water areas (rows 3–5, cols 1–2 and cols 4–5). Only Chuột may enter water.
   - A Chuột in water cannot be captured by land pieces and cannot capture any piece on land (including Voi). Chuột vs Chuột capture is allowed when both are in water or both on land.
   - Rule used here: any capture across the water/land boundary is forbidden, in both directions. Once the Chuột is back on land it behaves normally.
-- **Jumps**: Sư tử and Hổ may jump over a river in a straight line (horizontally or vertically), landing on the first land square across. The jump is blocked if any Chuột (either side) occupies any water square in the jump path. The landing square capture follows normal rank rules.
+- **Jumps**: river jumps go in a straight line, landing on the first land square across. **Sư tử** may jump both horizontally and vertically; **Hổ** may jump vertically only; **Báo** may jump horizontally only. A jump is blocked if any Chuột (either side) occupies any water square in the jump path. The landing square capture follows normal rank rules.
 - **Traps**: each den is surrounded by 3 trap squares. An enemy piece standing on your trap has effective rank 0 and can be captured by any of your pieces. Your own traps do not affect your own pieces.
 - **Den**: a piece may never enter its own den.
 - **Win conditions**: move any piece into the enemy den; capture all enemy pieces; or the opponent has no legal move on their turn.
