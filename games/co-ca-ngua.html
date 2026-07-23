@@ -232,6 +232,28 @@ body::before{
     box-shadow:0 0 0 4px rgba(255,255,255,.85),0 8px 18px rgba(0,0,0,.45);
 }
 .horse.movable:hover{filter:brightness(1.12)}
+/* Destination highlights */
+.cell.dest{box-shadow:inset 0 0 0 3px rgba(255,255,255,.92);border-radius:6px;z-index:6}
+.cell.dest-cap{box-shadow:inset 0 0 0 3px rgba(255,80,80,.95),0 0 14px rgba(255,60,60,.55);border-radius:6px;z-index:6}
+.cell.dest.hot{box-shadow:inset 0 0 0 5px #ffe14d,0 0 18px rgba(255,225,77,.8)}
+.cell.dest-cap.hot{box-shadow:inset 0 0 0 5px #ff5a5a,0 0 20px rgba(255,60,60,.85)}
+.dest-mark{
+    position:absolute;left:50%;top:50%;
+    width:36%;height:36%;border-radius:50%;
+    background:radial-gradient(circle at 40% 35%,#ffffff,#ffe14d 75%);
+    box-shadow:0 0 12px rgba(255,236,120,.9);
+    z-index:6;pointer-events:none;
+    animation:destPulse 1s ease-in-out infinite;
+}
+.dest-mark.cap{
+    width:auto;height:auto;background:none;box-shadow:none;
+    font-size:calc(var(--cell)*.6);z-index:26;
+}
+.dest-mark.cap::after{content:'⚔️'}
+@keyframes destPulse{
+    0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(.82)}
+    50%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}
+}
 /* Dice */
 .dice-area{
     display:flex;align-items:center;gap:14px;justify-content:center;
@@ -632,10 +654,15 @@ function renderHorses(){
                 el.style.transform = 'translate(-50%,-50%)';
             }
 
-            const isMovable = !gameOver && !busy && phase==='move' &&
-                it.ci===currentPlayer &&
-                currentMoves.some(m=>m.horse===it.h);
-            if(isMovable) el.classList.add('movable');
+            const move = (!gameOver && !busy && phase==='move' && it.ci===currentPlayer)
+                ? currentMoves.find(m=>m.horse===it.h) : null;
+            if(move){
+                el.classList.add('movable');
+                // hovering a horse emphasises the exact cell it will land on
+                const [dr,dc] = stepCell(it.ci, move.toStep);
+                el.addEventListener('mouseenter',()=>getCell(dr,dc).classList.add('hot'));
+                el.addEventListener('mouseleave',()=>getCell(dr,dc).classList.remove('hot'));
+            }
             el.addEventListener('click',(e)=>{
                 e.stopPropagation();
                 onHorseClick(it.ci, it.h);
@@ -728,6 +755,27 @@ function rollDie(){
     }, 620);
 }
 
+// Show a pulsing marker on every cell the current player can move a horse to.
+function markDestinations(){
+    clearDestHighlights();
+    if(gameOver || phase!=='move') return;
+    currentMoves.forEach(m=>{
+        const [r,c] = stepCell(currentPlayer, m.toStep);
+        const cell = getCell(r,c);
+        const cap = collectCaptures(currentPlayer, m.toStep).length>0;
+        cell.classList.add(cap ? 'dest-cap' : 'dest');
+        const mark = document.createElement('div');
+        mark.className = 'dest-mark' + (cap ? ' cap' : '');
+        cell.appendChild(mark);
+    });
+}
+
+function clearDestHighlights(){
+    board.querySelectorAll('.dest-mark').forEach(m=>m.remove());
+    board.querySelectorAll('.cell.dest,.cell.dest-cap,.cell.hot')
+        .forEach(c=>c.classList.remove('dest','dest-cap','hot'));
+}
+
 function beginMovePhase(){
     currentMoves = getEligibleMoves(currentPlayer, dieValue);
 
@@ -747,6 +795,7 @@ function beginMovePhase(){
     hintEl.textContent = 'Chọn con ngựa sáng để di chuyển.';
     updateTurnStatus();
     renderHorses();
+    markDestinations();
 
     if(currentMoves.length===1){
         // only one legal option → auto-play for smoother flow
@@ -771,6 +820,7 @@ function cellCenter([r,c]){
 function moveHorse(ci, horse, toStep, toState){
     busy = true;
     currentMoves = [];
+    clearDestHighlights();
     hintEl.textContent = '';
 
     const fromStable = horse.state==='stable';
@@ -911,6 +961,7 @@ function nextTurn(){
     dieValue = null;
     phase = 'roll';
     currentMoves = [];
+    clearDestHighlights();
     dieFace.textContent = '🎲';
     hintEl.textContent = 'Cần gieo được 6 để đưa ngựa ra khỏi chuồng.';
     updateTurnStatus();
@@ -1004,6 +1055,7 @@ function endGame(ci){
     gameOver = true;
     phase = 'roll';
     currentMoves = [];
+    clearDestHighlights();
     renderHorses();
     updateHUD();
     updateTurnStatus();
@@ -1143,7 +1195,9 @@ function restart(){
     currentMoves = [];
     busy = false;
     gameOver = false;
+    hiddenHorse = null;
     dieFace.textContent = '🎲';
+    clearDestHighlights();
     document.getElementById('overlay').classList.remove('show');
     renderHorses();
     updateHUD();
