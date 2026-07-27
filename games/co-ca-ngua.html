@@ -95,15 +95,21 @@ body::before{
 .btn-primary{background:linear-gradient(135deg,#f0b400,#e07000);color:#fff}
 .btn-secondary{background:linear-gradient(135deg,#1e4f73,#0f2f47);color:#fff;border:1px solid rgba(255,255,255,.28)}
 .status{
-    display:flex;align-items:center;justify-content:center;gap:10px;
-    font-size:16px;font-weight:900;text-align:center;
-    padding:10px 16px;border-radius:14px;min-height:44px;
-    background:linear-gradient(135deg,rgba(0,0,0,.30),rgba(0,0,0,.20));
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    text-align:center;
+    padding:8px 14px;border-radius:16px;
+    height:70px;                 /* fixed — text changes never shift the layout */
+    background:linear-gradient(180deg,rgba(17,24,39,.86),rgba(15,23,42,.86));
     border:2px solid var(--turn,rgba(255,255,255,.3));
-    box-shadow:0 8px 22px rgba(0,0,0,.3);
+    box-shadow:0 12px 26px rgba(0,0,0,.32);
     transition:border-color .3s;
+    overflow:hidden;
 }
-.status .dot{width:15px;height:15px;flex:none;border-radius:50%;box-shadow:0 0 12px currentColor}
+.status .st-main{display:flex;align-items:center;justify-content:center;gap:8px}
+.status .st-turn{font-size:16px;font-weight:900;line-height:1.15}
+.status .st-sub{font-size:12.5px;font-weight:600;opacity:.85;line-height:1.2;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.status .dot{width:14px;height:14px;flex:none;border-radius:50%;box-shadow:0 0 12px currentColor}
 .main{
     width:100%;
     flex:1;
@@ -395,8 +401,11 @@ body::before{
     <div class="main">
         <div class="leftpanel">
             <div class="status" id="turnStatus">
-                <div class="dot"></div>
-                <span>Lượt: ĐỎ — hãy gieo xúc xắc</span>
+                <div class="st-main">
+                    <span class="dot"></span>
+                    <span class="st-turn">Lượt: ĐỎ</span>
+                </div>
+                <div class="st-sub">hãy gieo xúc xắc</div>
             </div>
             <div class="dice-area">
                 <div class="die" id="dieFace">🎲</div>
@@ -696,11 +705,13 @@ function updateTurnStatus(){
     st.style.setProperty('--turn', col.css);
     st.querySelector('.dot').style.color = col.css;
     st.querySelector('.dot').style.background = col.css;
-    let txt;
-    if(gameOver) txt = 'Ván đấu kết thúc';
-    else if(phase==='roll') txt = `Lượt: ${col.label} — hãy gieo xúc xắc`;
-    else txt = `Lượt: ${col.label} — chọn ngựa để đi (${dieValue})`;
-    st.querySelector('span').textContent = txt;
+
+    let turn, sub;
+    if(gameOver){ turn = 'Ván đấu kết thúc'; sub = '🏁'; }
+    else if(phase==='roll'){ turn = `Lượt: ${col.label}`; sub = 'hãy gieo xúc xắc'; }
+    else { turn = `Lượt: ${col.label}`; sub = `chọn ngựa để đi (🎲 ${dieValue})`; }
+    st.querySelector('.st-turn').textContent = turn;
+    st.querySelector('.st-sub').textContent = sub;
     rollBtn.disabled = !(phase==='roll' && !busy && !gameOver);
 }
 
