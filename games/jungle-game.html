@@ -1210,12 +1210,13 @@ function canCapture(attacker,defender,dr,dc){
     // Voi không ăn chuột
     if(attacker.type==='elephant' && defender.type==='rat') return false;
 
-    // Bẫy làm yếu quân
-    const defenderWeak =
+    // Bẫy làm yếu quân: chỉ khi quân đứng đúng ngay ô bẫy của đối phương
+    const defenderOnEnemyTrap = terrain[dr][dc]==='trap' && (
         (defender.player==='red' && dr>=7) ||
-        (defender.player==='blue' && dr<=1);
+        (defender.player==='blue' && dr<=1)
+    );
 
-    if(defenderWeak) return true;
+    if(defenderOnEnemyTrap) return true;
 
     return ANIMALS[attacker.type].rank >= ANIMALS[defender.type].rank;
 }
