@@ -104,6 +104,22 @@ const Rules = (()=>{
             tied.filter(i => i.enemy).forEach(i => { flipped.add(i.cell); seeds.add(i.cell); });
         }
 
+        // PLUS — group contacts by (myEdge + theirEdge); any group with >=2
+        // members and >=1 enemy flips all enemies in that group.
+        let plus = false;
+        const bySum = new Map();
+        info.forEach(i => {
+            const k = i.mine + i.theirs;
+            if(!bySum.has(k)) bySum.set(k, []);
+            bySum.get(k).push(i);
+        });
+        bySum.forEach(group => {
+            if(group.length >= 2 && group.some(i => i.enemy)){
+                plus = true;
+                group.filter(i => i.enemy).forEach(i => { flipped.add(i.cell); seeds.add(i.cell); });
+            }
+        });
+
         // BASIC — strictly greater facing edge flips an enemy.
         info.forEach(i => {
             if(i.enemy && i.mine > i.theirs) flipped.add(i.cell);
@@ -112,7 +128,7 @@ const Rules = (()=>{
         return {
             waves: [[...flipped]],
             same,
-            plus: false,
+            plus,
             comboDepth: 0
         };
     }

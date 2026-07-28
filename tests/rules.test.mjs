@@ -162,3 +162,41 @@ test('SAME takes cards BASIC never could', () => {
   assert.equal(CARDS[20].w, CARDS[11].e); // tie, not a win
   assert.deepEqual(flat(res).sort((a, b) => a - b), [3, 5]);
 });
+
+// PLUS fixture, deliberately built so BASIC and SAME both flip nothing —
+// every capture here is PLUS's doing alone.
+// Place 🐜 (id 11: n4 e4 s3 w4) at centre cell 4:
+//   west = cell 3 = 🐍 (id 7,  e:5) -> our w:4 loses to 5;  sum 4 + 5 = 9
+//   east = cell 5 = 👾 (id 25, w:5) -> our e:4 loses to 5;  sum 4 + 5 = 9
+// Sums tie at 9, so PLUS flips both despite our edges being *weaker*.
+test('PLUS: two equal edge-sums flip both enemies', () => {
+  const board = makeBoard({ 3: [7, 1], 5: [25, 1] });
+  const res = Rules.resolve(board, 4, 11, 0);
+  assert.equal(res.plus, true);
+  assert.equal(res.same, false);
+  assert.deepEqual(flat(res).sort((a, b) => a - b), [3, 5]);
+});
+
+test('PLUS: differing sums do not fire, and weak edges take nothing', () => {
+  // 🐀 (id 0, e:2) west -> sum 6;  👾 (id 25, w:5) east -> sum 9.
+  const board = makeBoard({ 3: [0, 1], 5: [25, 1] });
+  const res = Rules.resolve(board, 4, 11, 0);
+  assert.equal(res.plus, false);
+  assert.deepEqual(flat(res), [3]); // only the BASIC flip on 🐀 (4 > 2)
+});
+
+test('PLUS: a group of friendly-only cards does not fire', () => {
+  const board = makeBoard({ 3: [7, 0], 5: [25, 0] }); // equal sums, both ours
+  const res = Rules.resolve(board, 4, 11, 0);
+  assert.equal(res.plus, false);
+  assert.deepEqual(flat(res), []);
+});
+
+test('SAME and PLUS both fire on a board that satisfies each', () => {
+  // The Task 3 SAME fixture also has tied sums (4+4 and 4+4), so both rules
+  // fire on the same placement. They are checked independently.
+  const board = makeBoard({ 3: [13, 1], 5: [20, 1] });
+  const res = Rules.resolve(board, 4, 11, 0);
+  assert.equal(res.same, true);
+  assert.equal(res.plus, true);
+});
