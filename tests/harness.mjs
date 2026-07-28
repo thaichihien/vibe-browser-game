@@ -34,7 +34,7 @@ export function extract(marker) {
 // structurally-identical cross-realm values. `bridge` deep-clones data back
 // into host-realm arrays/objects, and wraps functions so their return
 // values get the same treatment while still executing inside the vm context.
-function bridge(value, seen = new WeakMap()) {
+export function bridge(value, seen = new WeakMap()) {
   if (value === null || typeof value !== 'object') {
     if (typeof value === 'function') {
       return (...args) => bridge(value(...args));

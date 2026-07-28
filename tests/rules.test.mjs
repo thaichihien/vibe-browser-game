@@ -92,3 +92,36 @@ test('resolve reports no combo when only BASIC fired', () => {
   assert.equal(res.plus, false);
   assert.equal(res.comboDepth, 0);
 });
+
+// These three tests are built so a same-direction lookup bug (comparing my
+// edge against the neighbour's edge in the SAME direction, instead of via
+// OPPOSITE) would NOT flip, while the correct OPPOSITE-edge comparison DOES.
+// The existing BASIC tests above use cards where both directions happen to
+// agree, so they can't catch this class of bug.
+
+test('BASIC compares the OPPOSITE edge, not the same-direction edge (east)', () => {
+  // cell 5 holds enemy 🐙 (id 9, w:2, e:7). We place 🕷️ (id 4, e:3) at cell 4.
+  // Correct: our east 3 vs their west 2 -> 3 > 2, flip.
+  // Same-direction bug would compare our east 3 vs their east 7 -> no flip.
+  const board = makeBoard({ 5: [9, 1] });
+  const res = Rules.resolve(board, 4, 4, 0);
+  assert.deepEqual(flat(res), [5]);
+});
+
+test('BASIC compares the OPPOSITE edge, not the same-direction edge (west)', () => {
+  // cell 4 holds enemy 🐢 (id 13, e:4, w:6). We place 🦍 (id 21, w:5) at cell 5.
+  // Correct: our west 5 vs their east 4 -> 5 > 4, flip.
+  // Same-direction bug would compare our west 5 vs their west 6 -> no flip.
+  const board = makeBoard({ 4: [13, 1] });
+  const res = Rules.resolve(board, 5, 21, 0);
+  assert.deepEqual(flat(res), [4]);
+});
+
+test('BASIC compares the OPPOSITE edge, not the same-direction edge (north)', () => {
+  // cell 1 holds enemy 🦅 (id 14, s:2, n:8). We place 🕷️ (id 4, n:4) at cell 4.
+  // Correct: our north 4 vs their south 2 -> 4 > 2, flip.
+  // Same-direction bug would compare our north 4 vs their north 8 -> no flip.
+  const board = makeBoard({ 1: [14, 1] });
+  const res = Rules.resolve(board, 4, 4, 0);
+  assert.deepEqual(flat(res), [1]);
+});
