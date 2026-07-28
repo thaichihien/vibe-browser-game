@@ -154,7 +154,51 @@ const Rules = (()=>{
         return {waves, same, plus, comboDepth: waves.length - 1};
     }
 
-    return {resolve};
+    function score(board, hands){
+        const s = [0, 0];
+        board.forEach(c => { if(c) s[c.owner]++; });
+        s[0] += hands[0].length;
+        s[1] += hands[1].length;
+        return s;
+    }
+
+    function legalCells(board){
+        const out = [];
+        board.forEach((c, i) => { if(!c) out.push(i); });
+        return out;
+    }
+
+    function winner(board, hands){
+        const [a, b] = score(board, hands);
+        if(a === b) return null;
+        return a > b ? 0 : 1;
+    }
+
+    return {resolve, score, legalCells, winner};
+})();
+
+const Deal = (()=>{
+    function shuffle(arr, rng){
+        const a = arr.slice();
+        for(let i = a.length - 1; i > 0; i--){
+            const j = Math.floor(rng() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    }
+
+    // Both sides get 2 common + 2 uncommon + 1 rare, drawn without replacement
+    // from the shared roster, so hands are varied but never lopsided.
+    function hands(rng = Math.random){
+        const pool = r => shuffle(CARDS.filter(c => c.r === r).map(c => c.id), rng);
+        const c = pool('common'), u = pool('uncommon'), x = pool('rare');
+        return [
+            [c[0], c[1], u[0], u[1], x[0]],
+            [c[2], c[3], u[2], u[3], x[1]]
+        ];
+    }
+
+    return {hands, shuffle};
 })();
 /* ==== ENGINE:END ==== */
 </script>
