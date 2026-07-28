@@ -741,10 +741,17 @@ test('COMBO: cards flipped by BASIC do not seed a cascade', () => {
 
 test('COMBO: cascade runs multiple levels deep, one array per level', () => {
   // A deliberate three-wave chain:
-  //   place 🐜 (id 11) at cell 4 -> SAME flips cell 3 (🐢 id 13) and cell 5 (🐗 id 20)
+  //   place 🐜 (id 11: s:3) at cell 4 -> SAME flips cell 3 (🐢 id 13) and cell 5 (🐗 id 20)
   //   captured 🐢 at cell 3 (s:4) beats cell 6 = 🐁 (id 1, n:1)   -> wave 1
-  //   captured 🐁 at cell 6 (e:4) beats cell 7 = 🐛 (id 3, w:2)   -> wave 2
-  const board = makeBoard({ 3: [13, 1], 5: [20, 1], 6: [1, 1], 7: [3, 1] });
+  //   captured 🐁 at cell 6 (e:4) beats cell 7 = 🦇 (id 10, w:3)  -> wave 2
+  //
+  // Cell 7 is a DIRECT neighbour of the placement cell 4, so it must survive
+  // wave 0 to be available for the cascade. 🦇 (id 10, n:7) is chosen so that
+  // against our s:3 it is not a SAME tie (3 != 7), loses no BASIC comparison
+  // (3 > 7 is false), and its PLUS sum (3+7=10) does not join the 8-group the
+  // two SAME contacts form (4+4). Substituting a card that fails any of those
+  // three conditions collapses the chain to two waves.
+  const board = makeBoard({ 3: [13, 1], 5: [20, 1], 6: [1, 1], 7: [10, 1] });
   const res = Rules.resolve(board, 4, 11, 0);
   assert.equal(res.waves.length, 3);
   assert.deepEqual(res.waves[0].sort((a, b) => a - b), [3, 5]);
@@ -754,10 +761,20 @@ test('COMBO: cascade runs multiple levels deep, one array per level', () => {
 });
 
 test('COMBO: a card is never flipped twice in one resolution', () => {
-  const board = makeBoard({ 3: [13, 1], 5: [20, 1], 6: [1, 1], 7: [3, 1] });
+  const board = makeBoard({ 3: [13, 1], 5: [20, 1], 6: [1, 1], 7: [10, 1] });
   const res = Rules.resolve(board, 4, 11, 0);
   const all = res.waves.flat();
   assert.equal(new Set(all).size, all.length);
+});
+
+test('PLUS: a three-member sum group flips every enemy in it', () => {
+  // Same geometry, but cell 7 holds 🐛 (id 3, n:5): our s:3 + their n:5 = 8,
+  // which joins the 8-sum group the two SAME contacts already form (4+4).
+  // All three contacts share sum 8, so PLUS takes all three at once.
+  const board = makeBoard({ 3: [13, 1], 5: [20, 1], 7: [3, 1] });
+  const res = Rules.resolve(board, 4, 11, 0);
+  assert.equal(res.plus, true);
+  assert.deepEqual(res.waves[0].sort((a, b) => a - b), [3, 5, 7]);
 });
 ```
 
