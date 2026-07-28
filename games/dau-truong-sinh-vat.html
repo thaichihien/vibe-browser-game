@@ -686,7 +686,8 @@ const state = {
     difficulty: 'normal',
     selected: null,        // cardId currently picked up
     busy: false,
-    gameOver: false
+    gameOver: false,
+    epoch: 0               // bumped on every newMatch() to invalidate stale timers
 };
 
 const boardEl  = document.getElementById('board');
@@ -760,6 +761,7 @@ function renderStatus(){
 }
 
 function newMatch(){
+    state.epoch++;
     state.board = Array(9).fill(null);
     state.hands = Deal.hands();
     state.turn = Math.random() < 0.5 ? 0 : 1;
@@ -826,6 +828,7 @@ function applyWaves(waves, owner){
 }
 
 function commitMove(cellIdx){
+    if(state.board[cellIdx]) return; // stale timer (e.g. AI move from an abandoned match) racing a now-occupied cell
     const cardId = state.selected;
     const owner = state.turn;
     state.busy = true;
@@ -864,7 +867,9 @@ function endTurn(){
 function aiTurn(){
     state.busy = true;
     renderStatus();
+    const epoch = state.epoch;
     setTimeout(() => {
+        if(state.epoch !== epoch) return; // match was abandoned/restarted while this was pending
         const mv = AI.pick(state.board, state.hands, 1, state.difficulty);
         state.busy = false;
         state.selected = mv.cardId;
@@ -915,7 +920,7 @@ function shakeBoard(){
 }
 
 // Flip one wave: swap each card's owner class and run the flip keyframe.
-function flipWave(cells, owner){
+function flipWave(cells, owner, epoch){
     cells.forEach(cell => {
         const el = boardEl.querySelector(`[data-cell="${cell}"] .card`);
         if(!el) return;
@@ -924,6 +929,8 @@ function flipWave(cells, owner){
         el.classList.add('flipping');
         // swap the fill halfway through, while the card is edge-on
         setTimeout(() => {
+            // a restart mid-wave would otherwise recolor a freshly-dealt card at the same cell
+            if(state.epoch !== epoch) return;
             el.classList.remove('own0', 'own1');
             el.classList.add('own' + owner);
         }, WAVE_MS / 2);
@@ -931,27 +938,38 @@ function flipWave(cells, owner){
 }
 
 function playWaves(res, owner, cellIdx, done){
+    const epoch = state.epoch; // if newMatch() runs before a timer below fires, that timer must no-op
     const placed = boardEl.querySelector(`[data-cell="${cellIdx}"] .card`);
     if(placed) placed.classList.add('landing');
     Sound.place();
     if(res.same || res.plus) Sound.same();
 
     if(res.same) callout('SAME!', 'same');
-    if(res.plus) setTimeout(() => callout('PLUS!', 'plus'), res.same ? 260 : 0);
+    if(res.plus) setTimeout(() => {
+        if(state.epoch !== epoch) return;
+        callout('PLUS!', 'plus');
+    }, res.same ? 260 : 0);
 
     let t = 240;
     res.waves.forEach((cells, i) => {
         if(!cells.length) return;
         setTimeout(() => {
-            flipWave(cells, owner);
+            if(state.epoch !== epoch) return;
+            flipWave(cells, owner, epoch);
             Sound.flip(i);
             if(i > 0) callout(`COMBO ×${i + 1}`, 'combo');
         }, t);
         t += WAVE_MS;
     });
 
-    if(res.comboDepth >= 2) setTimeout(shakeBoard, 240 + WAVE_MS);
-    setTimeout(done, t + 120);
+    if(res.comboDepth >= 2) setTimeout(() => {
+        if(state.epoch !== epoch) return;
+        shakeBoard();
+    }, 240 + WAVE_MS);
+    setTimeout(() => {
+        if(state.epoch !== epoch) return;
+        done();
+    }, t + 120);
 }
 
 function confettiBurst(){
