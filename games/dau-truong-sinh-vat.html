@@ -125,12 +125,33 @@ const Rules = (()=>{
             if(i.enemy && i.mine > i.theirs) flipped.add(i.cell);
         });
 
-        return {
-            waves: [[...flipped]],
-            same,
-            plus,
-            comboDepth: 0
-        };
+        // Apply the placement and the first wave to a scratch board, then run
+        // the COMBO cascade breadth-first from the SAME/PLUS seeds only.
+        const sim = board.slice();
+        sim[cellIdx] = {cardId, owner};
+        flipped.forEach(c => { sim[c] = {cardId: sim[c].cardId, owner}; });
+
+        const waves = [[...flipped]];
+        let frontier = [...seeds];
+
+        while(frontier.length){
+            const next = [];
+            frontier.forEach(src => {
+                const attacker = CARDS[sim[src].cardId];
+                neighborsOf(src).forEach(n => {
+                    const occ = sim[n.cell];
+                    if(!occ || occ.owner === owner) return;
+                    if(attacker[n.dir] > CARDS[occ.cardId][OPPOSITE[n.dir]]){
+                        sim[n.cell] = {cardId: occ.cardId, owner};
+                        next.push(n.cell);
+                    }
+                });
+            });
+            if(next.length) waves.push(next);
+            frontier = next;
+        }
+
+        return {waves, same, plus, comboDepth: waves.length - 1};
     }
 
     return {resolve};
