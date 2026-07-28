@@ -105,7 +105,9 @@ body::after{
 .card .edge.e{right:6%;top:50%;transform:translateY(-50%)}
 .card.selectable{cursor:pointer}
 .card.selectable:hover{transform:translateY(-6px);box-shadow:0 14px 30px rgba(0,0,0,.6),0 0 22px rgba(34,211,238,.5)}
+.card.rare.selectable:hover{box-shadow:0 14px 30px rgba(0,0,0,.6),0 0 22px rgba(34,211,238,.5),0 0 16px rgba(251,191,36,.55)}
 .card.selected{transform:translateY(-10px) scale(1.04);box-shadow:0 0 0 3px #fff,0 16px 34px rgba(0,0,0,.6)}
+.card.rare.selected{box-shadow:0 0 0 3px #fff,0 16px 34px rgba(0,0,0,.6),0 0 16px rgba(251,191,36,.55)}
 .card.spent{opacity:.22;filter:grayscale(1);pointer-events:none}
 /* ---- board ---- */
 .board-frame{
@@ -557,6 +559,129 @@ function newMatch(){
     state.gameOver = false;
     renderBoard();
     renderHands();
+    renderStatus();
+    markOpenSlots();
+    if(state.mode === 'ai' && state.turn === 1) aiTurn();
+}
+
+/* ── INTERACTION ── */
+function isHumanTurn(){
+    if(state.gameOver || state.busy) return false;
+    return state.mode === 'hotseat' || state.turn === 0;
+}
+
+function clearPreview(){
+    boardEl.querySelectorAll('.card.doomed').forEach(el => el.classList.remove('doomed'));
+}
+
+function previewAt(cellIdx){
+    clearPreview();
+    if(state.selected === null || state.board[cellIdx]) return;
+    const res = Rules.resolve(state.board, cellIdx, state.selected, state.turn);
+    res.waves.flat().forEach(cell => {
+        const el = boardEl.querySelector(`[data-cell="${cell}"] .card`);
+        if(el) el.classList.add('doomed');
+    });
+}
+
+function markOpenSlots(){
+    boardEl.querySelectorAll('.slot').forEach(slot => {
+        const empty = !state.board[Number(slot.dataset.cell)];
+        slot.classList.toggle('open', empty && state.selected !== null && isHumanTurn());
+    });
+}
+
+function selectCard(cardId){
+    if(!isHumanTurn()) return;
+    if(!state.hands[state.turn].includes(cardId)) return;
+    state.selected = state.selected === cardId ? null : cardId;
+    document.querySelectorAll('.hand .card').forEach(el => {
+        el.classList.toggle('selected', Number(el.dataset.cardId) === state.selected);
+    });
+    clearPreview();
+    markOpenSlots();
+    renderStatus();
+}
+
+function applyWaves(waves, owner){
+    waves.flat().forEach(cell => { state.board[cell].owner = owner; });
+}
+
+function commitMove(cellIdx){
+    const cardId = state.selected;
+    const owner = state.turn;
+    state.busy = true;
+    state.selected = null;
+    clearPreview();
+
+    const res = Rules.resolve(state.board, cellIdx, cardId, owner);
+    state.board[cellIdx] = {cardId, owner};
+    state.hands[owner].splice(state.hands[owner].indexOf(cardId), 1);
+
+    renderBoard();
+    renderHands();
+
+    playWaves(res, owner, cellIdx, () => {
+        applyWaves(res.waves, owner);
+        renderBoard();
+        renderStatus();
+        state.busy = false;
+        endTurn();
+    });
+}
+
+function endTurn(){
+    if(!Rules.legalCells(state.board).length){
+        finishMatch();
+        return;
+    }
+    state.turn = 1 - state.turn;
+    markOpenSlots();
+    renderStatus();
+    if(state.mode === 'ai' && state.turn === 1) aiTurn();
+}
+
+function aiTurn(){
+    state.busy = true;
+    renderStatus();
+    setTimeout(() => {
+        const mv = AI.pick(state.board, state.hands, 1, state.difficulty);
+        state.busy = false;
+        state.selected = mv.cardId;
+        state.turn = 1;
+        commitMove(mv.cellIdx);
+    }, 620);
+}
+
+boardEl.addEventListener('click', e => {
+    const slot = e.target.closest('.slot');
+    if(!slot || !isHumanTurn() || state.selected === null) return;
+    const cell = Number(slot.dataset.cell);
+    if(state.board[cell]) return;
+    commitMove(cell);
+});
+
+boardEl.addEventListener('mouseover', e => {
+    const slot = e.target.closest('.slot');
+    if(!slot || !isHumanTurn()) return;
+    previewAt(Number(slot.dataset.cell));
+});
+boardEl.addEventListener('mouseleave', clearPreview);
+
+document.addEventListener('click', e => {
+    const card = e.target.closest('.hand .card');
+    if(!card) return;
+    if(Number(card.dataset.owner) !== state.turn) return;
+    selectCard(Number(card.dataset.cardId));
+});
+
+/* ── ANIMATION (placeholder, replaced in Task 10) ── */
+function playWaves(res, owner, cellIdx, done){ done(); }
+
+function finishMatch(){
+    state.gameOver = true;
+    state.selected = null;
+    markOpenSlots();
     renderStatus();
 }
 
