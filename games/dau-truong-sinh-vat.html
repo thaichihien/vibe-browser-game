@@ -59,6 +59,57 @@ const CARDS = [
     {id:28, emoji:'🐲',  name:'Long Vương Gen',      r:'rare',     n:10, e:6,  s:8, w:4},
     {id:29, emoji:'🦠',  name:'Siêu Vi Nguyên Tổ',   r:'rare',     n:7,  e:10, s:6, w:7}
 ];
+
+const OPPOSITE = {n:'s', e:'w', s:'n', w:'e'};
+
+// In-board neighbours of a cell. The 3x3 grid does not wrap.
+function neighborsOf(idx){
+    const row = (idx/3)|0, col = idx%3;
+    const out = [];
+    if(row>0) out.push({dir:'n', cell:idx-3});
+    if(col<2) out.push({dir:'e', cell:idx+1});
+    if(row<2) out.push({dir:'s', cell:idx+3});
+    if(col>0) out.push({dir:'w', cell:idx-1});
+    return out;
+}
+
+const Rules = (()=>{
+    // Facing-edge comparison data for every occupied neighbour of `cellIdx`.
+    function contacts(board, cellIdx, cardId, owner){
+        const me = CARDS[cardId];
+        return neighborsOf(cellIdx)
+            .filter(n => board[n.cell])
+            .map(n => {
+                const occ = board[n.cell];
+                return {
+                    cell:   n.cell,
+                    dir:    n.dir,
+                    mine:   me[n.dir],
+                    theirs: CARDS[occ.cardId][OPPOSITE[n.dir]],
+                    enemy:  occ.owner !== owner
+                };
+            });
+    }
+
+    function resolve(board, cellIdx, cardId, owner){
+        const info = contacts(board, cellIdx, cardId, owner);
+        const flipped = new Set();
+
+        // BASIC — strictly greater facing edge flips an enemy.
+        info.forEach(i => {
+            if(i.enemy && i.mine > i.theirs) flipped.add(i.cell);
+        });
+
+        return {
+            waves: [[...flipped]],
+            same: false,
+            plus: false,
+            comboDepth: 0
+        };
+    }
+
+    return {resolve};
+})();
 /* ==== ENGINE:END ==== */
 </script>
 </body>
