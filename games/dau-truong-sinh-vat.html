@@ -559,6 +559,7 @@ function newMatch(){
     state.gameOver = false;
     renderBoard();
     renderHands();
+    markSelectable();
     renderStatus();
     markOpenSlots();
     if(state.mode === 'ai' && state.turn === 1) aiTurn();
@@ -591,6 +592,13 @@ function markOpenSlots(){
     });
 }
 
+function markSelectable(){
+    document.querySelectorAll('.hand .card').forEach(el => {
+        const owner = Number(el.dataset.owner);
+        el.classList.toggle('selectable', owner === state.turn && isHumanTurn());
+    });
+}
+
 function selectCard(cardId){
     if(!isHumanTurn()) return;
     if(!state.hands[state.turn].includes(cardId)) return;
@@ -600,6 +608,7 @@ function selectCard(cardId){
     });
     clearPreview();
     markOpenSlots();
+    markSelectable();
     renderStatus();
 }
 
@@ -620,6 +629,7 @@ function commitMove(cellIdx){
 
     renderBoard();
     renderHands();
+    markSelectable();
 
     playWaves(res, owner, cellIdx, () => {
         applyWaves(res.waves, owner);
@@ -637,6 +647,7 @@ function endTurn(){
     }
     state.turn = 1 - state.turn;
     markOpenSlots();
+    markSelectable();
     renderStatus();
     if(state.mode === 'ai' && state.turn === 1) aiTurn();
 }
@@ -682,6 +693,7 @@ function finishMatch(){
     state.gameOver = true;
     state.selected = null;
     markOpenSlots();
+    markSelectable();
     renderStatus();
 }
 
