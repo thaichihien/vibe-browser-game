@@ -201,6 +201,105 @@ const Deal = (()=>{
     return {hands, shuffle};
 })();
 /* ==== ENGINE:END ==== */
+
+/* ==== AI:START ==== */
+const AI = (()=>{
+    const sum = c => c.n + c.e + c.s + c.w;
+
+    // How exposed a card is once placed: the total of edges that face an
+    // empty in-board cell, i.e. the edges an opponent could attack next.
+    // Higher is safer, because a high edge is harder to beat.
+    function safety(board, cellIdx, cardId){
+        const card = CARDS[cardId];
+        return neighborsOf(cellIdx)
+            .filter(n => !board[n.cell])
+            .reduce((a, n) => a + card[n.dir], 0);
+    }
+
+    function allMoves(board, hand){
+        const cells = Rules.legalCells(board);
+        const out = [];
+        hand.forEach(cardId => cells.forEach(cellIdx => out.push({cardId, cellIdx})));
+        return out;
+    }
+
+    function flipsFor(board, mv, me){
+        return Rules.resolve(board, mv.cellIdx, mv.cardId, me).waves
+            .reduce((a, w) => a + w.length, 0);
+    }
+
+    // Greedy: most flips, then spend the weaker card, then sit safest.
+    function scoreGreedy(board, mv, me){
+        return [
+            flipsFor(board, mv, me),
+            -sum(CARDS[mv.cardId]),
+            safety(board, mv.cellIdx, mv.cardId)
+        ];
+    }
+
+    function better(a, b){
+        for(let i = 0; i < a.length; i++){
+            if(a[i] !== b[i]) return a[i] > b[i];
+        }
+        return false;
+    }
+
+    function bestGreedy(board, hand, me){
+        let best = null, bestKey = null;
+        allMoves(board, hand).forEach(mv => {
+            const key = scoreGreedy(board, mv, me);
+            if(!best || better(key, bestKey)){ best = mv; bestKey = key; }
+        });
+        return {move: best, key: bestKey};
+    }
+
+    // Apply a move to copies, leaving the caller's state untouched.
+    function applied(board, hands, mv, me){
+        const res = Rules.resolve(board, mv.cellIdx, mv.cardId, me);
+        const nb = board.slice();
+        nb[mv.cellIdx] = {cardId: mv.cardId, owner: me};
+        res.waves.flat().forEach(c => { nb[c] = {cardId: nb[c].cardId, owner: me}; });
+        const nh = [hands[0].slice(), hands[1].slice()];
+        nh[me].splice(nh[me].indexOf(mv.cardId), 1);
+        return {board: nb, hands: nh, flips: res.waves.flat().length};
+    }
+
+    function pick(board, hands, me, difficulty, rng = Math.random){
+        const moves = allMoves(board, hands[me]);
+        if(!moves.length) return null;
+
+        if(difficulty === 'easy'){
+            if(rng() < 0.2) return bestGreedy(board, hands[me], me).move;
+            return moves[Math.floor(rng() * moves.length)];
+        }
+
+        if(difficulty === 'normal'){
+            return bestGreedy(board, hands[me], me).move;
+        }
+
+        // hard — 1-ply: assume the opponent replies with their best greedy move.
+        const foe = 1 - me;
+        let best = null, bestKey = null;
+        moves.forEach(mv => {
+            const after = applied(board, hands, mv, me);
+            let reply = 0;
+            if(after.hands[foe].length && Rules.legalCells(after.board).length){
+                const r = bestGreedy(after.board, after.hands[foe], foe);
+                reply = r.key ? r.key[0] : 0;
+            }
+            const key = [
+                after.flips - reply,
+                -sum(CARDS[mv.cardId]),
+                safety(board, mv.cellIdx, mv.cardId)
+            ];
+            if(!best || better(key, bestKey)){ best = mv; bestKey = key; }
+        });
+        return best;
+    }
+
+    return {pick};
+})();
+/* ==== AI:END ==== */
 </script>
 </body>
 </html>
