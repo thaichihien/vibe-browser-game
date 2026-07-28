@@ -191,6 +191,44 @@ body::after{
     0%{opacity:1;transform:translateY(0) rotate(0)}
     100%{opacity:.85;transform:translateY(106vh) rotate(760deg)}
 }
+.overlay{
+    position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at center, rgba(8,4,20,.72), rgba(3,1,8,.93));
+    backdrop-filter:blur(7px);
+    opacity:0;visibility:hidden;transition:opacity .32s;
+}
+.overlay.show{opacity:1;visibility:visible}
+.panel{
+    position:relative;text-align:center;padding:28px 34px;border-radius:22px;
+    max-width:min(93vw,480px);max-height:86vh;overflow-y:auto;
+    background:linear-gradient(160deg,rgba(20,14,44,.97),rgba(7,4,15,.98));
+    border:1px solid rgba(34,211,238,.42);
+    box-shadow:0 30px 70px rgba(0,0,0,.72), 0 0 40px rgba(34,211,238,.18);
+    transform:translateY(22px) scale(.94);transition:transform .38s cubic-bezier(.2,.9,.2,1.2);
+}
+.overlay.show .panel{transform:translateY(0) scale(1)}
+.panel h2{margin:10px 0 6px;font-size:26px;font-weight:900;letter-spacing:1px}
+.panel h3{margin:0 0 14px;color:#7ff0ff;font-size:21px}
+.panel p{margin:0 0 18px;font-size:15px;line-height:1.55;color:#c9d8e6}
+.panel .big{font-size:62px;line-height:1;filter:drop-shadow(0 8px 18px rgba(0,0,0,.6))}
+.panel ul{margin:0 0 18px;padding-left:20px;line-height:1.65;text-align:left;font-size:14px}
+.panel li{margin-bottom:6px}
+.panel li b{color:#7ff0ff}
+.opt-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.opt{
+    padding:10px 16px;border-radius:12px;cursor:pointer;font-weight:800;font-size:14px;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);color:#e8f6ff;
+    transition:background .18s, box-shadow .18s;
+}
+.opt.on{background:linear-gradient(135deg,rgba(34,211,238,.34),rgba(124,58,242,.34));
+    border-color:#22d3ee;box-shadow:0 0 18px rgba(34,211,238,.5)}
+.panel .btn{width:100%;font-size:16px;padding:13px}
+.close-x{
+    position:absolute;top:12px;right:14px;width:32px;height:32px;border-radius:50%;
+    border:none;cursor:pointer;font-weight:900;
+    background:rgba(255,255,255,.1);color:#fff;transition:transform .2s, background .2s;
+}
+.close-x:hover{background:rgba(255,255,255,.24);transform:rotate(90deg)}
 </style>
 </head>
 <body>
@@ -220,6 +258,50 @@ body::after{
         <div class="hand p0" id="hand0"><div class="hand-label">🟦 BẠN</div></div>
         <div class="board-frame"><div class="board" id="board"></div></div>
         <div class="hand p1" id="hand1"><div class="hand-label">🟥 ĐỐI THỦ</div></div>
+    </div>
+
+    <div class="overlay show" id="startOverlay">
+        <div class="panel">
+            <div class="big">🧪</div>
+            <h2>ĐẤU TRƯỜNG SINH VẬT</h2>
+            <p>Đặt bài lên lưới 3×3. Cạnh mạnh hơn sẽ lật quân đối thủ về phía bạn.</p>
+            <div class="opt-row" id="modeRow">
+                <div class="opt on" data-mode="ai">🤖 Đấu với máy</div>
+                <div class="opt" data-mode="hotseat">👥 2 người</div>
+            </div>
+            <div class="opt-row" id="diffRow">
+                <div class="opt" data-diff="easy">Dễ</div>
+                <div class="opt on" data-diff="normal">Thường</div>
+                <div class="opt" data-diff="hard">Khó</div>
+            </div>
+            <button class="btn btn-primary" id="startBtn">⚡ Bắt đầu</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="rulesOverlay">
+        <div class="panel">
+            <button class="close-x" id="rulesClose" aria-label="Đóng">✕</button>
+            <h3>📖 Luật chơi</h3>
+            <ul>
+                <li>Mỗi bên có <b>5 lá bài</b>, đều <b>lật ngửa</b>. Lần lượt đặt bài lên lưới <b>3×3</b>.</li>
+                <li>Mỗi lá có <b>4 con số</b> ở bốn cạnh (10 hiện là <b>A</b>).</li>
+                <li><b>Cơ bản:</b> cạnh của bạn <b>lớn hơn</b> cạnh đối diện thì lật lá đó về phía bạn.</li>
+                <li><b>SAME:</b> nếu có <b>từ 2 cạnh trở lên bằng nhau đúng bằng</b> cạnh đối diện, lật tất cả quân địch trong nhóm đó — kể cả khi số của chúng lớn hơn.</li>
+                <li><b>PLUS:</b> nếu <b>tổng</b> (cạnh bạn + cạnh địch) của từ 2 phía trở lên <b>bằng nhau</b>, lật tất cả quân địch trong nhóm đó.</li>
+                <li><b>COMBO:</b> quân bị lật bởi SAME hoặc PLUS sẽ <b>tự tấn công</b> hàng xóm của nó theo luật cơ bản, tạo phản ứng dây chuyền.</li>
+                <li>Hết ô trống thì tính điểm: <b>số quân trên bàn + số bài còn trên tay</b>. Ai nhiều hơn thì thắng, 5–5 là hòa. 🏆</li>
+            </ul>
+            <button class="btn btn-primary" id="rulesOk">Đã hiểu 👍</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="endOverlay">
+        <div class="panel">
+            <div class="big" id="endEmoji">🏆</div>
+            <h2 id="endTitle">Chiến thắng!</h2>
+            <p id="endReason"></p>
+            <button class="btn btn-primary" id="againBtn">🔄 Chơi lại</button>
+        </div>
     </div>
 </div>
 
@@ -506,6 +588,95 @@ const AI = (()=>{
 })();
 /* ==== AI:END ==== */
 
+/* ── SOUND (Web Audio, synthesized) ── */
+const Sound = (()=>{
+    let ac = null, master = null;
+    let muted = localStorage.getItem('dauTruongSinhVat.muted') === '1';
+
+    function ensure(){
+        if(!ac){
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if(!AC) return null;
+            ac = new AC();
+            master = ac.createGain();
+            master.gain.value = .8;
+            master.connect(ac.destination);
+        }
+        if(ac.state === 'suspended') ac.resume();
+        return ac;
+    }
+
+    function tone({freq=440, type='sine', dur=.15, gain=.18, slideTo=null, when=0}){
+        if(muted || !ensure()) return;
+        const t0 = ac.currentTime + when;
+        const osc = ac.createOscillator(), g = ac.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t0);
+        if(slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(1, slideTo), t0 + dur);
+        g.gain.setValueAtTime(.0001, t0);
+        g.gain.exponentialRampToValueAtTime(gain, t0 + .006);
+        g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+        osc.connect(g); g.connect(master);
+        osc.start(t0); osc.stop(t0 + dur + .03);
+    }
+
+    function noise({dur=.2, gain=.16, type='bandpass', freq=1200, freqTo=null, when=0}){
+        if(muted || !ensure()) return;
+        const t0 = ac.currentTime + when;
+        const frames = Math.floor(ac.sampleRate * dur);
+        const buf = ac.createBuffer(1, frames, ac.sampleRate);
+        const d = buf.getChannelData(0);
+        for(let i = 0; i < frames; i++) d[i] = Math.random() * 2 - 1;
+        const src = ac.createBufferSource(); src.buffer = buf;
+        const f = ac.createBiquadFilter(); f.type = type;
+        f.frequency.setValueAtTime(freq, t0);
+        if(freqTo) f.frequency.exponentialRampToValueAtTime(Math.max(1, freqTo), t0 + dur);
+        const g = ac.createGain();
+        g.gain.setValueAtTime(gain, t0);
+        g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+        src.connect(f); f.connect(g); g.connect(master);
+        src.start(t0); src.stop(t0 + dur + .03);
+    }
+
+    return {
+        get muted(){ return muted; },
+        toggle(){
+            muted = !muted;
+            localStorage.setItem('dauTruongSinhVat.muted', muted ? '1' : '0');
+            if(!muted){ ensure(); this.place(); }
+            return muted;
+        },
+        place(){
+            tone({freq:320, type:'triangle', dur:.09, gain:.14, slideTo:180});
+            noise({dur:.06, gain:.07, type:'lowpass', freq:900});
+        },
+        // pitch climbs with each combo wave
+        flip(wave = 0){
+            const base = 520 * Math.pow(1.22, wave);
+            tone({freq:base, type:'square', dur:.11, gain:.10, slideTo:base * 1.7});
+            noise({dur:.07, gain:.05, type:'highpass', freq:2600});
+        },
+        same(){
+            [523.25, 659.25, 783.99].forEach((f, i) =>
+                tone({freq:f, type:'triangle', dur:.26, gain:.12, when:i * .05}));
+        },
+        win(){
+            [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => {
+                tone({freq:f, type:'triangle', dur:.42, gain:.15, when:i * .11});
+                tone({freq:f * 2, type:'sine', dur:.3, gain:.05, when:i * .11});
+            });
+        },
+        lose(){
+            [440, 349.23, 261.63].forEach((f, i) =>
+                tone({freq:f, type:'sawtooth', dur:.42, gain:.12, when:i * .16}));
+        }
+    };
+})();
+
+function updateSoundUI(){
+    document.getElementById('soundBtn').textContent = Sound.muted ? '🔇 Âm: TẮT' : '🔊 Âm: BẬT';
+}
+
 /* ── STATE ── */
 const state = {
     board: Array(9).fill(null),
@@ -763,6 +934,7 @@ function playWaves(res, owner, cellIdx, done){
     const placed = boardEl.querySelector(`[data-cell="${cellIdx}"] .card`);
     if(placed) placed.classList.add('landing');
     Sound.place();
+    if(res.same || res.plus) Sound.same();
 
     if(res.same) callout('SAME!', 'same');
     if(res.plus) setTimeout(() => callout('PLUS!', 'plus'), res.same ? 260 : 0);
@@ -800,11 +972,76 @@ function finishMatch(){
     state.gameOver = true;
     state.selected = null;
     markOpenSlots();
-    markSelectable();
     renderStatus();
+
+    const [s0, s1] = Rules.score(state.board, state.hands);
+    const w = Rules.winner(state.board, state.hands);
+    const emoji = document.getElementById('endEmoji');
+    const title = document.getElementById('endTitle');
+    const reason = document.getElementById('endReason');
+
+    if(w === null){
+        emoji.textContent = '🤝';
+        title.textContent = 'HÒA!';
+        reason.textContent = `Tỉ số ${s0} — ${s1}. Không ai chiếm được ưu thế.`;
+        Sound.lose();
+    }else{
+        const humanWon = state.mode === 'hotseat' ? true : w === 0;
+        const who = state.mode === 'hotseat'
+            ? (w === 0 ? 'NGƯỜI 1 🟦' : 'NGƯỜI 2 🟥')
+            : (w === 0 ? 'BẠN 🟦' : 'ĐỐI THỦ 🟥');
+        emoji.textContent = humanWon ? '🏆' : '💀';
+        title.textContent = `${who} CHIẾN THẮNG!`;
+        reason.textContent = `Tỉ số chung cuộc ${s0} — ${s1}.`;
+        if(humanWon){ Sound.win(); confettiBurst(); }
+        else Sound.lose();
+    }
+    document.getElementById('endOverlay').classList.add('show');
 }
 
-newMatch();
+/* ── WIRING ── */
+const startOverlay = document.getElementById('startOverlay');
+const rulesOverlay = document.getElementById('rulesOverlay');
+const endOverlay   = document.getElementById('endOverlay');
+
+document.getElementById('modeRow').addEventListener('click', e => {
+    const opt = e.target.closest('.opt');
+    if(!opt) return;
+    state.mode = opt.dataset.mode;
+    document.querySelectorAll('#modeRow .opt').forEach(o => o.classList.toggle('on', o === opt));
+    document.getElementById('diffRow').style.display = state.mode === 'ai' ? 'flex' : 'none';
+});
+
+document.getElementById('diffRow').addEventListener('click', e => {
+    const opt = e.target.closest('.opt');
+    if(!opt) return;
+    state.difficulty = opt.dataset.diff;
+    document.querySelectorAll('#diffRow .opt').forEach(o => o.classList.toggle('on', o === opt));
+});
+
+document.getElementById('startBtn').addEventListener('click', () => {
+    startOverlay.classList.remove('show');
+    newMatch();
+});
+
+document.getElementById('restartBtn').addEventListener('click', () => {
+    endOverlay.classList.remove('show');
+    startOverlay.classList.add('show');
+});
+document.getElementById('againBtn').addEventListener('click', () => {
+    endOverlay.classList.remove('show');
+    newMatch();
+});
+
+document.getElementById('rulesBtn').addEventListener('click', () => rulesOverlay.classList.add('show'));
+document.getElementById('rulesClose').addEventListener('click', () => rulesOverlay.classList.remove('show'));
+document.getElementById('rulesOk').addEventListener('click', () => rulesOverlay.classList.remove('show'));
+rulesOverlay.addEventListener('click', e => { if(e.target === rulesOverlay) rulesOverlay.classList.remove('show'); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape') rulesOverlay.classList.remove('show'); });
+
+document.getElementById('soundBtn').addEventListener('click', () => { Sound.toggle(); updateSoundUI(); });
+
+updateSoundUI();
 </script>
 </body>
 </html>
