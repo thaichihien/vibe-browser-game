@@ -6,17 +6,182 @@
 <title>Đấu Trường Sinh Vật</title>
 <style>
 *{box-sizing:border-box}
+:root{
+    --void:#07040f;
+    --panel:rgba(14,10,30,.72);
+    --cyan:#22d3ee;
+    --magenta:#f472d0;
+    --rim-common:#7c8798;
+    --rim-uncommon:#34d399;
+    --rim-rare:#fbbf24;
+    --card: clamp(64px, min(calc((100vh - 260px)/3), calc((100vw - 460px)/3)), 128px);
+}
 body{
-    margin:0;
-    min-height:100vh;
+    margin:0;min-height:100vh;overflow-x:hidden;
     font-family:'Segoe UI',system-ui,sans-serif;
     color:#e8f6ff;
-    background:#07040f;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(34,211,238,.16), transparent 34%),
+      radial-gradient(circle at 84% 20%, rgba(244,114,208,.14), transparent 32%),
+      radial-gradient(circle at 50% 96%, rgba(126,58,242,.16), transparent 44%),
+      linear-gradient(180deg,#07040f 0%,#0d0722 55%,#07040f 100%);
+}
+/* scanlines + vignette */
+body::before{
+    content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 3px);
+    mix-blend-mode:overlay;
+}
+body::after{
+    content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(circle at 50% 45%, transparent 45%, rgba(0,0,0,.65) 100%);
+}
+.container{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px}
+.header{display:flex;align-items:center;justify-content:space-between;width:min(1120px,100%);gap:16px;flex-wrap:wrap}
+.title{
+    display:flex;align-items:center;gap:12px;padding:8px 18px;border-radius:18px;
+    background:linear-gradient(135deg,rgba(34,211,238,.18),rgba(244,114,208,.14));
+    border:1px solid rgba(34,211,238,.45);
+    box-shadow:0 0 28px rgba(34,211,238,.28), inset 0 1px 0 rgba(255,255,255,.12);
+}
+.title h1{
+    margin:0;font-size:clamp(19px,2.6vw,30px);font-weight:900;letter-spacing:2px;
+    color:#d8fbff;text-shadow:0 0 14px rgba(34,211,238,.8);
+}
+.controls{display:flex;gap:10px;flex-wrap:wrap}
+.btn{
+    border:1px solid rgba(255,255,255,.18);cursor:pointer;
+    padding:9px 14px;border-radius:12px;font-weight:800;font-size:14px;color:#e8f6ff;
+    background:rgba(255,255,255,.07);
+    transition:transform .16s, box-shadow .16s, background .16s;
+}
+.btn:hover{transform:translateY(-2px);background:rgba(255,255,255,.14);box-shadow:0 0 18px rgba(34,211,238,.35)}
+.btn:active{transform:translateY(0)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-primary{background:linear-gradient(135deg,#22d3ee,#7c3aed);border-color:transparent;color:#06121a}
+.main{
+    width:min(1120px,100%);display:grid;
+    grid-template-columns:minmax(120px,1fr) auto minmax(120px,1fr);
+    gap:16px;align-items:center;justify-items:center;
+}
+/* ---- hands ---- */
+.hand{display:flex;flex-direction:column;gap:8px;align-items:center}
+.hand-label{
+    font-size:13px;font-weight:900;letter-spacing:1px;padding:5px 12px;border-radius:10px;
+    background:var(--panel);border:1px solid rgba(255,255,255,.14);
+}
+.hand.p0 .hand-label{color:var(--cyan);border-color:rgba(34,211,238,.5)}
+.hand.p1 .hand-label{color:var(--magenta);border-color:rgba(244,114,208,.5)}
+/* ---- card ---- */
+.card{
+    position:relative;width:var(--card);height:var(--card);border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:calc(var(--card)*.42);
+    border:2px solid var(--rim);
+    background:linear-gradient(160deg,var(--fill-a),var(--fill-b));
+    box-shadow:0 8px 20px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.16);
+    user-select:none;transition:transform .18s, box-shadow .18s;
+    transform-style:preserve-3d;
+}
+.card.own0{--fill-a:rgba(34,211,238,.34);--fill-b:rgba(8,47,73,.92)}
+.card.own1{--fill-a:rgba(244,114,208,.34);--fill-b:rgba(74,10,58,.92)}
+.card.common{--rim:var(--rim-common)}
+.card.uncommon{--rim:var(--rim-uncommon)}
+.card.rare{--rim:var(--rim-rare);box-shadow:0 8px 20px rgba(0,0,0,.5), 0 0 16px rgba(251,191,36,.4)}
+/* holographic sheen */
+.card::after{
+    content:'';position:absolute;inset:0;border-radius:10px;pointer-events:none;
+    background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.22) 50%,transparent 62%);
+    opacity:0;transition:opacity .25s;
+}
+.card:hover::after{opacity:1}
+.card .edge{
+    position:absolute;font-size:calc(var(--card)*.17);font-weight:900;line-height:1;
+    color:#fff;text-shadow:0 0 6px rgba(0,0,0,.95),0 1px 2px rgba(0,0,0,.9);
+}
+.card .edge.n{top:5%;left:50%;transform:translateX(-50%)}
+.card .edge.s{bottom:5%;left:50%;transform:translateX(-50%)}
+.card .edge.w{left:6%;top:50%;transform:translateY(-50%)}
+.card .edge.e{right:6%;top:50%;transform:translateY(-50%)}
+.card.selectable{cursor:pointer}
+.card.selectable:hover{transform:translateY(-6px);box-shadow:0 14px 30px rgba(0,0,0,.6),0 0 22px rgba(34,211,238,.5)}
+.card.selected{transform:translateY(-10px) scale(1.04);box-shadow:0 0 0 3px #fff,0 16px 34px rgba(0,0,0,.6)}
+.card.spent{opacity:.22;filter:grayscale(1);pointer-events:none}
+/* ---- board ---- */
+.board-frame{
+    padding:12px;border-radius:20px;
+    background:linear-gradient(150deg,rgba(34,211,238,.10),rgba(124,58,242,.12));
+    border:1px solid rgba(34,211,238,.34);
+    box-shadow:0 24px 60px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.10);
+}
+.board{display:grid;grid-template-columns:repeat(3,var(--card));grid-template-rows:repeat(3,var(--card));gap:6px}
+.slot{
+    position:relative;width:var(--card);height:var(--card);border-radius:12px;
+    border:1px dashed rgba(34,211,238,.28);
+    background:radial-gradient(circle at 50% 50%, rgba(34,211,238,.08), rgba(7,4,15,.5));
+}
+.slot.open{cursor:pointer;border-style:solid;border-color:rgba(34,211,238,.75);box-shadow:inset 0 0 20px rgba(34,211,238,.28)}
+.slot.open:hover{box-shadow:inset 0 0 30px rgba(34,211,238,.55),0 0 22px rgba(34,211,238,.45)}
+.slot .card{position:absolute;inset:0;width:100%;height:100%}
+/* ghost preview of cards that would flip */
+.card.doomed{outline:3px solid #fff;outline-offset:-3px;animation:doomPulse .7s ease-in-out infinite}
+@keyframes doomPulse{0%,100%{outline-color:rgba(255,255,255,.35)}50%{outline-color:rgba(255,255,255,1)}}
+/* ---- status ---- */
+.statusbar{display:flex;flex-direction:column;align-items:center;gap:8px;width:min(1120px,100%)}
+.status{
+    display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;
+    height:56px;width:min(440px,100%);padding:8px 16px;border-radius:14px;
+    background:var(--panel);border:2px solid var(--turnColor,rgba(255,255,255,.2));
+    box-shadow:0 0 22px rgba(0,0,0,.5);transition:border-color .3s;overflow:hidden;
+}
+.status .st-turn{font-size:15px;font-weight:900}
+.status .st-sub{font-size:12px;opacity:.82}
+.score{
+    display:flex;align-items:center;justify-content:center;gap:16px;
+    height:52px;padding:8px 22px;border-radius:14px;
+    background:var(--panel);border:1px solid rgba(255,255,255,.14);
+}
+.score .sc{font-size:26px;font-weight:900;line-height:1}
+.score .sc.p0{color:var(--cyan);text-shadow:0 0 14px rgba(34,211,238,.7)}
+.score .sc.p1{color:var(--magenta);text-shadow:0 0 14px rgba(244,114,208,.7)}
+.score .dash{opacity:.4;font-size:20px}
+@media (max-width:900px){
+    :root{--card:clamp(56px, calc((100vw - 60px)/3), 96px)}
+    .main{grid-template-columns:1fr;gap:10px}
+    .hand{flex-direction:row;flex-wrap:wrap;justify-content:center}
+    .hand.p1{order:-1}
 }
 </style>
 </head>
 <body>
-<div class="container" id="app"></div>
+<div class="container">
+    <div class="header">
+        <div class="title"><span style="font-size:30px">🧪</span><h1>ĐẤU TRƯỜNG SINH VẬT</h1></div>
+        <div class="controls">
+            <button class="btn" id="soundBtn">🔊 Âm thanh</button>
+            <button class="btn" id="rulesBtn">📖 Luật chơi</button>
+            <button class="btn btn-primary" id="restartBtn">🔄 Ván mới</button>
+        </div>
+    </div>
+
+    <div class="statusbar">
+        <div class="status" id="status">
+            <span class="st-turn">Lượt: BẠN</span>
+            <span class="st-sub">chọn một lá bài</span>
+        </div>
+        <div class="score">
+            <span class="sc p0" id="score0">5</span>
+            <span class="dash">—</span>
+            <span class="sc p1" id="score1">5</span>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="hand p0" id="hand0"><div class="hand-label">🟦 BẠN</div></div>
+        <div class="board-frame"><div class="board" id="board"></div></div>
+        <div class="hand p1" id="hand1"><div class="hand-label">🟥 ĐỐI THỦ</div></div>
+    </div>
+</div>
 
 <script>
 /* ==== ENGINE:START ==== */
@@ -300,6 +465,102 @@ const AI = (()=>{
     return {pick};
 })();
 /* ==== AI:END ==== */
+
+/* ── STATE ── */
+const state = {
+    board: Array(9).fill(null),
+    hands: [[], []],
+    turn: 0,
+    mode: 'ai',            // 'ai' | 'hotseat'
+    difficulty: 'normal',
+    selected: null,        // cardId currently picked up
+    busy: false,
+    gameOver: false
+};
+
+const boardEl  = document.getElementById('board');
+const statusEl = document.getElementById('status');
+
+const edgeLabel = v => v === 10 ? 'A' : String(v);
+
+function cardFace(cardId, owner){
+    const c = CARDS[cardId];
+    const el = document.createElement('div');
+    el.className = `card ${c.r} own${owner}`;
+    el.dataset.cardId = cardId;
+    el.title = c.name;
+    el.innerHTML =
+        `<span class="edge n">${edgeLabel(c.n)}</span>` +
+        `<span class="edge e">${edgeLabel(c.e)}</span>` +
+        `<span class="edge s">${edgeLabel(c.s)}</span>` +
+        `<span class="edge w">${edgeLabel(c.w)}</span>` +
+        `<span class="emoji">${c.emoji}</span>`;
+    return el;
+}
+
+function renderBoard(){
+    boardEl.innerHTML = '';
+    for(let i = 0; i < 9; i++){
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        slot.dataset.cell = i;
+        const occ = state.board[i];
+        if(occ) slot.appendChild(cardFace(occ.cardId, occ.owner));
+        boardEl.appendChild(slot);
+    }
+}
+
+function renderHands(){
+    [0, 1].forEach(p => {
+        const wrap = document.getElementById('hand' + p);
+        wrap.querySelectorAll('.card').forEach(el => el.remove());
+        state.hands[p].forEach(cardId => {
+            const el = cardFace(cardId, p);
+            el.dataset.owner = p;
+            wrap.appendChild(el);
+        });
+    });
+}
+
+function renderStatus(){
+    const [s0, s1] = Rules.score(state.board, state.hands);
+    document.getElementById('score0').textContent = s0;
+    document.getElementById('score1').textContent = s1;
+
+    const mine = state.turn === 0;
+    const colour = mine ? 'var(--cyan)' : 'var(--magenta)';
+    statusEl.style.setProperty('--turnColor', colour);
+
+    let turnText, subText;
+    if(state.gameOver){
+        turnText = 'Ván đấu kết thúc';
+        subText  = '🏁';
+    }else if(state.mode === 'ai' && !mine){
+        turnText = 'Lượt: ĐỐI THỦ';
+        subText  = 'đang suy nghĩ…';
+    }else{
+        turnText = state.mode === 'hotseat'
+            ? (mine ? 'Lượt: NGƯỜI 1' : 'Lượt: NGƯỜI 2')
+            : 'Lượt: BẠN';
+        subText = state.selected === null ? 'chọn một lá bài' : 'chọn một ô trống';
+    }
+    statusEl.querySelector('.st-turn').textContent = turnText;
+    statusEl.querySelector('.st-sub').textContent = subText;
+}
+
+function newMatch(){
+    state.board = Array(9).fill(null);
+    state.hands = Deal.hands();
+    state.turn = Math.random() < 0.5 ? 0 : 1;
+    state.selected = null;
+    state.busy = false;
+    state.gameOver = false;
+    renderBoard();
+    renderHands();
+    renderStatus();
+}
+
+newMatch();
 </script>
 </body>
 </html>
