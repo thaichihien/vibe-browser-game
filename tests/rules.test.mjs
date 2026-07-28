@@ -200,3 +200,63 @@ test('SAME and PLUS both fire on a board that satisfies each', () => {
   assert.equal(res.same, true);
   assert.equal(res.plus, true);
 });
+
+// Cell layout:  0 1 2
+//               3 4 5
+//               6 7 8
+test('COMBO: a SAME-flipped card cascades into its own neighbour', () => {
+  // Task 3's SAME fixture, plus a weak enemy below cell 3.
+  // SAME flips cell 3 (🐢 id 13) and cell 5 (🐗 id 20).
+  // The captured 🐢 at cell 3 has s:4, and cell 6 holds 🐀 (id 0, n:3) -> 4 > 3, combo.
+  const board = makeBoard({ 3: [13, 1], 5: [20, 1], 6: [0, 1] });
+  const res = Rules.resolve(board, 4, 11, 0);
+  assert.equal(res.same, true);
+  assert.deepEqual(res.waves[0].sort((a, b) => a - b), [3, 5]);
+  assert.deepEqual(res.waves[1], [6]);
+  assert.equal(res.comboDepth, 1);
+});
+
+test('COMBO: cards flipped by BASIC do not seed a cascade', () => {
+  // Place 🐲 (id 28: n10 e6 s8 w4) at cell 4 — pure BASIC flip on cell 5.
+  // Cell 5 = 🐀 (id 0, w:1) flips. Cell 8 below it holds a weak enemy 🐁 (id 1, n:1),
+  // which the flipped 🐀 (id 0, s:4) would beat — but BASIC flips never combo.
+  const board = makeBoard({ 5: [0, 1], 8: [1, 1] });
+  const res = Rules.resolve(board, 4, 28, 0);
+  assert.deepEqual(res.waves[0], [5]);
+  assert.equal(res.waves.length, 1);
+  assert.equal(res.comboDepth, 0);
+});
+
+test('COMBO: cascade runs multiple levels deep, one array per level', () => {
+  // A deliberate three-wave chain:
+  //   place 🐜 (id 11) at cell 4 -> SAME flips cell 3 (🐢 id 13) and cell 5 (🐗 id 20).
+  //   Cell 7 holds 🦇 (id 10, n:7 e:3 s:2 w:3): our s:3 vs their n:7 is not a tie,
+  //   not a BASIC win, and its sum (3+7=10) doesn't join the SAME contacts' 8-group,
+  //   so it survives wave 0 untouched.
+  //   captured 🐢 at cell 3 (s:4) beats cell 6 = 🐁 (id 1, n:1)   -> wave 1
+  //   captured 🐁 at cell 6 (e:4) beats cell 7 = 🦇 (id 10, w:3)  -> wave 2
+  const board = makeBoard({ 3: [13, 1], 5: [20, 1], 6: [1, 1], 7: [10, 1] });
+  const res = Rules.resolve(board, 4, 11, 0);
+  assert.equal(res.waves.length, 3);
+  assert.deepEqual(res.waves[0].sort((a, b) => a - b), [3, 5]);
+  assert.deepEqual(res.waves[1], [6]);
+  assert.deepEqual(res.waves[2], [7]);
+  assert.equal(res.comboDepth, 2);
+});
+
+test('COMBO: a card is never flipped twice in one resolution', () => {
+  const board = makeBoard({ 3: [13, 1], 5: [20, 1], 6: [1, 1], 7: [10, 1] });
+  const res = Rules.resolve(board, 4, 11, 0);
+  const all = res.waves.flat();
+  assert.equal(new Set(all).size, all.length);
+});
+
+test('PLUS: a three-member sum group flips every enemy in it', () => {
+  // Same geometry, but cell 7 holds 🐛 (id 3, n:5): our s:3 + their n:5 = 8,
+  // which joins the 8-sum group the two SAME contacts already form (4+4).
+  // All three contacts share sum 8, so PLUS takes all three at once.
+  const board = makeBoard({ 3: [13, 1], 5: [20, 1], 7: [3, 1] });
+  const res = Rules.resolve(board, 4, 11, 0);
+  assert.equal(res.plus, true);
+  assert.deepEqual(res.waves[0].sort((a, b) => a - b), [3, 5, 7]);
+});
