@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './harness.mjs';
 
-const { CARDS, Rules, neighborsOf } = load(['ENGINE'], ['CARDS', 'Rules', 'neighborsOf']);
+const { CARDS, Rules, neighborsOf, Deal } = load(['ENGINE'], ['CARDS', 'Rules', 'neighborsOf', 'Deal']);
 
 test('roster has exactly 30 cards with sequential ids', () => {
   assert.equal(CARDS.length, 30);
@@ -259,4 +259,66 @@ test('PLUS: a three-member sum group flips every enemy in it', () => {
   const res = Rules.resolve(board, 4, 11, 0);
   assert.equal(res.plus, true);
   assert.deepEqual(res.waves[0].sort((a, b) => a - b), [3, 5, 7]);
+});
+
+// Deterministic RNG so deal/AI tests are reproducible.
+function seeded(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+}
+
+test('score counts owned board cards plus cards left in hand', () => {
+  const board = makeBoard({ 0: [1, 0], 1: [2, 0], 2: [3, 1] });
+  const hands = [[10, 11], [12, 13, 14]];
+  assert.deepEqual(Rules.score(board, hands), [4, 4]);
+});
+
+test('scores always total 10 for a full board and empty hands', () => {
+  const board = Array.from({ length: 9 }, (_, i) => ({ cardId: i, owner: i % 2 }));
+  const [a, b] = Rules.score(board, [[], [29]]);
+  assert.equal(a + b, 10);
+});
+
+test('winner returns the higher scorer and null on a 5-5 draw', () => {
+  const draw = Array.from({ length: 9 }, (_, i) => ({ cardId: i, owner: i < 5 ? 0 : 1 }));
+  assert.equal(Rules.winner(draw, [[], [29]]), null); // 5 vs 4+1 = 5
+  const win = Array.from({ length: 9 }, (_, i) => ({ cardId: i, owner: i < 6 ? 0 : 1 }));
+  assert.equal(Rules.winner(win, [[], [29]]), 0);     // 6 vs 3+1 = 4
+});
+
+test('legalCells lists only empty cells', () => {
+  const board = makeBoard({ 0: [1, 0], 4: [2, 1] });
+  assert.deepEqual(Rules.legalCells(board), [1, 2, 3, 5, 6, 7, 8]);
+});
+
+test('deal gives each side 2 common, 2 uncommon, 1 rare', () => {
+  const rng = seeded(42);
+  for (let i = 0; i < 50; i++) {
+    const hands = Deal.hands(rng);
+    for (const hand of hands) {
+      assert.equal(hand.length, 5);
+      const by = r => hand.filter(id => CARDS[id].r === r).length;
+      assert.equal(by('common'), 2);
+      assert.equal(by('uncommon'), 2);
+      assert.equal(by('rare'), 1);
+    }
+  }
+});
+
+test('deal never gives the same card to both sides', () => {
+  const rng = seeded(7);
+  for (let i = 0; i < 50; i++) {
+    const [a, b] = Deal.hands(rng);
+    assert.equal(new Set([...a, ...b]).size, 10);
+  }
+});
+
+test('deal is varied across seeds', () => {
+  const seen = new Set();
+  const rng = seeded(99);
+  for (let i = 0; i < 20; i++) seen.add(Deal.hands(rng)[0].join(','));
+  assert.ok(seen.size > 10, `deal too repetitive: only ${seen.size} distinct hands in 20`);
 });
