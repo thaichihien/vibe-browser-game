@@ -125,3 +125,40 @@ test('BASIC compares the OPPOSITE edge, not the same-direction edge (north)', ()
   const res = Rules.resolve(board, 4, 4, 0);
   assert.deepEqual(flat(res), [1]);
 });
+
+// Standard SAME fixture, used by several tests below.
+// Place 🐜 (id 11: n4 e4 s3 w4) at centre cell 4. Cell 4's occupied contacts:
+//   west  = cell 3 = 🐢 (id 13, e:4)  -> our w:4 ties  -> SAME contact
+//   east  = cell 5 = 🐗 (id 20, w:4)  -> our e:4 ties  -> SAME contact
+// Neither tie can be taken by BASIC, which needs a *strictly* greater edge.
+test('SAME: two equal facing edges flip both enemies', () => {
+  const board = makeBoard({ 3: [13, 1], 5: [20, 1] });
+  const res = Rules.resolve(board, 4, 11, 0);
+  assert.equal(res.same, true);
+  assert.deepEqual(flat(res).sort((a, b) => a - b), [3, 5]);
+});
+
+test('SAME: a single equal edge is not enough', () => {
+  const board = makeBoard({ 5: [20, 1] }); // one equal contact only
+  const res = Rules.resolve(board, 4, 11, 0);
+  assert.equal(res.same, false);
+});
+
+test('SAME: friendly neighbour counts toward the threshold but is not flipped', () => {
+  // Same geometry, but cell 3 is ours. SAME still fires — two equal contacts —
+  // and only the enemy at cell 5 flips.
+  const board = makeBoard({ 3: [13, 0], 5: [20, 1] });
+  const res = Rules.resolve(board, 4, 11, 0);
+  assert.equal(res.same, true);
+  assert.deepEqual(flat(res), [5]);
+});
+
+test('SAME takes cards BASIC never could', () => {
+  // This is the whole point of the rule. Both contacts are exact ties, so a
+  // BASIC-only engine flips nothing here.
+  const board = makeBoard({ 3: [13, 1], 5: [20, 1] });
+  const res = Rules.resolve(board, 4, 11, 0);
+  assert.equal(CARDS[13].e, CARDS[11].w); // tie, not a win
+  assert.equal(CARDS[20].w, CARDS[11].e); // tie, not a win
+  assert.deepEqual(flat(res).sort((a, b) => a - b), [3, 5]);
+});
