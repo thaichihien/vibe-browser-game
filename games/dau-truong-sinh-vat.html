@@ -94,6 +94,15 @@ const Rules = (()=>{
     function resolve(board, cellIdx, cardId, owner){
         const info = contacts(board, cellIdx, cardId, owner);
         const flipped = new Set();
+        const seeds = new Set();   // flipped by SAME/PLUS -> these seed COMBO
+        let same = false;
+
+        // SAME — >=2 contacts with exactly equal facing edges, >=1 of them enemy.
+        const tied = info.filter(i => i.mine === i.theirs);
+        if(tied.length >= 2 && tied.some(i => i.enemy)){
+            same = true;
+            tied.filter(i => i.enemy).forEach(i => { flipped.add(i.cell); seeds.add(i.cell); });
+        }
 
         // BASIC — strictly greater facing edge flips an enemy.
         info.forEach(i => {
@@ -102,7 +111,7 @@ const Rules = (()=>{
 
         return {
             waves: [[...flipped]],
-            same: false,
+            same,
             plus: false,
             comboDepth: 0
         };
