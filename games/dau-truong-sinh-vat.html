@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Đấu Trường Sinh Vật</title>
+<style>
+*{box-sizing:border-box}
+body{
+    margin:0;
+    min-height:100vh;
+    font-family:'Segoe UI',system-ui,sans-serif;
+    color:#e8f6ff;
+    background:#07040f;
+}
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+
+<script>
+/* ==== ENGINE:START ==== */
+const RARITY_BAND = {
+    common:   [10, 16],
+    uncommon: [17, 22],
+    rare:     [25, 30]
+};
+
+// id === index. n/e/s/w are the four edge values, 1..10 (10 displays as "A").
+const CARDS = [
+    {id:0,  emoji:'🐀',  name:'Chuột Thí Nghiệm',   r:'common',   n:3,  e:2,  s:4, w:1},
+    {id:1,  emoji:'🐁',  name:'Chuột Nhắt',          r:'common',   n:1,  e:4,  s:2, w:3},
+    {id:2,  emoji:'🦗',  name:'Dế Đột Biến',         r:'common',   n:2,  e:5,  s:1, w:3},
+    {id:3,  emoji:'🐛',  name:'Sâu Nhớt',            r:'common',   n:5,  e:1,  s:3, w:2},
+    {id:4,  emoji:'🕷️',  name:'Nhện Ống Nghiệm',     r:'common',   n:4,  e:3,  s:2, w:3},
+    {id:5,  emoji:'🐸',  name:'Ếch Axit',            r:'common',   n:2,  e:6,  s:1, w:3},
+    {id:6,  emoji:'🦎',  name:'Thằn Lằn Tái Sinh',   r:'common',   n:6,  e:2,  s:3, w:2},
+    {id:7,  emoji:'🐍',  name:'Rắn Neon',            r:'common',   n:3,  e:5,  s:4, w:1},
+    {id:8,  emoji:'🦂',  name:'Bọ Cạp Phóng Xạ',     r:'common',   n:5,  e:2,  s:6, w:1},
+    {id:9,  emoji:'🐙',  name:'Bạch Tuộc Biến Gen',  r:'common',   n:2,  e:7,  s:3, w:2},
+    {id:10, emoji:'🦇',  name:'Dơi Siêu Âm',         r:'common',   n:7,  e:3,  s:2, w:3},
+    {id:11, emoji:'🐜',  name:'Kiến Chúa Nhỏ',       r:'common',   n:4,  e:4,  s:3, w:4},
+    {id:12, emoji:'🪲',  name:'Bọ Giáp Sắt',         r:'common',   n:3,  e:3,  s:7, w:3},
+    {id:13, emoji:'🐢',  name:'Rùa Vỏ Thép',         r:'common',   n:2,  e:4,  s:4, w:6},
+    {id:14, emoji:'🦅',  name:'Đại Bàng Sinh Học',   r:'uncommon', n:8,  e:4,  s:2, w:3},
+    {id:15, emoji:'🐺',  name:'Sói Đột Biến',        r:'uncommon', n:5,  e:6,  s:4, w:2},
+    {id:16, emoji:'🦈',  name:'Cá Mập Bể Nuôi',      r:'uncommon', n:3,  e:8,  s:5, w:2},
+    {id:17, emoji:'🦉',  name:'Cú Quét Tia',         r:'uncommon', n:7,  e:3,  s:5, w:3},
+    {id:18, emoji:'🐊',  name:'Cá Sấu Nhân Bản',     r:'uncommon', n:4,  e:5,  s:8, w:2},
+    {id:19, emoji:'🦏',  name:'Tê Giác Bọc Giáp',    r:'uncommon', n:2,  e:4,  s:6, w:7},
+    {id:20, emoji:'🐗',  name:'Lợn Lòi Cuồng Nộ',    r:'uncommon', n:6,  e:7,  s:3, w:4},
+    {id:21, emoji:'🦍',  name:'Khỉ Đột Cường Hóa',   r:'uncommon', n:5,  e:5,  s:6, w:5},
+    {id:22, emoji:'🐻',  name:'Gấu Phóng Xạ',        r:'uncommon', n:9,  e:4,  s:6, w:2},
+    {id:23, emoji:'🦖',  name:'Khủng Long Thu Nhỏ',  r:'uncommon', n:6,  e:8,  s:5, w:3},
+    {id:24, emoji:'🐉',  name:'Rồng Ống Nghiệm',     r:'rare',     n:9,  e:7,  s:6, w:3},
+    {id:25, emoji:'👾',  name:'Sinh Vật Lạ',         r:'rare',     n:7,  e:9,  s:4, w:5},
+    {id:26, emoji:'🦑',  name:'Mực Khổng Lồ',        r:'rare',     n:5,  e:6,  s:9, w:6},
+    {id:27, emoji:'👹',  name:'Quỷ Đột Biến',        r:'rare',     n:8,  e:5,  s:7, w:7},
+    {id:28, emoji:'🐲',  name:'Long Vương Gen',      r:'rare',     n:10, e:6,  s:8, w:4},
+    {id:29, emoji:'🦠',  name:'Siêu Vi Nguyên Tổ',   r:'rare',     n:7,  e:10, s:6, w:7}
+];
+/* ==== ENGINE:END ==== */
+</script>
+</body>
+</html>
