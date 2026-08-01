@@ -2,200 +2,1585 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Game Hub 🎮</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="ARCADE.SYS — a hub of small browser games. No install, just play." />
+  <title>ARCADE.SYS 🎮</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%8E%AE</text></svg>" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet" />
 
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Segoe UI', sans-serif;
+    /* ══════════════════════════════ tokens ══════════════════════════════ */
+    :root {
+      --void: #06060d;
+      --panel: #0c0c16;
+      --panel-hi: #12121f;
+      --cyan: #00f0ff;
+      --magenta: #ff2bd6;
+      --lime: #c8ff2f;
+      --amber: #ffb300;
+      --text: #e6f4ff;
+      --dim: #6d7d93;
+
+      --line: rgba(0, 240, 255, 0.14);
+      --line-hi: rgba(0, 240, 255, 0.34);
+      --fill: rgba(0, 240, 255, 0.05);
+
+      --sidebar-w: 244px;
+      --display: 'Orbitron', 'Segoe UI', system-ui, sans-serif;
+      --body: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --notch: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
     }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* our display:flex rules would otherwise beat the UA's [hidden] */
+    [hidden] { display: none !important; }
 
     body {
-      height: 100vh;
-      background: linear-gradient(135deg, #1e1e2f, #2aad2a40);
-      color: white;
+      min-height: 100vh;
+      font-family: var(--body);
+      color: var(--text);
+      background: var(--void);
+      background-image:
+        radial-gradient(900px 500px at 78% -8%, rgba(255, 43, 214, 0.13), transparent 62%),
+        radial-gradient(760px 460px at 8% 4%, rgba(0, 240, 255, 0.12), transparent 60%),
+        linear-gradient(rgba(0, 240, 255, 0.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.028) 1px, transparent 1px);
+      background-size: auto, auto, 44px 44px, 44px 44px;
+      background-attachment: fixed;
+    }
+
+    :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.18); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.32); }
+
+    .display {
+      font-family: var(--display);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* ══════════════════════════════ sidebar ══════════════════════════════ */
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: var(--sidebar-w);
+      z-index: 60;
       display: flex;
       flex-direction: column;
+      gap: 4px;
+      padding: 22px 14px 16px;
+      background: linear-gradient(180deg, var(--panel), #08080f);
+      border-right: 1px solid var(--line);
+      overflow-y: auto;
+      transition: transform 0.28s ease;
     }
 
-    header {
-      padding: 20px 40px;
-      font-size: 24px;
-      font-weight: bold;
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 8px 16px;
+      text-decoration: none;
+      color: inherit;
     }
 
-    .container {
-      flex: 1;
+    .brand-mark {
+      width: 34px;
+      height: 34px;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 25px;
-      padding: 30px 40px;
+      place-items: center;
+      font-size: 17px;
+      background: linear-gradient(135deg, var(--cyan), var(--magenta));
+      color: #04040a;
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+      box-shadow: 0 0 18px rgba(0, 240, 255, 0.45);
     }
 
-    .card {
-      border-radius: 20px;
-      padding: 25px;
-      transition: 0.3s;
+    .brand-text { line-height: 1.15; }
+    .brand-name { font-family: var(--display); font-weight: 900; font-size: 15px; letter-spacing: 0.1em; }
+    .brand-sub { font-size: 10px; letter-spacing: 0.22em; color: var(--dim); text-transform: uppercase; }
+
+    .nav-label {
+      font-family: var(--display);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.26em;
+      color: var(--dim);
+      padding: 16px 10px 8px;
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      color: white;
-      cursor: pointer;
+      align-items: center;
+      gap: 8px;
     }
 
-    .card:hover {
-      transform: translateY(-8px) scale(1.03);
-      box-shadow: 0 15px 30px rgba(0,0,0,0.4);
-    }
+    .nav-label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
-    .card h2 {
-      margin-bottom: 10px;
-      font-size: 20px;
-    }
-
-    .card p {
+    .nav-item {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      width: 100%;
+      padding: 9px 11px;
+      font: inherit;
       font-size: 14px;
-      opacity: 0.9;
-      margin-bottom: 20px;
+      color: var(--dim);
+      background: none;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      text-align: left;
+      transition: color 0.16s, background 0.16s;
     }
 
-    .play-btn {
-      padding: 12px;
+    .nav-item:hover { color: var(--text); background: var(--fill); }
+
+    .nav-item .ico { width: 18px; text-align: center; font-size: 14px; flex: none; }
+    .nav-item .txt { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .nav-item .n {
+      font-family: var(--display);
+      font-size: 10px;
+      color: var(--dim);
+      opacity: 0.8;
+    }
+
+    .nav-item[aria-current="true"] {
+      color: var(--text);
+      background: linear-gradient(90deg, rgba(0, 240, 255, 0.16), transparent 72%);
+    }
+
+    .nav-item[aria-current="true"]::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan), 0 0 22px rgba(0, 240, 255, 0.6);
+    }
+
+    .nav-item[aria-current="true"] .n { color: var(--cyan); opacity: 1; }
+
+    .side-search {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      padding: 10px 12px;
+      font: inherit;
+      font-size: 13px;
+      color: var(--dim);
+      background: var(--fill);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: 0.16s;
+    }
+
+    .side-search:hover { color: var(--text); border-color: var(--line-hi); }
+    .side-search .kbd {
+      margin-left: auto;
+      font-family: var(--display);
+      font-size: 10px;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      padding: 1px 5px;
+    }
+
+    .side-foot {
+      padding: 12px 12px 0;
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      color: var(--dim);
+      text-transform: uppercase;
+      font-family: var(--display);
+    }
+
+    .side-foot .dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      margin-right: 6px;
+      border-radius: 50%;
+      background: var(--lime);
+      box-shadow: 0 0 8px var(--lime);
+      animation: pulse 2.4s infinite;
+    }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+    /* ══════════════════════════════ topbar (mobile) ══════════════════════════════ */
+    .topbar {
+      display: none;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: rgba(6, 6, 13, 0.86);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .icon-btn {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      font-size: 16px;
+      color: var(--text);
+      background: var(--fill);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: 0.16s;
+    }
+
+    .icon-btn:hover { border-color: var(--line-hi); box-shadow: 0 0 14px rgba(0, 240, 255, 0.25); }
+
+    .scrim {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 55;
+      background: rgba(3, 3, 8, 0.72);
+      backdrop-filter: blur(2px);
+    }
+
+    body.drawer-open .scrim { display: block; }
+
+    /* ══════════════════════════════ layout ══════════════════════════════ */
+    .shell { margin-left: var(--sidebar-w); min-height: 100vh; display: flex; flex-direction: column; }
+    main { flex: 1; padding: 30px 34px 48px; }
+
+    .page-head { margin-bottom: 22px; }
+    .page-title { font-family: var(--display); font-size: 22px; font-weight: 900; letter-spacing: 0.09em; text-transform: uppercase; }
+    .page-sub { margin-top: 5px; font-size: 13.5px; color: var(--dim); }
+
+    /* ══════════════════════════════ hero carousel ══════════════════════════════ */
+    .hero {
+      position: relative;
+      margin-bottom: 34px;
+      height: clamp(320px, 40vh, 400px);
+      border: 1px solid var(--line);
+      background: var(--panel);
+      clip-path: var(--notch);
+      overflow: hidden;
+    }
+
+    .hero-floor {
+      position: absolute;
+      inset: 42% 0 0;
+      background-image:
+        linear-gradient(rgba(0, 240, 255, 0.22) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.22) 1px, transparent 1px);
+      background-size: 60px 40px;
+      transform: perspective(320px) rotateX(62deg);
+      transform-origin: top center;
+      mask-image: linear-gradient(transparent, #000 42%, transparent 92%);
+      -webkit-mask-image: linear-gradient(transparent, #000 42%, transparent 92%);
+      animation: floor 4.5s linear infinite;
+      opacity: 0.75;
+      pointer-events: none;
+    }
+
+    @keyframes floor { to { background-position: 0 40px, 0 0; } }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 24px;
+      padding: 34px 40px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(14px);
+      transition: opacity 0.5s, transform 0.5s, visibility 0.5s;
+    }
+
+    .slide.is-active { opacity: 1; visibility: visible; transform: none; }
+
+    .slide::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: var(--grad);
+      opacity: 0.34;
+      mask-image: linear-gradient(105deg, #000 6%, transparent 74%);
+      -webkit-mask-image: linear-gradient(105deg, #000 6%, transparent 74%);
+    }
+
+    .slide-body { max-width: 560px; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--display);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.3em;
+      color: var(--cyan);
+      margin-bottom: 14px;
+    }
+
+    .eyebrow .bar { width: 26px; height: 1px; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+    .eyebrow .new { color: var(--amber); }
+
+    .slide-title {
+      font-family: var(--display);
+      font-size: clamp(26px, 3.6vw, 44px);
+      font-weight: 900;
+      line-height: 1.03;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      text-shadow: 0 0 26px rgba(0, 240, 255, 0.35);
+    }
+
+    .slide-desc { margin: 12px 0 16px; font-size: 15px; line-height: 1.55; color: rgba(230, 244, 255, 0.8); }
+
+    .slide-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 22px; list-style: none; }
+
+    .slide-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+    .btn-play {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 12px 26px;
+      font-family: var(--display);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: #04040a;
+      text-decoration: none;
+      background: linear-gradient(135deg, var(--cyan), #4affd6);
       border: none;
-      border-radius: 12px;
-      background: rgba(0,0,0,0.2);
-      color: white;
-      font-weight: bold;
+      cursor: pointer;
+      clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 11px 100%, 0 calc(100% - 11px));
+      box-shadow: 0 0 22px rgba(0, 240, 255, 0.5);
+      transition: 0.18s;
+    }
+
+    .btn-play:hover { box-shadow: 0 0 34px rgba(0, 240, 255, 0.85); transform: translateY(-2px); }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 18px;
+      font: inherit;
+      font-size: 13px;
+      color: var(--text);
+      background: rgba(6, 6, 13, 0.5);
+      border: 1px solid var(--line-hi);
+      cursor: pointer;
+      transition: 0.18s;
+    }
+
+    .btn-ghost:hover { border-color: var(--magenta); box-shadow: 0 0 18px rgba(255, 43, 214, 0.35); }
+    .btn-ghost[aria-pressed="true"] { color: var(--amber); border-color: var(--amber); }
+
+    .slide-art {
+      font-size: clamp(80px, 11vw, 140px);
+      line-height: 1;
+      filter: drop-shadow(0 0 34px var(--glow));
+      animation: bob 5s ease-in-out infinite;
+    }
+
+    @keyframes bob { 0%, 100% { transform: translateY(-6px); } 50% { transform: translateY(6px); } }
+
+    .hero-ctrl {
+      position: absolute;
+      right: 22px;
+      bottom: 20px;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .dots { display: flex; gap: 8px; }
+
+    .dot-btn {
+      width: 26px;
+      height: 4px;
+      padding: 0;
+      background: rgba(0, 240, 255, 0.22);
+      border: none;
       cursor: pointer;
       transition: 0.2s;
     }
 
-    .play-btn:hover {
-      background: rgba(0,0,0,0.35);
+    .dot-btn[aria-current="true"] { background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+
+    .arrows { display: flex; gap: 6px; }
+
+    .arrow {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      color: var(--text);
+      background: rgba(6, 6, 13, 0.6);
+      border: 1px solid var(--line);
+      cursor: pointer;
+      transition: 0.16s;
     }
 
-    footer {
-      text-align: center;
-      padding: 10px;
+    .arrow:hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 14px rgba(0, 240, 255, 0.35); }
+    .arrow:disabled { opacity: 0.28; cursor: default; }
+
+    /* ══════════════════════════════ rails & sections ══════════════════════════════ */
+    .row-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 14px;
+    }
+
+    .row-title {
+      font-family: var(--display);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .row-title .n { color: var(--cyan); font-size: 11px; margin-left: 8px; }
+    .row-head .line { flex: 1; height: 1px; background: var(--line); }
+
+    .row { margin-bottom: 34px; }
+
+    .rail {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      padding-bottom: 8px;
+      scrollbar-width: none;
+    }
+
+    .rail::-webkit-scrollbar { display: none; }
+    .rail > .card { flex: 0 0 236px; scroll-snap-align: start; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 18px;
+    }
+
+    /* ══════════════════════════════ card ══════════════════════════════ */
+    .card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      color: var(--text);
+      text-decoration: none;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover, .card:focus-visible {
+      transform: translateY(-5px);
+      border-color: var(--glow);
+      box-shadow: 0 0 0 1px var(--glow), 0 10px 34px -8px var(--glow), 0 16px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .cover {
+      position: relative;
+      height: 112px;
+      display: grid;
+      place-items: center;
+      background: var(--grad);
+      clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+    }
+
+    .cover::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px),
+        linear-gradient(transparent 46%, rgba(6, 6, 13, 0.62));
+      pointer-events: none;
+    }
+
+    .cover-icon { font-size: 46px; line-height: 1; filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6)); transition: transform 0.25s; }
+    .card:hover .cover-icon { transform: scale(1.14) rotate(-5deg); }
+
+    .badge {
+      position: absolute;
+      top: 9px;
+      left: 9px;
+      z-index: 2;
+      font-family: var(--display);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      padding: 4px 8px;
+      color: #2a1c00;
+      background: var(--amber);
+      box-shadow: 0 0 16px rgba(255, 179, 0, 0.6);
+    }
+
+    .fav-btn {
+      position: absolute;
+      top: 8px;
+      right: 22px;
+      z-index: 2;
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      line-height: 1;
+      color: rgba(255, 255, 255, 0.8);
+      background: rgba(6, 6, 13, 0.62);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 2px;
+      cursor: pointer;
+      transition: 0.16s;
+    }
+
+    .fav-btn:hover { transform: scale(1.14); border-color: var(--amber); }
+    .fav-btn[aria-pressed="true"] { color: var(--amber); border-color: var(--amber); box-shadow: 0 0 14px rgba(255, 179, 0, 0.45); }
+
+    .card-body { flex: 1; display: flex; flex-direction: column; gap: 7px; padding: 14px 14px 10px; }
+
+    .card-title {
+      font-family: var(--display);
+      font-size: 13.5px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      line-height: 1.3;
+      text-transform: uppercase;
+    }
+
+    .card:hover .card-title { animation: glitch 0.32s steps(2, end) 1; }
+
+    @keyframes glitch {
+      0%   { text-shadow: 1.5px 0 var(--magenta), -1.5px 0 var(--cyan); }
+      50%  { text-shadow: -1.5px 0 var(--magenta), 1.5px 0 var(--cyan); }
+      100% { text-shadow: none; }
+    }
+
+    .card-desc { flex: 1; font-size: 12.5px; line-height: 1.5; color: var(--dim); }
+
+    mark { background: rgba(0, 240, 255, 0.24); color: var(--text); border-radius: 2px; padding: 0 2px; }
+
+    .tags { display: flex; flex-wrap: wrap; gap: 5px; list-style: none; margin-top: 2px; }
+
+    .tag {
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--dim);
+      background: var(--fill);
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      padding: 3px 6px;
+    }
+
+    .slide-tags .tag { font-size: 11px; padding: 4px 9px; color: rgba(230, 244, 255, 0.85); background: rgba(6, 6, 13, 0.42); }
+
+    .card-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 14px 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .play-tag {
+      font-family: var(--display);
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: var(--cyan);
+      transition: 0.18s;
+    }
+
+    .card:hover .play-tag { text-shadow: 0 0 12px var(--cyan); }
+    .last-played { font-size: 10.5px; color: var(--dim); }
+
+    /* ══════════════════════════════ library toolbar ══════════════════════════════ */
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: -30px -34px 24px;
+      padding: 18px 34px 14px;
+      background: rgba(6, 6, 13, 0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .toolbar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+    .search { position: relative; flex: 1 1 240px; max-width: 400px; }
+
+    .search input {
+      width: 100%;
+      padding: 11px 38px 11px 36px;
+      font: inherit;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--fill);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      transition: 0.18s;
+    }
+
+    .search input::placeholder { color: var(--dim); }
+    .search input:focus { border-color: var(--cyan); box-shadow: 0 0 18px rgba(0, 240, 255, 0.22); }
+    .search .ico { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: 0.55; font-size: 13px; pointer-events: none; }
+
+    .clear-btn {
+      position: absolute;
+      right: 7px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: none;
+      padding: 4px 7px;
+      font-size: 15px;
+      line-height: 1;
+      color: var(--dim);
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    .clear-btn:hover { color: var(--cyan); }
+    .search input:not(:placeholder-shown) ~ .clear-btn { display: block; }
+
+    select {
+      font: inherit;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--fill);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+
+    select option { background: var(--panel); }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 13px;
+      font-size: 13px;
+      color: var(--dim);
+      background: var(--fill);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      cursor: pointer;
+      user-select: none;
+      transition: 0.18s;
+    }
+
+    .toggle:hover { color: var(--text); }
+    .toggle input { accent-color: var(--cyan); cursor: pointer; }
+    .toggle:has(input:checked) { color: var(--cyan); border-color: var(--line-hi); }
+
+    .spacer { flex: 1; }
+    .count { font-family: var(--display); font-size: 11px; letter-spacing: 0.12em; color: var(--dim); white-space: nowrap; }
+    .count b { color: var(--cyan); font-weight: 700; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      font: inherit;
       font-size: 12px;
-      opacity: 0.6;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--dim);
+      background: var(--fill);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      cursor: pointer;
+      transition: 0.16s;
+    }
+
+    .chip:hover { color: var(--text); border-color: var(--line-hi); }
+
+    .chip[aria-pressed="true"] {
+      color: #04040a;
+      font-weight: 700;
+      background: var(--cyan);
+      border-color: var(--cyan);
+      box-shadow: 0 0 18px rgba(0, 240, 255, 0.45);
+    }
+
+    .chip .n { font-family: var(--display); font-size: 10px; opacity: 0.75; }
+
+    .chip.fav-chip[aria-pressed="true"] {
+      color: #2a1c00;
+      background: var(--amber);
+      border-color: var(--amber);
+      box-shadow: 0 0 18px rgba(255, 179, 0, 0.45);
+    }
+
+    /* ══════════════════════════════ empty + footer ══════════════════════════════ */
+    .empty { text-align: center; padding: 76px 20px; color: var(--dim); }
+    .empty .big { font-size: 44px; margin-bottom: 14px; filter: drop-shadow(0 0 22px var(--magenta)); }
+    .empty h2 { font-family: var(--display); font-size: 16px; letter-spacing: 0.14em; color: var(--text); margin-bottom: 8px; text-transform: uppercase; }
+
+    .empty button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font: inherit;
+      font-size: 13px;
+      color: var(--cyan);
+      background: var(--fill);
+      border: 1px solid var(--line-hi);
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .empty button:hover { box-shadow: 0 0 18px rgba(0, 240, 255, 0.3); }
+
+    footer {
+      padding: 18px 34px;
+      font-family: var(--display);
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--dim);
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* ══════════════════════════════ responsive ══════════════════════════════ */
+    @media (max-width: 1080px) {
+      :root { --sidebar-w: 74px; }
+      .brand { justify-content: center; padding-left: 0; padding-right: 0; }
+      .brand-text, .nav-item .txt, .nav-item .n, .side-foot span, .side-search .kbd, .side-search .txt { display: none; }
+      .nav-label { justify-content: center; padding: 14px 0 8px; font-size: 8px; letter-spacing: 0.14em; }
+      .nav-label::after { display: none; }
+      .nav-item { justify-content: center; padding: 11px 0; }
+      .side-search { justify-content: center; padding: 11px 0; }
+      .side-foot { text-align: center; padding: 12px 0 0; }
+      main { padding: 26px 22px 40px; }
+      .toolbar { margin: -26px -22px 22px; padding: 16px 22px 12px; }
+      footer { padding: 16px 22px; }
+      .slide { padding: 28px 26px; }
+    }
+
+    @media (max-width: 720px) {
+      :root { --sidebar-w: 244px; }
+      .sidebar { transform: translateX(-100%); box-shadow: 0 0 60px rgba(0, 0, 0, 0.8); }
+      body.drawer-open .sidebar { transform: none; }
+      .brand { justify-content: flex-start; padding: 0 8px 16px; }
+      .brand-text, .nav-item .txt, .nav-item .n, .side-foot span, .side-search .kbd, .side-search .txt { display: block; }
+      .nav-label { justify-content: flex-start; padding: 16px 10px 8px; font-size: 9.5px; letter-spacing: 0.26em; }
+      .nav-label::after { display: block; }
+      .nav-item, .side-search { justify-content: flex-start; padding: 10px 12px; }
+      .side-foot { text-align: left; padding: 12px 12px 0; }
+      .shell { margin-left: 0; }
+      .topbar { display: flex; }
+      main { padding: 20px 16px 34px; }
+      .toolbar { top: 59px; margin: -20px -16px 20px; padding: 14px 16px 12px; }
+      .toolbar-row { gap: 8px; }
+      .search { flex-basis: 100%; max-width: none; }
+      .long-label { display: none; }
+      select, .toggle { flex: 1; justify-content: center; }
+      .spacer { display: none; }
+      .count { order: 9; width: 100%; }
+      .chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+      .chips::-webkit-scrollbar { display: none; }
+      .chip { flex: 0 0 auto; }
+      .hero { height: auto; min-height: 340px; }
+      .slide { grid-template-columns: 1fr; padding: 24px 20px 62px; }
+      .slide-art { display: none; }
+      .hero-ctrl { right: 16px; bottom: 16px; }
+      .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+      .rail > .card { flex-basis: 208px; }
+      footer { padding: 16px; font-size: 9px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; }
+      .card:hover { transform: none; }
+      .card:hover .cover-icon { transform: none; }
+      .rail { scroll-behavior: auto; }
     }
   </style>
 </head>
 
 <body>
 
-<header>🎮 My Game Hub</header>
+<div class="scrim" id="scrim" hidden></div>
 
-<div class="container" id="gameContainer"></div>
+<nav class="sidebar" id="sidebar" aria-label="Main">
+  <a class="brand" href="#/home">
+    <span class="brand-mark" aria-hidden="true">🎮</span>
+    <span class="brand-text">
+      <span class="brand-name">ARCADE.SYS</span>
+      <span class="brand-sub">game hub</span>
+    </span>
+  </a>
 
-<footer>thaichihien @ 2026</footer>
+  <div class="nav-label">Browse</div>
+  <div id="mainNav"></div>
+
+  <div class="nav-label">Sectors</div>
+  <div id="sectorNav"></div>
+
+  <button class="side-search" id="sideSearch" type="button">
+    <span aria-hidden="true">⌕</span>
+    <span class="txt">Search</span>
+    <span class="kbd">/</span>
+  </button>
+
+  <div class="side-foot"><span class="dot"></span><span id="sideCount"></span></div>
+</nav>
+
+<div class="shell">
+  <div class="topbar">
+    <button class="icon-btn" id="menuBtn" type="button" aria-label="Open menu" aria-expanded="false">☰</button>
+    <span class="brand-name display">ARCADE.SYS</span>
+  </div>
+
+  <main id="main"></main>
+
+  <footer>
+    <span>thaichihien @ 2026</span>
+    <span id="footCount"></span>
+  </footer>
+</div>
 
 <script>
-  // 🔥 DATA SOURCE
+  /* ══════════════════════════════ data ══════════════════════════════ */
   const games = [
     {
-      title: "❇️ Grid Survival",
+      icon: "❇️",
+      title: "Grid Survival",
       description: "Moving and escaping missiles on the grid!",
+      category: "Arcade",
+      tags: ["1 player", "Reflex"],
+      added: "2026-03-26",
       color: "linear-gradient(135deg, #000000, #34f005)",
       path: "games/grid-survival.html"
     },
     {
-      title: "🌾 Farmer Dream",
+      icon: "🌾",
+      title: "Farmer Dream",
       description: "Grow crops and feed your animals.",
+      category: "Simulation",
+      tags: ["1 player", "Relaxing"],
+      added: "2026-03-26",
       color: "linear-gradient(135deg,#ffd000, #43ff82)",
       path: "games/farmer-dream.html"
     },
-     {
-      title: "🐮 Animal Catching",
+    {
+      icon: "🐮",
+      title: "Animal Catching",
       description: "Catch animals and avoid the wolf!",
+      category: "Arcade",
+      tags: ["1 player", "Reflex"],
+      added: "2026-03-26",
       color: "linear-gradient(135deg, #64031a, #ff2600)",
       path: "games/animal-catching.html"
     },
-      {
-      title: "🦁 Jungle King",
+    {
+      icon: "🦁",
+      title: "Jungle King",
       description: "Eat and evolve to become the king!",
+      category: "Arcade",
+      tags: ["1 player", "Upgrades"],
+      added: "2026-03-26",
       color: "linear-gradient(135deg, #0b6421, #16e042)",
       path: "games/jungle-king.html"
     },
     {
-      title: "💣 Attack On Cursor",
+      icon: "💣",
+      title: "Attack On Cursor",
       description: "Become titan cursor and attack the enemy base!",
+      category: "Action",
+      tags: ["1 player", "Mouse only"],
+      added: "2026-03-26",
       color: "linear-gradient(135deg, #4b1083, #3c4ff5)",
       path: "games/attack-on-cursor.html"
     },
     {
-      title: "🐳 Docker Battlefield",
+      icon: "🐳",
+      title: "Docker Battlefield",
       description: "Place your docker containers strategically to defend!",
+      category: "Strategy",
+      tags: ["1 player", "Tower defense"],
+      added: "2026-03-26",
       color: "linear-gradient(135deg, #000000, #0099ff)",
       path: "games/docker-battlefield.html"
     },
     {
-      title: "🌃 Survive through night",
+      icon: "🌃",
+      title: "Survive through night",
       description: "Survive the night and keep your fire burning!",
+      category: "Simulation",
+      tags: ["1 player", "Survival"],
+      added: "2026-03-26",
       color: "linear-gradient(135deg, #000000, #ff9100)",
       path: "games/survive-through-night.html"
     },
     {
-      title: "🔮 Magic Shooter",
+      icon: "🔮",
+      title: "Magic Shooter",
       description: "3D FPS with 20 magic bullets against endless waves!",
+      category: "Action",
+      tags: ["1 player", "3D", "Waves"],
+      added: "2026-07-15",
       color: "linear-gradient(135deg, #1a0533, #a06bff)",
       path: "games/magic-shooter.html"
     },
     {
-      title: "🐯 Cờ Thú",
+      icon: "🐯",
+      title: "Cờ Thú",
       description: "Jungle chess: outsmart your rival and storm their den!",
+      category: "Board",
+      tags: ["2 players", "vs AI", "Tiếng Việt"],
+      added: "2026-07-23",
       color: "linear-gradient(135deg, #0f2a1b, #3f6212)",
       path: "games/jungle-game.html"
     },
     {
-      title: "🏇 Cờ Cá Ngựa",
+      icon: "🏇",
+      title: "Cờ Cá Ngựa",
       description: "Đua ngựa 4 người: gieo xúc xắc, ăn quân, về đích!",
+      category: "Board",
+      tags: ["4 players", "vs AI", "Tiếng Việt"],
+      added: "2026-07-23",
       color: "linear-gradient(135deg, #7a3b12, #2f6b2e)",
       path: "games/co-ca-ngua.html"
     },
     {
-      title: "🧪 Monster battle",
+      icon: "🧪",
+      title: "Monster battle",
       description: "Đấu bài sinh vật 3×3: SAME, PLUS và combo lật ngược thế trận!",
+      category: "Board",
+      tags: ["Cards", "vs AI", "Tiếng Việt"],
+      added: "2026-07-28",
       color: "linear-gradient(135deg, #12103a, #d946a6)",
       path: "games/monster-battle.html"
     },
   ];
 
-  const container = document.getElementById("gameContainer");
+  // monochrome glyphs only — emoji codepoints would render in colour and
+  // break the sidebar's uniform neon look
+  const CATEGORY_ICONS = {
+    Action: "⚔", Arcade: "◈", Board: "♟", Simulation: "⚙", Strategy: "⊞"
+  };
 
-  function renderGames() {
-    container.innerHTML = "";
+  /* ══════════════════════════════ storage ══════════════════════════════ */
+  const STORE_FAV = "gamehub:favorites";
+  const STORE_PLAYED = "gamehub:lastPlayed";
 
-    games.forEach(game => {
-      const card = document.createElement("div");
-      card.className = "card";
-      card.style.background = game.color;
+  const load = (key, fallback) => {
+    try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
+  };
+  const save = (key, value) => {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* private mode */ }
+  };
 
-      card.innerHTML = `
-        <div>
-          <h2>${game.title}</h2>
-          <p>${game.description}</p>
+  const favorites = new Set(load(STORE_FAV, []));
+  const lastPlayed = load(STORE_PLAYED, {});   // path -> epoch ms
+
+  /* ══════════════════════════════ derived ══════════════════════════════ */
+  const categories = [...new Set(games.map(g => g.category))].sort();
+  const newestDate = games.reduce((max, g) => g.added > max ? g.added : max, "");
+  const spotlight = [...games].sort((a, b) => b.added.localeCompare(a.added)).slice(0, 4);
+
+  // neon glow per card = the brightest-looking stop of its own gradient
+  games.forEach(g => {
+    const hexes = g.color.match(/#[0-9a-f]{3,6}/gi) || ["#00f0ff"];
+    g.glow = hexes[hexes.length - 1];
+  });
+
+  /* ══════════════════════════════ state ══════════════════════════════ */
+  const state = {
+    route: "home",      // "home" | "library"
+    query: "",
+    category: "All",
+    favOnly: false,
+    sort: "default",
+    group: true,
+    slide: 0
+  };
+
+  /* ══════════════════════════════ helpers ══════════════════════════════ */
+  const escapeHtml = str => String(str).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function highlight(text, query) {
+    const safe = escapeHtml(text);
+    if (!query) return safe;
+    const needle = escapeHtml(query).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return safe.replace(new RegExp(needle, "gi"), m => `<mark>${m}</mark>`);
+  }
+
+  function timeAgo(ts) {
+    const mins = Math.floor((Date.now() - ts) / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return days < 30 ? `${days}d ago` : `${Math.floor(days / 30)}mo ago`;
+  }
+
+  const recents = () => games
+    .filter(g => lastPlayed[g.path])
+    .sort((a, b) => lastPlayed[b.path] - lastPlayed[a.path]);
+
+  const matchesQuery = g => {
+    const q = state.query.toLowerCase();
+    return !q ||
+      g.title.toLowerCase().includes(q) ||
+      g.description.toLowerCase().includes(q) ||
+      g.category.toLowerCase().includes(q) ||
+      g.tags.some(t => t.toLowerCase().includes(q));
+  };
+
+  const visible = () => games.filter(g =>
+    matchesQuery(g) &&
+    (state.category === "All" || g.category === state.category) &&
+    (!state.favOnly || favorites.has(g.path))
+  );
+
+  function sortList(list) {
+    const copy = [...list];
+    switch (state.sort) {
+      case "az":     return copy.sort((a, b) => a.title.localeCompare(b.title));
+      case "new":    return copy.sort((a, b) => b.added.localeCompare(a.added));
+      case "played": return copy.sort((a, b) => (lastPlayed[b.path] || 0) - (lastPlayed[a.path] || 0));
+      default:       return copy;
+    }
+  }
+
+  /* ══════════════════════════════ templates ══════════════════════════════ */
+  function favBtnHtml(game, cls) {
+    const on = favorites.has(game.path);
+    return `<button class="${cls}" type="button" data-fav="${game.path}" aria-pressed="${on}"
+              title="${on ? "Remove from favorites" : "Add to favorites"}"
+              aria-label="${on ? "Remove" : "Add"} ${escapeHtml(game.title)} ${on ? "from" : "to"} favorites">${on ? "★" : "☆"}</button>`;
+  }
+
+  function cardHtml(game) {
+    const played = lastPlayed[game.path];
+    return `
+      <a class="card" href="${game.path}" data-path="${game.path}"
+         style="--grad: ${game.color}; --glow: ${game.glow}">
+        <div class="cover">
+          ${game.added === newestDate ? `<span class="badge">NEW</span>` : ""}
+          ${favBtnHtml(game, "fav-btn")}
+          <span class="cover-icon" aria-hidden="true">${game.icon}</span>
         </div>
-        <button class="play-btn">▶ Play</button>
-      `;
+        <div class="card-body">
+          <h3 class="card-title">${highlight(game.title, state.query)}</h3>
+          <p class="card-desc">${highlight(game.description, state.query)}</p>
+          <ul class="tags">
+            <li class="tag">${escapeHtml(game.category)}</li>
+            ${game.tags.map(t => `<li class="tag">${escapeHtml(t)}</li>`).join("")}
+          </ul>
+        </div>
+        <div class="card-foot">
+          <span class="play-tag">▶ PLAY</span>
+          ${played ? `<span class="last-played">${timeAgo(played)}</span>` : ""}
+        </div>
+      </a>`;
+  }
 
-      // whole card clickable (better UX)
-      card.addEventListener("click", () => openGame(game.path));
+  const gridHtml = list => `<div class="grid">${list.map(cardHtml).join("")}</div>`;
 
-      container.appendChild(card);
+  const rowHtml = (title, list, layout = "rail") => `
+    <section class="row">
+      <div class="row-head">
+        <h2 class="row-title">${title}<span class="n">${list.length}</span></h2>
+        <span class="line"></span>
+        ${layout === "rail" ? `
+          <div class="arrows rail-nav" hidden>
+            <button class="arrow" type="button" data-rail="-1" aria-label="Scroll ${title} left">‹</button>
+            <button class="arrow" type="button" data-rail="1" aria-label="Scroll ${title} right">›</button>
+          </div>` : ""}
+      </div>
+      ${layout === "rail"
+        ? `<div class="rail">${list.map(cardHtml).join("")}</div>`
+        : gridHtml(list)}
+    </section>`;
+
+  function heroHtml() {
+    const slides = spotlight.map((g, i) => `
+      <article class="slide ${i === 0 ? "is-active" : ""}" data-slide="${i}"
+               style="--grad: ${g.color}; --glow: ${g.glow}"
+               aria-hidden="${i === 0 ? "false" : "true"}">
+        <div class="slide-body">
+          <div class="eyebrow">
+            <span class="bar"></span>
+            ${g.added === newestDate ? `<span class="new">◆ NEW RELEASE</span>` : `<span>SPOTLIGHT</span>`}
+          </div>
+          <h2 class="slide-title">${escapeHtml(g.title)}</h2>
+          <p class="slide-desc">${escapeHtml(g.description)}</p>
+          <ul class="slide-tags">
+            <li class="tag">${escapeHtml(g.category)}</li>
+            ${g.tags.map(t => `<li class="tag">${escapeHtml(t)}</li>`).join("")}
+          </ul>
+          <div class="slide-actions">
+            <a class="btn-play" href="${g.path}" data-path="${g.path}">▶ PLAY NOW</a>
+            ${favBtnHtml(g, "btn-ghost")}
+          </div>
+        </div>
+        <div class="slide-art" aria-hidden="true">${g.icon}</div>
+      </article>`).join("");
+
+    return `
+      <section class="hero" id="hero" role="region" aria-label="Featured games" aria-roledescription="carousel">
+        <div class="hero-floor" aria-hidden="true"></div>
+        ${slides}
+        <div class="hero-ctrl">
+          <div class="dots" id="dots">
+            ${spotlight.map((g, i) => `
+              <button class="dot-btn" type="button" data-goto="${i}"
+                      aria-current="${i === 0}" aria-label="Show ${escapeHtml(g.title)}"></button>`).join("")}
+          </div>
+          <div class="arrows">
+            <button class="arrow" type="button" data-step="-1" aria-label="Previous featured game">‹</button>
+            <button class="arrow" type="button" data-step="1" aria-label="Next featured game">›</button>
+          </div>
+        </div>
+      </section>`;
+  }
+
+  function toolbarHtml() {
+    const counts = games.reduce((acc, g) => (acc[g.category] = (acc[g.category] || 0) + 1, acc), {});
+    const chip = (label, value, n, cls = "") => `
+      <button class="chip ${cls}" type="button" data-category="${value}"
+              aria-pressed="${state.category === value && !state.favOnly}">${label}<span class="n">${n}</span></button>`;
+
+    return `
+      <div class="toolbar">
+        <div class="toolbar-row">
+          <div class="search">
+            <span class="ico" aria-hidden="true">⌕</span>
+            <input id="search" type="search" placeholder="Search games…" aria-label="Search games"
+                   autocomplete="off" value="${escapeHtml(state.query)}" />
+            <button class="clear-btn" id="clearSearch" type="button" aria-label="Clear search">✕</button>
+          </div>
+          <select id="sort" aria-label="Sort games">
+            <option value="default"${state.sort === "default" ? " selected" : ""}>Sort: Featured</option>
+            <option value="az"${state.sort === "az" ? " selected" : ""}>Sort: A–Z</option>
+            <option value="new"${state.sort === "new" ? " selected" : ""}>Sort: Newest</option>
+            <option value="played"${state.sort === "played" ? " selected" : ""}>Sort: Recently played</option>
+          </select>
+          <label class="toggle">
+            <input type="checkbox" id="group"${state.group ? " checked" : ""} />
+            Group<span class="long-label"> by sector</span>
+          </label>
+          <span class="spacer"></span>
+          <span class="count" id="count"></span>
+        </div>
+        <div class="chips" id="chips" role="group" aria-label="Filter by sector">
+          ${chip("All", "All", games.length)}
+          ${categories.map(c => chip(c, c, counts[c])).join("")}
+          <button class="chip fav-chip" type="button" data-fav-filter aria-pressed="${state.favOnly}">
+            ★ Favorites<span class="n">${favorites.size}</span>
+          </button>
+        </div>
+      </div>`;
+  }
+
+  /* ══════════════════════════════ pages ══════════════════════════════ */
+  function homeHtml() {
+    const rec = recents().slice(0, 6);
+    const fav = games.filter(g => favorites.has(g.path));
+    const fresh = [...games].sort((a, b) => b.added.localeCompare(a.added)).slice(0, 6);
+
+    return heroHtml()
+      + (rec.length ? rowHtml("⏱ Continue playing", rec) : "")
+      + (fav.length ? rowHtml("★ Your favorites", fav) : "")
+      + rowHtml("✦ New arrivals", fresh)
+      + categories.map(c =>
+          rowHtml(`${CATEGORY_ICONS[c] || "▣"} ${escapeHtml(c)}`, games.filter(g => g.category === c))
+        ).join("");
+  }
+
+  function libraryHtml() {
+    const list = visible();
+    const heading = `
+      <div class="page-head">
+        <h1 class="page-title">${state.favOnly ? "★ Favorites" : state.category === "All" ? "Library" : escapeHtml(state.category)}</h1>
+        <p class="page-sub">Every game in the hub — filter, sort and dive in.</p>
+      </div>`;
+
+    if (!list.length) {
+      return toolbarHtml() + heading + `
+        <div class="empty">
+          <div class="big">🕹️</div>
+          <h2>No signal</h2>
+          <p>${state.favOnly ? "You haven't starred any games in this sector yet." : "No games match that query."}</p>
+          <button type="button" id="resetFilters">Reset filters</button>
+        </div>`;
+    }
+
+    let body;
+    if (state.group) {
+      body = categories
+        .map(c => [c, sortList(list.filter(g => g.category === c))])
+        .filter(([, items]) => items.length)
+        .map(([c, items]) => rowHtml(`${CATEGORY_ICONS[c] || "▣"} ${escapeHtml(c)}`, items, "grid"))
+        .join("");
+    } else {
+      body = gridHtml(sortList(list));
+    }
+
+    return toolbarHtml() + heading + body;
+  }
+
+  /* ══════════════════════════════ render ══════════════════════════════ */
+  const main = document.getElementById("main");
+  const mainNav = document.getElementById("mainNav");
+  const sectorNav = document.getElementById("sectorNav");
+
+  function navItemHtml(ico, label, n, active, data) {
+    return `<button class="nav-item" type="button" ${data} aria-current="${active}">
+      <span class="ico" aria-hidden="true">${ico}</span>
+      <span class="txt">${label}</span>
+      <span class="n">${n}</span>
+    </button>`;
+  }
+
+  function renderNav() {
+    const lib = state.route === "library";
+    const plain = lib && state.category === "All" && !state.favOnly && state.sort !== "played";
+
+    mainNav.innerHTML =
+      navItemHtml("⌂", "Home", "", state.route === "home", `data-nav="home"`) +
+      navItemHtml("▣", "Library", games.length, plain, `data-nav="library"`) +
+      navItemHtml("★", "Favorites", favorites.size, lib && state.favOnly, `data-nav="favorites"`) +
+      navItemHtml("⏱", "Recent", recents().length, lib && !state.favOnly && state.sort === "played", `data-nav="recent"`);
+
+    const counts = games.reduce((acc, g) => (acc[g.category] = (acc[g.category] || 0) + 1, acc), {});
+    sectorNav.innerHTML = categories.map(c =>
+      navItemHtml(CATEGORY_ICONS[c] || "▣", escapeHtml(c), counts[c],
+        lib && !state.favOnly && state.category === c, `data-nav="cat" data-cat="${c}"`)
+    ).join("");
+  }
+
+  function render() {
+    renderNav();
+    main.innerHTML = state.route === "home" ? homeHtml() : libraryHtml();
+
+    syncRails();
+
+    if (state.route === "home") {
+      state.slide = 0;
+      startCarousel();
+    } else {
+      stopCarousel();
+      updateCount();
+      if (state.wantSearch) { state.wantSearch = false; focusSearch(); }
+    }
+  }
+
+  // rails only show their arrows when there is something to scroll to
+  function syncRails() {
+    main.querySelectorAll(".row").forEach(row => {
+      const rail = row.querySelector(".rail");
+      const nav = row.querySelector(".rail-nav");
+      if (!rail || !nav) return;
+      const max = rail.scrollWidth - rail.clientWidth;
+      nav.hidden = max < 8;
+      nav.querySelector('[data-rail="-1"]').disabled = rail.scrollLeft < 8;
+      nav.querySelector('[data-rail="1"]').disabled = rail.scrollLeft >= max - 8;
     });
   }
 
-  function openGame(path) {
-    window.location.href = path;
-    // or: window.open(path, '_blank');
+  main.addEventListener("scroll", e => {
+    if (e.target.classList?.contains("rail")) syncRails();
+  }, true);
+
+  window.addEventListener("resize", syncRails);
+
+  function updateCount() {
+    const el = document.getElementById("count");
+    if (el) el.innerHTML = `<b>${visible().length}</b> / ${games.length} games`;
   }
 
-  renderGames();
+  /* ══════════════════════════════ carousel ══════════════════════════════ */
+  let carouselTimer = null;
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function showSlide(i) {
+    const slides = main.querySelectorAll(".slide");
+    if (!slides.length) return;
+    state.slide = (i + slides.length) % slides.length;
+
+    slides.forEach((s, idx) => {
+      const on = idx === state.slide;
+      s.classList.toggle("is-active", on);
+      s.setAttribute("aria-hidden", String(!on));
+      s.querySelectorAll("a, button").forEach(el => el.tabIndex = on ? 0 : -1);
+    });
+    main.querySelectorAll(".dot-btn").forEach((d, idx) =>
+      d.setAttribute("aria-current", String(idx === state.slide)));
+  }
+
+  function startCarousel() {
+    showSlide(state.slide);
+    stopCarousel();
+    if (reduceMotion || spotlight.length < 2) return;
+    carouselTimer = setInterval(() => showSlide(state.slide + 1), 6000);
+  }
+
+  function stopCarousel() {
+    if (carouselTimer) { clearInterval(carouselTimer); carouselTimer = null; }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stopCarousel();
+    else if (state.route === "home") startCarousel();
+  });
+
+  /* ══════════════════════════════ routing ══════════════════════════════ */
+  function applyHash() {
+    const [page, arg] = decodeURIComponent(location.hash.replace(/^#\/?/, "")).split("/");
+
+    state.favOnly = false;
+    state.category = "All";
+    if (state.sort === "played") state.sort = "default";
+
+    switch (page) {
+      case "library":
+        state.route = "library";
+        if (arg && categories.includes(arg)) state.category = arg;
+        break;
+      case "favorites":
+        state.route = "library";
+        state.favOnly = true;
+        break;
+      case "recent":
+        state.route = "library";
+        state.sort = "played";
+        break;
+      default:
+        state.route = "home";
+    }
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  const go = hash => {
+    closeDrawer();
+    if (location.hash === hash) applyHash();
+    else location.hash = hash;
+  };
+
+  window.addEventListener("hashchange", applyHash);
+
+  /* ══════════════════════════════ events ══════════════════════════════ */
+  document.querySelector(".sidebar").addEventListener("click", e => {
+    const item = e.target.closest(".nav-item");
+    if (!item) return;
+    const nav = item.dataset.nav;
+    go(nav === "cat" ? `#/library/${encodeURIComponent(item.dataset.cat)}` : `#/${nav}`);
+  });
+
+  document.getElementById("sideSearch").addEventListener("click", openSearch);
+
+  // routing renders on `hashchange`, so defer the focus to the next render
+  function openSearch() {
+    closeDrawer();
+    if (state.route === "library") focusSearch();
+    else { state.wantSearch = true; go("#/library"); }
+  }
+
+  function focusSearch() {
+    const el = document.getElementById("search");
+    if (el) { el.focus(); el.select(); }
+  }
+
+  main.addEventListener("click", e => {
+    // favorite toggle (cards + hero)
+    const fav = e.target.closest("[data-fav]");
+    if (fav) {
+      e.preventDefault();
+      e.stopPropagation();
+      const path = fav.dataset.fav;
+      favorites.has(path) ? favorites.delete(path) : favorites.add(path);
+      save(STORE_FAV, [...favorites]);
+      const keep = state.slide;
+      render();
+      if (state.route === "home") showSlide(keep);
+      return;
+    }
+
+    if (e.target.id === "resetFilters") {
+      state.query = "";
+      state.category = "All";
+      state.favOnly = false;
+      render();
+      return;
+    }
+
+    const railBtn = e.target.closest("[data-rail]");
+    if (railBtn) {
+      const rail = railBtn.closest(".row").querySelector(".rail");
+      rail.scrollBy({ left: +railBtn.dataset.rail * rail.clientWidth * 0.82, behavior: "smooth" });
+      return;
+    }
+
+    const dot = e.target.closest("[data-goto]");
+    if (dot) { showSlide(+dot.dataset.goto); startCarousel(); return; }
+
+    const step = e.target.closest("[data-step]");
+    if (step) { showSlide(state.slide + +step.dataset.step); startCarousel(); return; }
+
+    const chip = e.target.closest(".chip");
+    if (chip) {
+      if (chip.hasAttribute("data-fav-filter")) {
+        state.favOnly = !state.favOnly;
+        if (state.favOnly) state.category = "All";
+      } else {
+        state.category = chip.dataset.category;
+        state.favOnly = false;
+      }
+      render();
+      return;
+    }
+
+    if (e.target.id === "clearSearch") {
+      const input = document.getElementById("search");
+      input.value = "";
+      state.query = "";
+      input.focus();
+      rerenderResults();
+      return;
+    }
+
+    const link = e.target.closest("[data-path]");
+    if (link) recordPlay(link.dataset.path);   // let the link navigate
+  });
+
+  main.addEventListener("input", e => {
+    if (e.target.id !== "search") return;
+    state.query = e.target.value.trim();
+    rerenderResults();
+  });
+
+  main.addEventListener("change", e => {
+    if (e.target.id === "sort") { state.sort = e.target.value; rerenderResults(); }
+    if (e.target.id === "group") { state.group = e.target.checked; rerenderResults(); }
+  });
+
+  main.addEventListener("keydown", e => {
+    if (e.target.id !== "search") return;
+    if (e.key === "Escape") {
+      e.target.value = "";
+      state.query = "";
+      rerenderResults();
+    }
+    if (e.key === "Enter") {
+      const first = main.querySelector(".card");
+      if (first) { recordPlay(first.dataset.path); location.href = first.getAttribute("href"); }
+    }
+  });
+
+  // re-render only the results below the toolbar, so the search box keeps focus
+  function rerenderResults() {
+    const toolbar = main.querySelector(".toolbar");
+    if (!toolbar) return render();
+    const parsed = new DOMParser()
+      .parseFromString(`<div>${libraryHtml()}</div>`, "text/html").body.firstChild;
+    parsed.querySelector(".toolbar").remove();
+    while (toolbar.nextSibling) toolbar.nextSibling.remove();
+    toolbar.after(...parsed.childNodes);
+    updateCount();
+    renderNav();
+  }
+
+  document.addEventListener("keydown", e => {
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    if (e.key === "/" && !typing) {
+      e.preventDefault();
+      openSearch();
+    }
+    if (e.key === "Escape") closeDrawer();
+    if (state.route === "home" && !typing && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+      showSlide(state.slide + (e.key === "ArrowRight" ? 1 : -1));
+      startCarousel();
+    }
+  });
+
+  // pause autoplay while the user is on the hero
+  main.addEventListener("pointerenter", e => {
+    if (e.target.closest && e.target.closest("#hero")) stopCarousel();
+  }, true);
+  main.addEventListener("pointerleave", e => {
+    if (e.target.closest && e.target.closest("#hero") && state.route === "home") startCarousel();
+  }, true);
+  main.addEventListener("focusin", e => { if (e.target.closest("#hero")) stopCarousel(); });
+
+  /* ══════════════════════════════ drawer ══════════════════════════════ */
+  const menuBtn = document.getElementById("menuBtn");
+  const scrim = document.getElementById("scrim");
+
+  function openDrawer() {
+    document.body.classList.add("drawer-open");
+    scrim.hidden = false;
+    menuBtn.setAttribute("aria-expanded", "true");
+  }
+  function closeDrawer() {
+    document.body.classList.remove("drawer-open");
+    scrim.hidden = true;
+    menuBtn.setAttribute("aria-expanded", "false");
+  }
+
+  menuBtn.addEventListener("click", () =>
+    document.body.classList.contains("drawer-open") ? closeDrawer() : openDrawer());
+  scrim.addEventListener("click", closeDrawer);
+
+  /* ══════════════════════════════ play tracking ══════════════════════════════ */
+  function recordPlay(path) {
+    lastPlayed[path] = Date.now();
+    save(STORE_PLAYED, lastPlayed);
+  }
+
+  /* ══════════════════════════════ boot ══════════════════════════════ */
+  if (document.fonts) document.fonts.ready.then(syncRails);   // metrics shift once Orbitron lands
+  document.getElementById("sideCount").textContent = `${games.length} titles online`;
+  document.getElementById("footCount").textContent = `${games.length} games · ${categories.length} sectors`;
+  applyHash();
 </script>
 
 </body>
