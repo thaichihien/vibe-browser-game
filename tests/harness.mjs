@@ -4,7 +4,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const GAME = path.join(ROOT, 'games', 'dau-truong-sinh-vat.html');
+export const GAME = path.join(ROOT, 'games', 'monster-battle.html');
 
 export function readGame() {
   return readFileSync(GAME, 'utf8');
