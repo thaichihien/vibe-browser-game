@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Last Quarter</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="room">
+
+  <header class="topbar">
+    <a class="link" href="../../index.html">← ARCADE.SYS</a>
+    <div class="topbar-actions">
+      <button class="tbtn" id="btn-rules">HOW TO PLAY</button>
+      <button class="tbtn" id="btn-mute" title="Mute (M)">🔊</button>
+    </div>
+  </header>
+
+  <main class="stage">
+
+    <!-- the cabinet -->
+    <section class="cabinet">
+      <div class="marquee"><span>LAST</span><b>QUARTER</b></div>
+
+      <div class="bezel">
+        <canvas id="screen" aria-label="arcade screen"></canvas>
+        <div class="scan" aria-hidden="true"></div>
+        <div class="glare" aria-hidden="true"></div>
+        <div id="overlay" class="overlay"></div>
+      </div>
+
+      <div class="deck">
+        <div class="joy" aria-hidden="true">🕹️</div>
+        <div class="slot">INSERT COIN</div>
+        <div class="joy dim" aria-hidden="true">🔴</div>
+      </div>
+    </section>
+
+    <!-- the world outside the cabinet -->
+    <aside id="watcher" class="watcher">
+      <div class="who">
+        <div id="face" class="face">
+          <span class="head" id="face-head">🙂</span>
+          <span class="hat" id="face-hat"></span>
+          <span class="acc" id="face-acc"></span>
+        </div>
+        <div class="who-text">
+          <div id="who-name" class="who-name">NOBODY</div>
+          <div id="who-tag" class="who-tag">waiting for a player</div>
+        </div>
+      </div>
+
+      <div id="feed" class="feed" aria-live="polite"></div>
+
+      <div class="pad">
+        <div class="pad-label">what they are pressing</div>
+        <div class="caps">
+          <div id="cap-left" class="cap"><span>◀</span><i class="bar"></i><i class="mark"></i></div>
+          <div id="cap-jump" class="cap jump"><span>⤒</span><i class="bar"></i><i class="mark"></i></div>
+          <div id="cap-right" class="cap"><span>▶</span><i class="bar"></i><i class="mark"></i></div>
+        </div>
+        <div class="legend">
+          <span><i class="sw them"></i>them</span>
+          <span><i class="sw you"></i>you</span>
+          <span><i class="sw wait"></i>incoming</span>
+          <span><i class="sw now"></i>jump now</span>
+        </div>
+      </div>
+
+      <div class="touch" id="touch">
+        <button data-touch="left" aria-label="left">◀</button>
+        <button data-touch="jump" aria-label="jump">JUMP</button>
+        <button data-touch="right" aria-label="right">▶</button>
+      </div>
+    </aside>
+
+  </main>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

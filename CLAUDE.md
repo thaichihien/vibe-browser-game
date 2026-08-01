@@ -97,6 +97,11 @@ is unreachable** — nothing scans the `games/` directory, so an unregistered fi
 appears in the hub. Shipping one means all three of:
 
 1. **`games/<slug>.html`** — the game itself, self-contained per "Games — `games/*.html`" above.
+   A game big enough to warrant it may instead be a **folder**, `games/<slug>/` with its own
+   `index.html`, `style.css` and ES modules — `games/last-quarter/` is the only one so far.
+   The tradeoff is that ES modules do not load over `file://`, so a folder game must be opened
+   through a server; GitHub Pages is unaffected. Everything else still applies: vanilla JS, no
+   build step, no dependencies, emoji for all art, no network requests.
 2. **The `games` array in `index.html`** — append one object. All of these fields are required;
    several features silently misbehave if any is omitted:
 
@@ -109,7 +114,7 @@ appears in the hub. Shipping one means all three of:
      tags: ["Cards", "vs AI", "Tiếng Việt"],       // searchable; shown as pills
      added: "2026-07-28",                          // ISO; drives newest-sort and the NEW badge
      color: "linear-gradient(135deg, #12103a, #d946a6)",  // last hex stop becomes the card glow
-     path: "games/monster-battle.html"
+     path: "games/monster-battle.html"    // folder games point at their index.html
    }
    ```
 
