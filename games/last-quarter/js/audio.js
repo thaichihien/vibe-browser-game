@@ -72,6 +72,7 @@ export const Sound = {
 
   /* ── cues ── */
   jump()       { this.tone(360, 0.14, { slide: 300, gain: 0.35 }); },
+  shoot()      { this.tone(920, 0.07, { type: 'square', slide: -520, gain: 0.22 }); },
   land()       { this.tone(150, 0.06, { type: 'triangle', gain: 0.2 }); },
   coin()       { this.tone(1050, 0.07, { type: 'square', gain: 0.3 });
                  this.tone(1560, 0.11, { type: 'square', gain: 0.26, delay: 0.06 }); },

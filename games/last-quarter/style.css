@@ -198,15 +198,15 @@ body {
 .lvl .lvl-stars { color: var(--amber); letter-spacing: 1px; }
 
 /* report card */
-.report { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin: 12px 0; }
+/* One row now — the readouts that used to sit beside it all reported the hidden
+ * meter, and printing it after the fact undid the point of never showing it. */
+.report { display: grid; gap: 7px; margin: 12px 0; }
 .stat {
   text-align: left; padding: 8px 10px; border-radius: 9px;
   background: rgba(255, 255, 255, .04); border: 1px solid var(--line);
 }
 .stat b { display: block; font-size: 15px; color: var(--ink); }
 .stat span { font-size: 10px; letter-spacing: 1.6px; color: var(--muted); }
-.meter { height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .12); margin-top: 5px; overflow: hidden; }
-.meter i { display: block; height: 100%; }
 .stars { font-size: 22px; letter-spacing: 6px; color: var(--amber); margin: 4px 0 2px; }
 
 /* ── watcher panel ───────────────────────────────────────────────────── */
@@ -313,7 +313,10 @@ body {
   transition: transform .07s, color .1s, background .1s, box-shadow .1s;
   overflow: hidden;
 }
-.cap.jump { width: 78px; }
+/* The action cap is the spacebar, so it is shaped like one — wide, with the
+ * word on it rather than a glyph. The two direction caps stay square, which
+ * makes the panel read as a stick and a bar at a glance. */
+.cap.jump { width: 128px; font-size: 12px; letter-spacing: .16em; font-weight: 800; }
 .cap span { position: relative; z-index: 2; }
 
 /* their hand — filled */

@@ -12,7 +12,7 @@ export const VIEW_W = COLS * TILE;      // 640
 export const VIEW_H = ROWS * TILE;      // 384
 
 /* Global pace. Scaling `dt` slows the character, the hand at the cabinet and
- * both meters by the same factor, so every trajectory and every gap stays
+ * the meter by the same factor, so every trajectory and every gap stays
  * exactly as reachable as before — you simply get more real time to read the
  * screen and react. This is the honest dial for "too fast"; do not try to slow
  * the game by lowering runSpeed, which would silently shorten jump reach and
@@ -24,14 +24,21 @@ export const PHYS = {
   gravity: 1900,
   maxFall: 760,
   runSpeed: 215,
-  accel: 1500,
-  airAccel: 1000,
-  friction: 2000,
+  /* Nothing is held, so a direction tap is an impulse: velocity jumps straight
+   * to full speed and then bleeds off. The decay is deliberately gentle — one
+   * tap has to carry far enough that a corridor costs a press every couple of
+   * seconds rather than every stride, or the keycaps become noise again. */
+  dashDecay: 95,           // px/s of speed lost per second while coasting
+  /* Exactly zero. A jump has to keep every pixel per second it left the ground
+   * with, because the 136px reach that every gap in every level is measured
+   * against is `runSpeed × airtime`. Bleeding even 30px/s in the air shortened
+   * that to ~129 and turned clean jumps into 5px-margin coin flips. */
+  airDecay: 0,
+  turnBoost: 1.0,          // a tap the other way reverses outright
   /* 95px apex (just under 3 tiles, so a 3-tile wall still blocks) and 136px of
    * reach, which clears a 3-tile hole with room to spare and nothing wider.
    * Every gap in the levels is either under that or has a platform in it. */
   jumpVel: 600,
-  jumpCut: 0.42,       // vy multiplier when jump is released early
   coyote: 0.15,
   buffer: 0.17,
   springVel: 800,
@@ -42,64 +49,61 @@ export const PHYS = {
   respawnDelay: 0.85,
 };
 
-/* ── the two hidden meters ────────────────────────────────────────────── */
+/* ── the one hidden meter ─────────────────────────────────────────────────
+ * PATIENCE: how much longer this person believes the joystick is connected to
+ * anything. A press of yours that matched theirs adds; a miss subtracts. That
+ * is the whole ledger — nothing else in the game touches it.
+ *
+ * There are exactly two ways to lose, and each has its own resource:
+ *   patience → 0   they decide the cabinet is broken and fetch the attendant
+ *   hearts   → 0   the character is dead three times over
+ *
+ * Obeying kills you on hearts, defying kills you on patience, and that squeeze
+ * is the game. Boredom used to be a third pressure bleeding the meter on a
+ * timer; it is gone, so nothing runs out while you are playing well.
+ *
+ * Never drawn as a bar during play.
+ */
 export const METER = {
   hearts: 3,
 
-  /* FUN — how entertained the human is. Never drawn as a bar. */
-  funStart: 60,
-  funMax: 100,
-  /* Boredom is not a flat drain: it accelerates the longer you go without
-   * doing anything worth watching. Safe, slow play is what actually kills you. */
-  boredomBase: 0.9,
-  boredomPeak: 2.5,
-  boredomRamp: 7.5,        // seconds of nothing before boredom is at full strength
-  progressGain: 0.030,     // per px of new furthest-right distance
-  coinGain: 4,
-  stompGain: 7,
-  nearMissGain: 11,
-  checkpointGain: 10,
-  idleAfter: 2.0,
-  idleDrain: 4,
-  deathFirst: 4,           // the first death of a level is a thrill, not a bore
-  deathAfter: -11,
+  patienceStart: 60,
+  patienceMax: 100,
 
-  /* SUS — how convinced the human is that the cabinet is broken. */
-  susMax: 100,
-  susDirRate: 32,          // points/sec while your direction contradicts theirs
-  susDecay: 6,
-  /* Jump is judged as a call-and-response with a timing window rather than a
-   * silent tolerance. Their press opens an accept window; land your jump inside
-   * it and it reads as the machine obeying. Press well before they do and it is
-   * a ghost jump; let the window lapse and it is a dead button. */
-  jumpAcceptEarly: 0.26,   // how far ahead of their press you may jump
+  /* The only income. A press of yours that matched theirs, in time, on the
+   * right key. One hand can strike about 1.4 keys a second, so a run that
+   * answers everything climbs at roughly 4/s — fast enough that a clean patch
+   * genuinely buys back room to disobey later. */
+  hitGain: 2.0,
+
+  /* The only drain, charged once on a verdict and never continuously. A miss is
+   * worth two to three obedient presses, so you can afford to defy them every
+   * few seconds — not every second. */
+  missGhost: 7,            // you acted, they never pressed
+  missIgnored: 5,          // they pressed, the window lapsed
+
+
+  /* The hit window, which is the whole of divergence. Their press opens an
+   * accept window; land yours inside it and the machine reads as obedient. Act
+   * well before they ask and it is a ghost input; let the window lapse and the
+   * button looks dead. */
+  jumpAcceptEarly: 0.26,   // how far ahead of their press you may act
   jumpAcceptLate: 0.30,    // how long after their press the window stays open
-  susJumpHit: 1.5,         // a clean match reassures them a little
-  /* Mistimed jumps are the loudest tell there is — a button that visibly did
-   * nothing, or a jump nobody asked for. Priced above the direction weights
-   * below on purpose: the joystick is a held state you can drift back into
-   * sync on, the button is a discrete promise you either kept or broke. */
-  susGhostJump: 28,        // you jumped, they never pressed
-  susIgnoredJump: 16,      // they pressed jump, the window lapsed
-  graceTime: 0.28,         // brief mismatches read as input lag and cost nothing
-  /* Attention scales with boredom: an absorbed human stops watching the buttons.
-   * Keeping FUN high is literally what buys you room to disobey. */
-  attentionAtZeroFun: 1.4,
-  attentionAtFullFun: 0.6,
-  wWrongDir: 1.0,          // they hold right, you run left
-  wFrozen: 0.7,            // they hold a direction, you stand there
-  /* Coasting on after they let go is the mildest of the three — the machine
-   * carrying on is far less damning than it going the wrong way. Kept cheap on
-   * purpose: a flailing player lets go constantly, and suspicion accrued while
-   * you were simply making progress feels like it was nothing to do with you. */
-  wGhostMove: 0.35,
-  /* Pulling left is a deliberate, infrequent input — they hold right by default
-   * and barely watch it, but when they consciously haul the stick back the other
-   * way and nothing happens, that is the moment they notice. */
-  wLeftBias: 1.35,
 
+  /* How visibly the picture falls apart. Not a resource — it is recent miss
+   * pressure, decaying, so the CRT reacts to what you just did while the face
+   * reports where patience stands. Two instruments, one number underneath. */
+  heatPerMiss: 0.34,
+  heatDecay: 0.5,
+
+  /* Attention scales with patience: someone who believes the machine is working
+   * stops scrutinising it, so a clean patch is literally what buys room to
+   * disobey. Kept narrow on purpose — low patience making misses dearer feeds
+   * straight back into patience, and too wide a range is a death spiral. */
+  attentionAtEmpty: 1.3,
+  attentionAtFull: 0.7,
   coverSpring: 1.2,        // seconds of free divergence after a spring launch
-  coverRide: 0.4,         // grace after stepping off a platform/conveyor
+  coverRide: 0.4,          // grace after stepping off a platform/conveyor
   nearMissDist: 34,
   nearMissCooldown: 0.7,
 };
@@ -110,14 +114,21 @@ export const METER = {
  * the lot on for a tuning or verification pass.
  */
 export const DEBUG = {
-  meters: false,       // live FUN / SUS / cover readout
+  meters: false,       // live patience / heat / cover readout
   hitboxes: false,     // player, entity and hazard boxes
   humanIntent: false,  // what the simulated human is currently trying to do
   tileGrid: false,
+  unlockAll: false,    // every cabinet playable without clearing the earlier ones
 };
 
-if (typeof location !== 'undefined' && /[?&]debug=1/.test(location.search)) {
-  for (const k of Object.keys(DEBUG)) DEBUG[k] = true;
+if (typeof location !== 'undefined') {
+  if (/[?&]debug=1/.test(location.search)) {
+    for (const k of Object.keys(DEBUG)) DEBUG[k] = true;
+  }
+  /* Kept separate from ?debug=1 on purpose: that one draws the real patience
+   * number, which spoils the whole point of reading it off the person. Use
+   * ?unlock=1 to jump straight to a level and still play it honestly. */
+  if (/[?&]unlock=1/.test(location.search)) DEBUG.unlockAll = true;
 }
 
 export const STORE_MUTED = 'lastQuarter.muted';

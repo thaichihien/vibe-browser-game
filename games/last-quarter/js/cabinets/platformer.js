@@ -1,84 +1,96 @@
-/* Canvas renderer for the arcade screen.
+/* Cabinet: PLATFORM — a side-scrolling tile platformer.
  *
- * Terrain is drawn; everything that acts — the character, enemies, pickups —
- * is an emoji. The CRT falls apart as SUS climbs, which is the suspicion meter
- * and the fiction being the same object: what the human is "noticing" is
- * literally what you can see going wrong.
+ * ◀ ▶ dash, SPACE jumps. Every input is a press, judged on a hit window.
+ *
+ * Terrain is drawn; everything that acts — the character, enemies, pickups — is
+ * an emoji.
  */
-import { TILE, ROWS, VIEW_W, VIEW_H, METER, DEBUG } from './config.js';
-import { isSolid, isOneWay, isHazard, conveyorDir } from './physics.js';
+import { TILE, ROWS, VIEW_W, VIEW_H, PHYS, DEBUG } from '../config.js';
+import { emoji } from '../crt.js';
+import {
+  buildWorld, stepWorld, isSolid, isOneWay, isHazard, conveyorDir,
+} from './platformer-sim.js';
 
-const FONT_EMOJI = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+const LOOKAHEAD = 210;
 
-export function initRenderer(canvas) {
-  const ctx = canvas.getContext('2d');
-  const r = { canvas, ctx, dpr: 1, particles: [] };
-  resize(r);
-  addEventListener('resize', () => resize(r));
-  return r;
-}
+/* No discounts. This is the machine every price in `config.js` was set against:
+ * a jump that never happened is the most legible thing a cabinet can do wrong. */
+const JUDGE = { dir: 'discrete', action: 'discrete' };
 
-function resize(r) {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  r.dpr = dpr;
-  r.canvas.width = Math.round(VIEW_W * dpr);
-  r.canvas.height = Math.round(VIEW_H * dpr);
-  r.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  r.ctx.imageSmoothingEnabled = true;
-}
+/* The default pools in director.js are already written for this machine, so
+ * there is nothing to override. */
+export const LINES = {};
 
-function emoji(ctx, ch, x, y, size, rot = 0, flip = 1) {
-  ctx.save();
-  ctx.translate(x, y);
-  if (rot) ctx.rotate(rot);
-  if (flip !== 1) ctx.scale(flip, 1);
-  ctx.font = `${size}px ${FONT_EMOJI}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(ch, 0, 0);
-  ctx.restore();
-}
+export const CABINET = {
+  id: 'platformer',
+  judge: JUDGE,
+  lines: LINES,
+  build(level) {
+    const world = buildWorld(level);
+    world.judge = JUDGE;
+    return world;
+  },
+  step: stepWorld,
+  draw,
+  sense,
+  debugDraw,
+};
 
-export function burst(r, x, y, color, n = 8, spread = 120) {
-  for (let i = 0; i < n; i++) {
-    const a = Math.random() * Math.PI * 2;
-    r.particles.push({
-      x, y, vx: Math.cos(a) * spread * (0.4 + Math.random()),
-      vy: Math.sin(a) * spread * (0.4 + Math.random()) - 60,
-      life: 0.5 + Math.random() * 0.3, t: 0, color,
-    });
+/* ── what the person at the cabinet can see ───────────────────────────────
+ * Perception only. Everything about *who* they are — reaction time, aim error,
+ * panic, mashing, wandering — stays in human.js, because it is the same person
+ * whichever machine they walk up to.
+ */
+function sense(world) {
+  const p = world.player;
+  const nose = p.x + p.w;
+  const footRow = Math.floor((p.y + p.h + 4) / TILE);
+  let gapDist = Infinity, hazDist = Infinity, threatDist = Infinity;
+
+  for (let d = 0; d <= LOOKAHEAD; d += 8) {
+    const cx = Math.floor((nose + d) / TILE);
+    if (cx >= world.cols) break;
+
+    if (hazDist === Infinity) {
+      for (let cy = footRow - 1; cy <= footRow; cy++) {
+        if (cy >= 0 && cy < ROWS && isHazard(world.grid[cy][cx])) { hazDist = d; break; }
+      }
+    }
+    if (gapDist === Infinity) {
+      let floor = false;
+      for (let cy = footRow; cy <= Math.min(ROWS - 1, footRow + 2); cy++) {
+        const ch = world.grid[cy][cx];
+        if (isSolid(ch) || isOneWay(ch)) { floor = true; break; }
+      }
+      if (!floor) gapDist = d;
+    }
+    if (gapDist !== Infinity && hazDist !== Infinity) break;
   }
+
+  for (const e of world.entities) {
+    if (e.type !== 'enemy' || e.dead) continue;
+    const d = e.x - nose;
+    if (d >= -10 && d < threatDist && Math.abs(e.y - p.y) < TILE * 2) threatDist = d;
+  }
+
+  return {
+    wantDir: 1,                                  // forward is always right
+    /* nothing is held, so travelling means tapping again as the last dash dies
+     * away — this is what tells the person when to nudge it along */
+    needMove: p.vx < PHYS.runSpeed * 0.5,
+    dangerDist: Math.min(gapDist, hazDist),      // press SPACE before this
+    threatDist,                                  // stomp it, or panic away from it
+    canAct: p.onGround,
+    approachSpeed: Math.max(60, Math.abs(p.vx)), // how fast dangerDist closes
+  };
 }
 
-/* Deterministic scenery so the parallax does not shimmer between frames. */
-function scenery(world) {
-  if (world._scenery) return world._scenery;
-  let seed = world.cols * 9301 + 49297;
-  const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
-  const deco = [];
-  for (let x = 40; x < world.w; x += 90 + rnd() * 120) {
-    deco.push({ x, y: (ROWS - 2) * TILE + 6, ch: world.theme.deco[(rnd() * world.theme.deco.length) | 0], s: 16 + rnd() * 10 });
-  }
-  const sky = [];
-  for (let x = 0; x < world.w; x += 150 + rnd() * 180) {
-    sky.push({ x, y: 30 + rnd() * 110, ch: world.theme.sky[(rnd() * world.theme.sky.length) | 0], s: 18 + rnd() * 16 });
-  }
-  world._scenery = { deco, sky };
-  return world._scenery;
-}
-
-export function drawFrame(r, world, d, human, dt) {
+/* ── drawing ──────────────────────────────────────────────────────────── */
+function draw(r, world, d, dt) {
   const { ctx } = r;
   const th = world.theme;
   const cam = Math.round(world.camX);
-  const susN = d ? d.sus / METER.susMax : 0;
 
-  ctx.save();
-  if (world.shake > 0) {
-    ctx.translate((Math.random() - 0.5) * 6 * world.shake, (Math.random() - 0.5) * 6 * world.shake);
-  }
-
-  /* ── sky ── */
   const sky = ctx.createLinearGradient(0, 0, 0, VIEW_H);
   sky.addColorStop(0, th.skyTop);
   sky.addColorStop(1, th.skyBottom);
@@ -105,7 +117,6 @@ export function drawFrame(r, world, d, human, dt) {
   }
   ctx.globalAlpha = 1;
 
-  /* ── tiles ── */
   const c0 = Math.max(0, Math.floor(cam / TILE) - 1);
   const c1 = Math.min(world.cols - 1, Math.ceil((cam + VIEW_W) / TILE));
 
@@ -123,7 +134,6 @@ export function drawFrame(r, world, d, human, dt) {
     }
   }
 
-  /* ── entities ── */
   for (const e of world.entities) {
     const x = e.x - cam;
     if (x < -60 || x > VIEW_W + 60) continue;
@@ -169,27 +179,24 @@ export function drawFrame(r, world, d, human, dt) {
     }
   }
 
-  /* ── the character ── */
   drawPlayer(ctx, world, d, cam);
+}
 
-  /* ── particles ── */
-  for (let i = r.particles.length - 1; i >= 0; i--) {
-    const p = r.particles[i];
-    p.t += dt;
-    if (p.t > p.life) { r.particles.splice(i, 1); continue; }
-    p.vy += 700 * dt;
-    p.x += p.vx * dt; p.y += p.vy * dt;
-    ctx.globalAlpha = 1 - p.t / p.life;
-    ctx.fillStyle = p.color;
-    ctx.fillRect(p.x - cam - 2, p.y - 2, 4, 4);
+/* Deterministic scenery so the parallax does not shimmer between frames. */
+function scenery(world) {
+  if (world._scenery) return world._scenery;
+  let seed = world.cols * 9301 + 49297;
+  const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+  const deco = [];
+  for (let x = 40; x < world.w; x += 90 + rnd() * 120) {
+    deco.push({ x, y: (ROWS - 2) * TILE + 6, ch: world.theme.deco[(rnd() * world.theme.deco.length) | 0], s: 16 + rnd() * 10 });
   }
-  ctx.globalAlpha = 1;
-  ctx.restore();
-
-  drawCabinetHud(ctx, world, d);
-  crtDamage(r, susN, world.time);
-  if (DEBUG.hitboxes || DEBUG.tileGrid) debugBoxes(ctx, world, cam);
-  if (DEBUG.meters || DEBUG.humanIntent) debugMeters(ctx, world, d, human);
+  const sky = [];
+  for (let x = 0; x < world.w; x += 150 + rnd() * 180) {
+    sky.push({ x, y: 30 + rnd() * 110, ch: world.theme.sky[(rnd() * world.theme.sky.length) | 0], s: 18 + rnd() * 16 });
+  }
+  world._scenery = { deco, sky };
+  return world._scenery;
 }
 
 /* A hole has to look like a hole. Without this, a gap in the floor is just a
@@ -274,15 +281,13 @@ function drawMovingPlatform(ctx, x, y, w, h, th) {
 
 /* Spikes are drawn rather than emoji'd, and always in the same danger red
  * regardless of theme. A 🔺 glyph is small, dark and sits on dark ground, which
- * made the one thing that costs you a heart the hardest thing to see. Terrain
- * is canvas-drawn everywhere else in this renderer, so this is consistent —
- * emoji stay for the things that act. */
+ * made the one thing that costs you a heart the hardest thing to see. */
 const SPIKE_TIP = '#fff1f2';
 const SPIKE_BODY = '#ef4444';
 const SPIKE_ROOT = '#7f1020';
 
 function drawSpike(ctx, x, y, time) {
-  const base = y + TILE;          // the teeth stand on the floor line
+  const base = y + TILE;
   const h = 25;
   const teeth = 3;
   const w = TILE / teeth;
@@ -303,16 +308,12 @@ function drawSpike(ctx, x, y, time) {
     ctx.lineTo(cx - 0.5, base);
     ctx.closePath();
     ctx.fill();
-    /* outline so the teeth stay separated even on the magma theme, where the
-     * ground behind them is itself orange */
     ctx.strokeStyle = 'rgba(0,0,0,.55)';
     ctx.lineWidth = 1.5;
     ctx.stroke();
   }
   ctx.restore();
 
-  /* dark plinth with a hot edge, so the teeth separate from whatever they
-   * happen to be standing on */
   ctx.fillStyle = 'rgba(8,3,6,.9)';
   ctx.fillRect(x, base - 5, TILE, 5);
   ctx.fillStyle = SPIKE_BODY;
@@ -338,8 +339,8 @@ function drawPlayer(ctx, world, d, cam) {
   const y = p.y + p.h / 2;
   const s = p.squash;
 
-  /* Rings only appear when something is actually happening — the default
-   * state is a clean picture, so an aura always means something. */
+  /* Rings only appear when something is actually happening — the default state
+   * is a clean picture, so an aura always means something. */
   if (world.cover > 0) ring(ctx, x, y + 6, 22, 'rgba(103,232,249,.75)', world.time * 6);
   else if (d && d.mismatchKind) ring(ctx, x, y + 6, 20, 'rgba(248,113,113,.85)', world.time * 14);
 
@@ -361,14 +362,14 @@ function drawPlayer(ctx, world, d, cam) {
   ctx.save();
   ctx.translate(x, y + 4);
   ctx.scale((1 + s) * (p.facing < 0 ? -1 : 1), 1 - s);
-  ctx.font = `30px ${FONT_EMOJI}`;
+  ctx.font = '30px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('🦖', 0, 0);
   ctx.restore();
 }
 
-function ring(ctx, x, y, rad, color, phase) {
+export function ring(ctx, x, y, rad, color, phase) {
   ctx.save();
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
@@ -380,90 +381,8 @@ function ring(ctx, x, y, rad, color, phase) {
   ctx.restore();
 }
 
-/* The cabinet's own HUD — hearts, stage code, coins, and how far along the
- * course the character is. The only literal readout in the game. */
-function drawCabinetHud(ctx, world, d) {
-  ctx.save();
-  ctx.fillStyle = 'rgba(2,6,18,.55)';
-  ctx.fillRect(0, 0, VIEW_W, 26);
-  ctx.fillStyle = 'rgba(255,255,255,.12)';
-  ctx.fillRect(0, 26, VIEW_W, 1);
-
-  const hearts = d ? d.hearts : 3;
-  for (let i = 0; i < METER.hearts; i++) {
-    ctx.globalAlpha = i < hearts ? 1 : 0.25;
-    emoji(ctx, i < hearts ? '❤️' : '🖤', 16 + i * 20, 13, 15);
-  }
-  ctx.globalAlpha = 1;
-
-  ctx.font = '700 12px ui-monospace,Menlo,Consolas,monospace';
-  ctx.textBaseline = 'middle';
-  ctx.textAlign = 'left';
-  ctx.fillStyle = world.theme.accent;
-  ctx.fillText(world.level.code + '  ' + world.level.name, 88, 13);
-
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#fde047';
-  emoji(ctx, '🪙', VIEW_W - 62, 13, 14);
-  ctx.fillText(`${world.coins}/${world.coinsTotal}`, VIEW_W - 12, 13);
-
-  /* course bar */
-  const barX = VIEW_W / 2 - 70, barW = 140;
-  ctx.fillStyle = 'rgba(255,255,255,.16)';
-  ctx.fillRect(barX, 20, barW, 3);
-  const prog = Math.max(0, Math.min(1, world.player.x / (world.w - 80)));
-  ctx.fillStyle = world.theme.accent;
-  ctx.fillRect(barX, 20, barW * prog, 3);
-  ctx.restore();
-}
-
-/* ── CRT decay ────────────────────────────────────────────────────────────
- * All of this is driven by SUS. A clean picture means they are not suspicious.
- */
-function crtDamage(r, susN, time) {
-  if (susN <= 0.02) return;
-  const { ctx, canvas } = r;
-  const g = susN;
-
-  /* ghosting */
-  ctx.save();
-  ctx.globalAlpha = 0.10 * g;
-  ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 2 + g * 3, 0, VIEW_W, VIEW_H);
-  ctx.globalAlpha = 0.08 * g;
-  ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, -(2 + g * 3), 0, VIEW_W, VIEW_H);
-  ctx.restore();
-
-  /* tearing */
-  if (Math.random() < g * 0.35) {
-    const bandY = Math.random() * (VIEW_H - 30);
-    const bandH = 8 + Math.random() * 26;
-    const shift = (Math.random() - 0.5) * 40 * g;
-    ctx.drawImage(canvas,
-      0, bandY * r.dpr, canvas.width, bandH * r.dpr,
-      shift, bandY, VIEW_W, bandH);
-  }
-
-  /* static */
-  const dots = (g * g * 220) | 0;
-  ctx.fillStyle = 'rgba(255,255,255,.5)';
-  for (let i = 0; i < dots; i++) {
-    ctx.fillRect((Math.random() * VIEW_W) | 0, (Math.random() * VIEW_H) | 0, 2, 1);
-  }
-
-  /* rolling bar */
-  if (g > 0.45) {
-    const y = ((time * 90) % (VIEW_H + 60)) - 60;
-    const grad = ctx.createLinearGradient(0, y, 0, y + 60);
-    grad.addColorStop(0, 'rgba(255,255,255,0)');
-    grad.addColorStop(0.5, `rgba(255,255,255,${0.06 * g})`);
-    grad.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, y, VIEW_W, 60);
-  }
-}
-
-/* ── debug ────────────────────────────────────────────────────────────── */
-function debugBoxes(ctx, world, cam) {
+function debugDraw(ctx, world) {
+  const cam = Math.round(world.camX);
   ctx.save();
   ctx.lineWidth = 1;
   if (DEBUG.tileGrid) {
@@ -486,29 +405,6 @@ function debugBoxes(ctx, world, cam) {
           ctx.strokeStyle = '#f97316';
           ctx.strokeRect(cx * TILE - cam, cy * TILE, TILE, TILE);
         }
-  }
-  ctx.restore();
-}
-
-function debugMeters(ctx, world, d, human) {
-  ctx.save();
-  ctx.font = '700 11px ui-monospace,Menlo,Consolas,monospace';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  let y = 34;
-  const line = (txt, color) => { ctx.fillStyle = color; ctx.fillText(txt, 10, y); y += 14; };
-  ctx.fillStyle = 'rgba(0,0,0,.55)';
-  ctx.fillRect(4, 30, 210, DEBUG.humanIntent ? 96 : 68);
-  if (DEBUG.meters && d) {
-    line(`FUN  ${d.fun.toFixed(1).padStart(5)}  ${'█'.repeat(Math.round(d.fun / 8))}`, '#4ade80');
-    line(`SUS  ${d.sus.toFixed(1).padStart(5)}  ${'█'.repeat(Math.round(d.sus / 8))}`, '#f87171');
-    line(`cover ${world.cover.toFixed(2)}  mism ${d.mismatchKind || '-'}`, '#e2e8f0');
-    line(`bored ${d.sinceThrill.toFixed(1)}s  hearts ${d.hearts}`, '#e2e8f0');
-  }
-  if (DEBUG.humanIntent && human) {
-    line(`intent ${human.intent}`, '#fbbf24');
-    line(`held  ${human.held.left ? '◀' : '·'}${human.held.jump ? '⤒' : '·'}${human.held.right ? '▶' : '·'}` +
-         `  tele ${human.telegraph.left ? '◀' : '·'}${human.telegraph.jump ? '⤒' : '·'}${human.telegraph.right ? '▶' : '·'}`, '#fbbf24');
   }
   ctx.restore();
 }

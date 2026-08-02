@@ -1,8 +1,9 @@
 /* Everything outside the bezel: the face, the comment feed and the keycaps.
  *
- * These four things are the only instruments the game gives you. There is no
- * FUN bar and no SUS bar — the face is the boredom gauge, the picture falling
- * apart is the suspicion gauge, and the keycaps are the divergence gauge.
+ * These three things are the only instruments the game gives you. Patience is
+ * never drawn as a bar: the face reports where it stands, the picture falling
+ * apart reports the misses that are taking it, and the keycaps show the call
+ * you are about to answer or ignore.
  */
 
 const FEED_MAX = 34;
@@ -35,6 +36,9 @@ function makeHud() {
       right: document.getElementById('cap-right'),
       jump: document.getElementById('cap-jump'),
     },
+    /* your own presses are single-frame pulses now, so the cap has to hold the
+     * marker open long enough to see */
+    youFlash: { left: 0, right: 0, jump: 0 },
     pending: [],
     typing: null,
     lastFace: '',
@@ -63,21 +67,25 @@ export function pushLine(hud, text, mood = 'neutral') {
   if (hud.pending.length > 6) hud.pending.splice(0, hud.pending.length - 6);
 }
 
+/* Patience is the number, but the face has to report two different things about
+ * it: where it stands, and whether it is being taken by misses right now. So
+ * recent divergence (`heat`) overrides the stages — someone mid-argument with a
+ * cabinet does not look bored, they look annoyed. */
 function faceFor(d) {
-  if (d.sus > 78) return '😠';
-  if (d.sus > 54) return '🤨';
-  if (d.fun > 82) return '🤩';
-  if (d.fun > 64) return '😀';
-  if (d.fun > 46) return '🙂';
-  if (d.fun > 30) return '😐';
-  if (d.fun > 15) return '😒';
+  if (d.heat > 0.78) return '😠';
+  if (d.heat > 0.54) return '🤨';
+  if (d.patience > 82) return '🤩';
+  if (d.patience > 64) return '😀';
+  if (d.patience > 46) return '🙂';
+  if (d.patience > 30) return '😐';
+  if (d.patience > 15) return '😒';
   return '🥱';
 }
 
 function postureFor(d) {
-  if (d.sus > 54) return 'squint';
-  if (d.fun > 70) return 'lean';
-  if (d.fun < 32) return 'slump';
+  if (d.heat > 0.54) return 'squint';
+  if (d.patience > 70) return 'lean';
+  if (d.patience < 32) return 'slump';
   return '';
 }
 
@@ -99,26 +107,32 @@ export function updateHud(hud, d, human, you, dt) {
 
   /* keycaps: filled = their hand, outlined = yours, hatched = a visible lie.
    * The bar underneath is the timing: amber filling = a press is on its way,
-   * cyan draining = their press has landed and your jump has to fall inside it. */
+   * cyan draining = their press has landed and yours has to fall inside it. */
   const lag = human.lag || 0.3;
   const incoming = key => human.dueIn[key] === null ? -1 : 1 - Math.min(1, human.dueIn[key] / lag);
 
-  cap(hud.caps.left, {
-    theirs: human.held.left, yours: you.left,
-    tele: incoming('left'), clash: d.clash.left,
-  });
-  cap(hud.caps.right, {
-    theirs: human.held.right, yours: you.right,
-    tele: incoming('right'), clash: d.clash.right,
-  });
+  for (const k of ['left', 'right', 'jump']) {
+    if (you[k]) hud.youFlash[k] = 0.22;
+    else if (hud.youFlash[k] > 0) hud.youFlash[k] = Math.max(0, hud.youFlash[k] - dt);
+  }
 
-  const J = d.judge;
-  cap(hud.caps.jump, {
-    theirs: human.held.jump, yours: you.jump,
-    tele: incoming('jump'), clash: d.clash.jump > 0,
-    window: J.windowLeft > 0 ? J.windowLeft / J.windowTotal : -1,
-    verdict: J.verdictT > 0 ? J.verdict : null,
-  });
+  /* Every cap reads its own judging channel. On machines that hold a direction
+   * rather than tapping it, the left and right channels stay inert and those
+   * caps simply never light a window — same instrument, fewer moving parts. */
+  const chan = key => {
+    const c = d.chan[key];
+    return {
+      window: c.windowLeft > 0 ? c.windowLeft / c.windowTotal : -1,
+      verdict: c.verdictT > 0 ? c.verdict : null,
+    };
+  };
+
+  for (const k of ['left', 'right', 'jump']) {
+    cap(hud.caps[k], {
+      theirs: human.held[k], yours: hud.youFlash[k] > 0,
+      tele: incoming(k), clash: d.clash[k] > 0, ...chan(k),
+    });
+  }
 
   drainComments(hud, d);
   typeStep(hud, dt);

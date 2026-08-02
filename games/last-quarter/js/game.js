@@ -1,10 +1,10 @@
 /* Loop, screens, input and progression. */
 import { LEVELS } from './levels.js';
 import { STORE_PROGRESS, DEBUG, TIME_SCALE } from './config.js';
-import { buildWorld, stepWorld } from './physics.js';
+import { CABINETS } from './cabinets/index.js';
 import { makeHuman, humanReset, updateHuman } from './human.js';
 import { makeDirector, updateDirector, directorEvent, reportFor, say } from './director.js';
-import { initRenderer, drawFrame, burst } from './render.js';
+import { initRenderer, drawFrame, burst } from './crt.js';
 import { initHud, setIdentity, clearFeed, updateHud } from './hud.js';
 import { Sound } from './audio.js';
 
@@ -14,15 +14,10 @@ const S = {
 };
 
 const ENDINGS = {
-  bored: {
-    title: 'PLAYER WALKED AWAY',
-    sub: 'you were not worth watching',
-    body: 'They stopped caring before the level ran out. Coins, close calls and speed are what keep them at the cabinet — playing it safe is what empties the arcade.',
-  },
   broken: {
     title: 'CABINET UNPLUGGED',
     sub: 'the attendant has been called',
-    body: 'Too many presses that did nothing, and too many moves nobody asked for. They stopped believing the joystick was connected to anything.',
+    body: 'Too many presses that did nothing, and too many moves nobody asked for. They stopped believing the joystick was connected to anything. Answer the caps more often than you defy them.',
   },
   nohearts: {
     title: 'GAME OVER',
@@ -36,10 +31,13 @@ export function start() {
     state: S.TITLE,
     prev: S.TITLE,
     levelIndex: 0,
-    world: null, human: null, dir: null,
-    you: { left: false, right: false, jump: false, jumpPressed: false },
-    jumpEdge: false,
-    touch: { left: false, right: false, jump: false },
+    world: null, human: null, dir: null, cab: null,
+    /* One press at a time: `you` carries taps, never holds. `tap` is the single
+     * key actuated this frame, if any — holding a key does nothing beyond its
+     * initial edge, exactly as it does for the person at the cabinet. */
+    you: { left: false, right: false, jump: false, jumpPressed: false, tap: null },
+    tapQueue: [],
+    held: { left: false, right: false, jump: false },
     last: 0,
     r: initRenderer(document.getElementById('screen')),
     hud: initHud(),
@@ -65,6 +63,10 @@ function loadProgress() {
   } catch { /* private mode */ }
   return { unlocked: 1, stars: {} };
 }
+/* Never written back to storage — an unlock for testing must not quietly
+ * rewrite the player's real progress. */
+const unlockedCount = g => (DEBUG.unlockAll ? LEVELS.length : g.progress.unlocked);
+
 function saveProgress(g) {
   try { localStorage.setItem(STORE_PROGRESS, JSON.stringify(g.progress)); } catch { /* private mode */ }
 }
@@ -75,7 +77,7 @@ function loop(g, now) {
   g.last = now;
 
   if (g.state === S.PLAY) step(g, dt);
-  if (g.world) drawFrame(g.r, g.world, g.dir, g.human, dt);
+  if (g.world) drawFrame(g.r, g.cab, g.world, g.dir, g.human, dt);
 
   requestAnimationFrame(ts => loop(g, ts));
 }
@@ -83,11 +85,16 @@ function loop(g, now) {
 function step(g, dt) {
   const { world, human, dir, you } = g;
 
-  you.jumpPressed = g.jumpEdge;
-  g.jumpEdge = false;
+  /* at most one key is delivered per frame, in the order they were struck */
+  const tap = g.tapQueue.shift() || null;
+  you.tap = tap;
+  you.left = tap === 'left';
+  you.right = tap === 'right';
+  you.jump = tap === 'jump';
+  you.jumpPressed = tap === 'jump';
 
   updateHuman(human, world, dt);
-  stepWorld(world, dt, you, (name, data) => onEvent(g, name, data));
+  g.cab.step(world, dt, you, (name, data) => onEvent(g, name, data));
   updateDirector(dir, world, human, you, dt);
   updateHud(g.hud, dir, human, you, dt);
 
@@ -99,6 +106,8 @@ function onEvent(g, name, data) {
   const p = world.player;
   switch (name) {
     case 'jump': Sound.jump(); break;
+    case 'shoot': Sound.shoot(); break;
+    case 'hurt-taken': Sound.hurt(); break;
     case 'land': Sound.land(); break;
     case 'coin':
       Sound.coin();
@@ -127,11 +136,13 @@ function onEvent(g, name, data) {
 function beginLevel(g, index) {
   g.levelIndex = index;
   const level = LEVELS[index];
-  g.world = buildWorld(level);
-  g.human = makeHuman(level.player);
-  g.dir = makeDirector(level);
+  g.cab = CABINETS[level.cabinet];
+  g.world = g.cab.build(level);
+  g.human = makeHuman(level.player, g.cab.sense);
+  g.dir = makeDirector(level, g.cab.lines);
   g.you.left = g.you.right = g.you.jump = g.you.jumpPressed = false;
-  g.jumpEdge = false;
+  g.you.tap = null;
+  g.tapQueue.length = 0;
   g.ending = null;
   g.report = null;
 
@@ -176,24 +187,26 @@ function showTitle(g) {
   g.state = S.TITLE;
   if (!g.world) {
     /* Something has to be on the screen behind the title card. */
-    g.world = buildWorld(LEVELS[0]);
-    g.human = makeHuman(LEVELS[0].player);
-    g.dir = makeDirector(LEVELS[0]);
+    g.cab = CABINETS[LEVELS[0].cabinet];
+    g.world = g.cab.build(LEVELS[0]);
+    g.human = makeHuman(LEVELS[0].player, g.cab.sense);
+    g.dir = makeDirector(LEVELS[0], g.cab.lines);
   }
   const stars = id => '★'.repeat(g.progress.stars[id] || 0).padEnd(3, '☆');
+  const open = unlockedCount(g);
   showOverlay(g, `
     <h2>LAST QUARTER</h2>
     <p class="lede">You are the sprite. Someone else is holding the joystick,
     and they are not very good.</p>
     <div class="levels">
       ${LEVELS.map((L, i) => `
-        <button class="lvl" data-action="play" data-index="${i}" ${L.id <= g.progress.unlocked ? '' : 'disabled'}>
-          <span class="lvl-name">${L.id <= g.progress.unlocked ? L.code : '🔒'}</span>
-          <span class="lvl-stars">${L.id <= g.progress.unlocked ? stars(L.id) : '·····'}</span>
+        <button class="lvl" data-action="play" data-index="${i}" ${L.id <= open ? '' : 'disabled'}>
+          <span class="lvl-name">${L.id <= open ? L.code : '🔒'}</span>
+          <span class="lvl-stars">${L.id <= open ? stars(L.id) : '·····'}</span>
         </button>`).join('')}
     </div>
     <div class="btns">
-      <button class="btn" data-action="play" data-index="${Math.min(LEVELS.length, g.progress.unlocked) - 1}">START</button>
+      <button class="btn" data-action="play" data-index="${Math.min(LEVELS.length, open) - 1}">START</button>
       <button class="btn ghost" data-action="rules">HOW TO PLAY</button>
     </div>
   `);
@@ -222,31 +235,39 @@ function showRules(g) {
   showOverlay(g, `
     <h2>HOW TO PLAY</h2>
     <p class="lede">You control the character. The person at the cabinet only
-    <i>thinks</i> they do — and the cabinet gets pulled if they stop believing it,
-    or stop enjoying it.</p>
+    <i>thinks</i> they do. They have exactly one thing you can run down —
+    <b>patience</b> — and when it hits zero they either wander off or decide the
+    machine is broken. Either way the cabinet gets unplugged.</p>
     <ul>
       <li><b>The keycaps</b> show their hand. Filled amber is what <b>they</b> press,
         the dashed outline is what <b>you</b> press. A hatched red cap means the
         difference is visible.</li>
-      <li><b>Watch the bar under the jump cap.</b> Amber filling means a press is
+      <li><b>Watch the bar under each cap.</b> Amber filling means a press is
         on its way — you can see it coming. When it turns <span class="keys">cyan</span>
-        their press has landed and the window is open: jump inside it and you get a
-        <span class="keys">✓</span>, which actively calms them down. Jump well before
-        they press, or let the window run out, and you get a <span class="keys">✗</span>.</li>
-      <li><b>Their face</b> is your boredom gauge. Bored people leave. Coins,
-        near misses, stomps and speed are what hold them.</li>
-      <li><b>The picture</b> is your suspicion gauge. Tearing and static mean they
-        are starting to blame the machine. Get back in sync and it settles.</li>
-      <li><b>Borrow their presses.</b> Jump on a frame they also pressed jump and it
-        costs you nothing. Bad players mash — that is your budget.</li>
+        their press has landed and the window is open: hit that same key inside it
+        and you get a <span class="keys">✓</span>. Press well before they do, or let
+        the window run out, and you get a <span class="keys">✗</span>.</li>
+      <li><b>✓ is the only thing that puts patience back</b> — and ✗ is the only
+        thing that takes it in a hurry. Nothing else pays: not coins, not distance,
+        not surviving. They came here to press buttons and be answered.</li>
+      <li><b>Their face</b> shows where patience stands. Nothing else moves it —
+        no timer, no drain. Play as slowly as you like; it is only the presses
+        that are being counted.</li>
+      <li><b>The picture</b> shows the last few seconds. Tearing and static mean
+        they have just caught you out. Get back in sync and it settles.</li>
+      <li><b>Borrow their presses.</b> A jump on a frame they also pressed jump is
+        free — and it pays. Bad players mash; that is your budget.</li>
       <li><b>Springs, moving platforms and conveyors</b> move the character without
         the joystick, so anything you do while they carry you is free.</li>
-      <li><b>Entertained people stop watching the buttons.</b> The more fun they are
-        having, the more you can get away with.</li>
-      <li><b>Three hearts.</b> Lose them all and they put the joystick down.</li>
+      <li><b>People enjoying themselves stop watching the buttons.</b> The higher
+        their patience, the less a ✗ costs. Run it low and every mistake bites
+        harder.</li>
+      <li><b>Three hearts — the other way to lose.</b> Obeying a bad player is
+        exactly how the character dies, so the two ways out pull against each
+        other: obey and you run out of hearts, defy and you run out of patience.</li>
     </ul>
     <p><span class="keys">← →</span> or <span class="keys">A D</span> move ·
-       <span class="keys">↑ / W / SPACE</span> jump ·
+       <span class="keys">SPACE</span> (or <span class="keys">↑ / W</span>) jump ·
        <span class="keys">ESC</span> pause · <span class="keys">M</span> mute</p>
     <div class="btns"><button class="btn" data-action="closerules">GOT IT</button></div>
   `);
@@ -272,18 +293,12 @@ function showReport(g) {
   const end = ENDINGS[g.ending];
   const nextIndex = g.levelIndex + 1;
 
-  const bar = (val, max, color) =>
-    `<div class="meter"><i style="width:${Math.round(100 * val / max)}%;background:${color}"></i></div>`;
-
   showOverlay(g, `
     <h3>${L.code} · ${L.name}</h3>
     <h2>${win ? 'STILL PLUGGED IN' : end.title}</h2>
     <p>${win ? 'They put another quarter in.' : end.sub}</p>
     ${win ? `<div class="stars">${'★'.repeat(rep.stars)}${'☆'.repeat(3 - rep.stars)}</div>` : `<p>${end.body}</p>`}
     <div class="report">
-      <div class="stat"><span>HOW ENTERTAINED</span><b>${rep.avgFun}%</b>${bar(rep.avgFun, 100, '#4ade80')}</div>
-      <div class="stat"><span>HOW SUSPICIOUS</span><b>${rep.peakSus}%</b>${bar(rep.peakSus, 100, '#f8536a')}</div>
-      <div class="stat"><span>JUMPS IN SYNC</span><b>${rep.hits}/${rep.calls}</b>${bar(rep.sync, 100, '#67e8f9')}</div>
       <div class="stat"><span>COINS · DEATHS</span><b>${rep.coins}/${rep.coinsTotal} · ${rep.deaths}</b></div>
     </div>
     <div class="btns">
@@ -345,13 +360,14 @@ const KEYMAP = {
   ArrowUp: 'jump', KeyW: 'jump', Space: 'jump',
 };
 
+/* Only the strike matters. Holding is not an input on this cabinet, so a key
+ * that is already down contributes nothing until it is released and struck
+ * again — which is what makes "quick ◀ then ⤒" a sequence rather than a chord. */
 function setKey(g, key, down) {
-  if (key === 'jump') {
-    if (down && !g.you.jump) g.jumpEdge = true;
-    g.you.jump = down;
-  } else {
-    g.you[key] = down;
-  }
+  if (!down) { g.held[key] = false; return; }
+  if (g.held[key]) return;                 // still down from before: not a new press
+  g.held[key] = true;
+  if (g.tapQueue.length < 3) g.tapQueue.push(key);
 }
 
 function wireInput(g) {
@@ -393,6 +409,8 @@ function wireInput(g) {
 
   /* Alt-tabbing away should not count as you refusing to move. */
   addEventListener('blur', () => {
+    g.held.left = g.held.right = g.held.jump = false;
+    g.tapQueue.length = 0;
     g.you.left = g.you.right = g.you.jump = false;
     if (g.state === S.PLAY) showPause(g);
   });

@@ -4,8 +4,8 @@
  * reports back through `emit`, so the same simulation can be stepped from a
  * headless run or a debug scrub without a canvas attached.
  */
-import { TILE, ROWS, VIEW_W, PHYS, METER } from './config.js';
-import { normalizeMap } from './levels.js';
+import { TILE, ROWS, VIEW_W, PHYS, METER } from '../config.js';
+import { normalizeMap } from '../levels.js';
 
 const SOLID = '#><';
 const HAZARD = '^~';
@@ -27,7 +27,9 @@ export function buildWorld(level) {
     entities: [], coinsTotal: 0, coins: 0,
     spawn: { x: TILE * 2, y: TILE * 9 },
     checkpoint: null,
-    camX: 0, time: 0, maxX: 0, finished: false,
+    camX: 0, camY: 0, time: 0, progress: 0, progress01: 0,
+    canTurn: { left: true, right: true },
+    pickupIcon: '🪙', finished: false,
     cover: 0,          // seconds of "the machine moved me, not the joystick"
     shake: 0,
   };
@@ -108,7 +110,7 @@ function makePlayer(spawn) {
     coyote: 0, buffer: 0, jumpHeld: false,
     dead: false, deadT: 0, invuln: 0,
     squash: 0, ridePlat: null,
-    nearMissT: 0, idleT: 0,
+    nearMissT: 0,
   };
 }
 
@@ -123,9 +125,10 @@ const overlap = (a, b) =>
 /* ── the frame ─────────────────────────────────────────────────────────── */
 export function stepWorld(world, dt, input, emit) {
   world.time += dt;
-  world.justJumped = false;   // set below; the director judges the visible jump,
+  world.justAction = false;   // set below; the director judges the visible jump,
                               // not the keypress, since a buffered press that
                               // never leaves the ground is invisible to the human
+  world.justTurn = 0;         // set by a dash below
   const p = world.player;
 
   if (world.cover > 0) world.cover = Math.max(0, world.cover - dt);
@@ -134,6 +137,8 @@ export function stepWorld(world, dt, input, emit) {
   stepEntities(world, dt);
 
   if (p.dead) {
+    world.canAct = false;
+    world.canTurn.left = world.canTurn.right = false;
     p.deadT -= dt;
     p.vy = Math.min(p.vy + PHYS.gravity * dt, PHYS.maxFall);
     p.y += p.vy * dt;
@@ -150,15 +155,14 @@ export function stepWorld(world, dt, input, emit) {
     world.cover = Math.max(world.cover, METER.coverRide);
   }
 
-  /* ── horizontal ── */
+  /* ── horizontal: a tap is a dash, and between taps you coast ── */
   const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
-  const accel = p.onGround ? PHYS.accel : PHYS.airAccel;
   if (dir !== 0) {
-    p.vx += dir * accel * dt;
-    p.vx = Math.max(-PHYS.runSpeed, Math.min(PHYS.runSpeed, p.vx));
+    p.vx = dir * PHYS.runSpeed * PHYS.turnBoost;
     p.facing = dir;
-  } else if (p.onGround) {
-    const drop = PHYS.friction * dt;
+    world.justTurn = dir;              // a visible, commanded move
+  } else {
+    const drop = (p.onGround ? PHYS.dashDecay : PHYS.airDecay) * dt;
     p.vx = Math.abs(p.vx) <= drop ? 0 : p.vx - Math.sign(p.vx) * drop;
   }
 
@@ -177,15 +181,25 @@ export function stepWorld(world, dt, input, emit) {
   p.buffer = input.jumpPressed ? PHYS.buffer : Math.max(0, p.buffer - dt);
   if (p.buffer > 0 && p.coyote > 0) {
     p.vy = -PHYS.jumpVel;
+    /* A jump always leaves at full speed in the direction you are facing.
+     *
+     * Without this, reach depended on how long ago you last dashed — coast for
+     * a second and the same gap silently became uncrossable, which broke the
+     * "every gap is within 136px" invariant every level is built on. It also
+     * makes the intended move exactly the one the controls imply: tap ◀ or ▶ to
+     * aim, tap ⤒ to commit. */
+    p.vx = p.facing * PHYS.runSpeed;
     p.onGround = false;
     p.coyote = 0; p.buffer = 0;
     p.ridePlat = null;
     p.squash = -0.35;
-    world.justJumped = true;
+    world.justAction = true;
     emit('jump');
   }
-  if (!input.jump && p.vy < 0 && p.jumpHeld) p.vy *= PHYS.jumpCut;
-  p.jumpHeld = input.jump;
+  /* No variable jump height any more. It needed the button to be *held*, and
+   * with taps the release arrived one frame after take-off — so every jump was
+   * silently cut to 42% and every gap became uncrossable. One press, one full
+   * jump. */
 
   /* ── integrate ── */
   p.vy = Math.min(p.vy + PHYS.gravity * dt, PHYS.maxFall);
@@ -194,6 +208,8 @@ export function stepWorld(world, dt, input, emit) {
   const wasGround = p.onGround;
   moveY(world, p, p.vy * dt, emit);
   if (!wasGround && p.onGround) { p.squash = 0.35; emit('land'); }
+  world.canAct = p.onGround;
+  world.canTurn.left = world.canTurn.right = true;   // you can always dash
 
   /* Off the bottom of the map is a pit. */
   if (p.y > world.h + 40) return kill(world, emit, 'pit');
@@ -203,11 +219,10 @@ export function stepWorld(world, dt, input, emit) {
   touchEntities(world, emit);
   scanNearMiss(world, dt, emit);
 
-  /* Standing still is its own kind of failure — the human gets bored. */
-  p.idleT = Math.abs(p.vx) < 12 && p.onGround ? p.idleT + dt : 0;
-  p.atLedge = ledgeForced(world, p);
+  p.forcedWait = ledgeForced(world, p);
 
-  if (p.x > world.maxX) world.maxX = p.x;
+  if (p.x > world.progress) world.progress = p.x;
+  world.progress01 = Math.max(0, Math.min(1, p.x / (world.w - 80)));
   p.squash *= Math.max(0, 1 - dt * 7);
   world.camX += (clampCam(world, p.x) - world.camX) * Math.min(1, dt * 7);
 }

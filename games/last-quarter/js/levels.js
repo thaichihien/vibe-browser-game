@@ -72,6 +72,44 @@ const L3 = [
     '#'.repeat(9) + '.....' + '#'.repeat(32),
 ];
 
+/* ── level 4 — a different machine entirely: a vertical shooter ─────────
+ * `at` is a scroll distance, not a time, so waves stay pinned to the stage no
+ * matter how the pace is tuned. `drops` is how many of that wave leave a ⭐.
+ * Currents are stretches where the nebula visibly shoves the ship sideways —
+ * the shooter's equivalent of a conveyor, and the only free divergence here.
+ */
+const STAGE_SHMUP = {
+  length: 2200,
+  currents: [
+    { from: 640, to: 880, dir: -1 },
+    { from: 1440, to: 1680, dir: 1 },
+  ],
+  /* Thinned from what it was. An invader that reaches the bottom now costs a
+   * heart, so the stage cannot also be dense — the cost of a leak has to stay
+   * meaningful without leaks being unavoidable. */
+  waves: [
+    { at: 60,   kind: 'row',   n: 3, speed: 28, drops: 1 },
+    { at: 260,  kind: 'sweep', n: 3, speed: 26, fireEvery: 2.1 },
+    { at: 470,  kind: 'row',   n: 3, speed: 34, fireEvery: 2.1, drops: 1 },
+    { at: 690,  kind: 'dive',  n: 2, speed: 40 },
+    { at: 900,  kind: 'sweep', n: 4, speed: 28, drops: 2 },
+    { at: 1120, kind: 'row',   n: 3, speed: 32, hp: 2, fireEvery: 2.1 },
+    { at: 1340, kind: 'dive',  n: 3, speed: 44 },
+    { at: 1560, kind: 'sweep', n: 3, speed: 30, fireEvery: 2.1, drops: 2 },
+    { at: 1780, kind: 'row',   n: 3, speed: 36, hp: 2, drops: 1 },
+    { at: 1990, kind: 'boss',  hp: 16 },
+  ],
+};
+
+/* ── level 5 — a third machine: one screen, two fighters ────────────────
+ * Nothing to author but the opponent, which is the point: a fighting game's
+ * content is its exchanges, not its layout.
+ *   aggression  how readily the CPU swings once you are in range
+ *   speed       how hard it walks you down
+ *   punish      odds of taking its turn when you whiff — the anti-mash dial
+ */
+const FIGHT_1 = { aggression: 0.62, speed: 0.84, punish: 0.55 };
+
 /* ── themes ───────────────────────────────────────────────────────────── */
 const THEMES = {
   grass: {
@@ -89,6 +127,22 @@ const THEMES = {
     accent: '#fb923c', coinGlow: '#fbbf24',
     deco: ['🪨', '💀', '🔥', '🦴'], sky: ['🔥', '✨'],
     enemy: '🦂', hazardTint: '#f97316',
+  },
+  dojo: {
+    skyTop: '#2b0714', skyBottom: '#6d1533',
+    hillFar: '#3a0f1c', hillNear: '#4a1526',
+    groundTop: '#fbbf24', groundBody: '#25100a', groundLine: '#7c2d12',
+    accent: '#fbbf24', coinGlow: '#fde047',
+    deco: [], sky: [],
+    enemy: '👹', hazardTint: '#f43f5e',
+  },
+  space: {
+    skyTop: '#04010e', skyBottom: '#1d0b3f',
+    hillFar: '#120a2a', hillNear: '#1c1040',
+    groundTop: '#a78bfa', groundBody: '#2b1a5e', groundLine: '#3b2580',
+    accent: '#a78bfa', coinGlow: '#fde047',
+    deco: [], sky: [],
+    enemy: '👾', hazardTint: '#f43f5e',
   },
   sky: {
     skyTop: '#0b1033', skyBottom: '#3730a3',
@@ -118,32 +172,59 @@ const THEMES = {
 const PLAYERS = {
   dave: { name: 'DAVE', tag: 'plays now and then', face: '🙂', hat: '🧢', acc: '☕',
           reactionMs: 300, aimErrorPx: 36, panicChance: 0.12,
-          mashPerSec: 0.30, wanderPerSec: 0.16, attention: 1.00, boredScale: 1.00 },
+          mashPerSec: 0.30, wanderPerSec: 0.16, attention: 1.00 },
   meg:  { name: 'MEG', tag: 'no patience at all', face: '😤', hat: '🎧', acc: '🧋',
           reactionMs: 400, aimErrorPx: 48, panicChance: 0.30,
-          mashPerSec: 0.90, wanderPerSec: 0.45, attention: 0.92, boredScale: 1.20 },
-  /* Toby is the hardest on both meters at once, which is what makes 3-1 the
-   * finale rather than just a longer level. He scrutinises the machine hardest
-   * because he has no idea what it is supposed to do, so anything odd reads as
-   * broken — and being a kid on his first go, he loses interest fastest too.
-   * Beating him means playing entertainingly *and* staying in sync. */
+          mashPerSec: 0.90, wanderPerSec: 0.45, attention: 0.92 },
+  /* Toby has the highest `attention` of the three, which is what makes 3-1 the
+   * hardest platformer rather than just a longer one: he scrutinises the machine
+   * hardest because he has no idea what it is supposed to do, so anything odd
+   * reads as broken. He is also the slowest to react and the wildest guesser,
+   * which cuts the other way — his windows are late and his presses are often
+   * nonsense you can safely take for free. */
   toby: { name: 'TOBY', tag: 'never played before', face: '😯', hat: '🎈', acc: '🧸',
           reactionMs: 560, aimErrorPx: 78, panicChance: 0.46,
-          mashPerSec: 1.60, wanderPerSec: 0.72, attention: 1.15, boredScale: 1.45 },
+          mashPerSec: 1.60, wanderPerSec: 0.72, attention: 1.15 },
 };
+
+/* A machine they have never played makes everyone worse — and, importantly,
+ * less certain about what it is even supposed to do, so they scrutinise it
+ * less. That is what keeps a harder genre playable without inventing new
+ * people for it. */
+const newMachine = (p, over = {}) => ({
+  ...p,
+  reactionMs: Math.round(p.reactionMs * 1.15),
+  aimErrorPx: Math.round(p.aimErrorPx * 1.5),
+  attention: Number((p.attention * 0.85).toFixed(2)),
+  ...over,
+});
 
 export const LEVELS = [
   {
-    id: 1, code: '1-1', name: 'NEON GRASS', map: L1, theme: THEMES.grass, player: PLAYERS.dave,
+    id: 1, code: '1-1', name: 'NEON GRASS', cabinet: 'platformer', map: L1, theme: THEMES.grass, player: PLAYERS.dave,
     blurb: 'A quiet Tuesday. Dave is fine at this. Mostly do what he says.',
   },
   {
-    id: 2, code: '2-1', name: 'MAGMA CAVES', map: L2, theme: THEMES.magma, player: PLAYERS.meg,
+    id: 2, code: '2-1', name: 'MAGMA CAVES', cabinet: 'platformer', map: L2, theme: THEMES.magma, player: PLAYERS.meg,
     blurb: 'Meg mashes when she panics. Every stray press is a jump you can borrow.',
   },
   {
-    id: 3, code: '3-1', name: 'SKY CIRCUIT', map: L3, theme: THEMES.sky, player: PLAYERS.toby,
+    id: 3, code: '3-1', name: 'SKY CIRCUIT', cabinet: 'platformer', map: L3, theme: THEMES.sky, player: PLAYERS.toby,
     blurb: "Toby has never held a joystick. You are playing this one. He must not find out.",
+  },
+  {
+    id: 4, code: '4-1', name: 'STARDUST PATROL', cabinet: 'shmup',
+    stage: STAGE_SHMUP, theme: THEMES.space,
+    /* everyone hammers the fire button in a shooter — which is a gift, since a
+     * press of theirs is a shot you are allowed to take */
+    player: newMachine(PLAYERS.dave, { tag: 'has never flown one of these', mashPerSec: 1.8 }),
+    blurb: 'A different cabinet. Dave is a platformer man — he has no idea how to fly, and a shot that never comes out is impossible to miss.',
+  },
+  {
+    id: 5, code: '5-1', name: 'NEON DOJO', cabinet: 'fighter',
+    cpu: FIGHT_1, theme: THEMES.dojo,
+    player: newMachine(PLAYERS.meg, { tag: 'mashes at the wrong range' }),
+    blurb: 'Hold back to block — but back is where they are not pushing. The safe play is the suspicious one here, and standing off bores them senseless.',
   },
 ];
 
