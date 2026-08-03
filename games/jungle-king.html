@@ -3,499 +3,1977 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Jungle Frenzy 🐾</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Jungle King 🐾</title>
   <style>
+    :root {
+      --leaf: #7fe08a;
+      --gold: #ffd76a;
+      --panel: rgba(9, 24, 12, 0.74);
+      --edge: rgba(150, 226, 138, 0.24);
+      --ink: #eafbe6;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
     body {
       margin: 0;
-      overflow: hidden;
-      background: #1a2a1a;
-      font-family: Arial;
-    }
-
-    #viewport {
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      position: relative;
-      /* cursor: none; */
-    }
-
-    #world {
-      position: absolute;
-      width: 3000px;
-      height: 3000px;
-      background: radial-gradient(circle, #2e4d2e, #162616);
-    }
-
-    .animal {
-      position: absolute;
-      user-select: none;
-      transition: transform 0.1s;
-    }
-
-    #ui {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      color: white;
-      z-index: 10;
-    }
-
-    #startScreen,
-    #gameOver {
-      position: absolute;
-      width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+      background: #12240f;
+      color: var(--ink);
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    canvas {
+      display: block;
+      position: absolute;
+      inset: 0;
+      touch-action: none;
+    }
+
+    /* ---------- HUD ---------- */
+
+    #hud {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--edge);
+      border-radius: 14px;
+      backdrop-filter: blur(7px);
+      -webkit-backdrop-filter: blur(7px);
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.42);
+    }
+
+    #formCard {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      padding: 12px 16px 12px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 232px;
+    }
+
+    #formEmoji {
+      font-size: 40px;
+      line-height: 1;
+      width: 52px;
+      text-align: center;
+      filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.5));
+      transition: transform 0.18s ease-out;
+    }
+
+    #formEmoji.pop {
+      transform: scale(1.42);
+    }
+
+    #formName {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    #formMeta {
+      font-size: 12px;
+      opacity: 0.72;
+      margin-top: 1px;
+      letter-spacing: 0.6px;
+    }
+
+    #xpTrack {
+      width: 168px;
+      height: 8px;
+      margin-top: 7px;
+      background: rgba(0, 0, 0, 0.42);
+      border-radius: 99px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    #xpFill {
+      height: 100%;
+      width: 0%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--leaf), var(--gold));
+      transition: width 0.14s linear;
+    }
+
+    #runStats {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 18px;
+      display: flex;
+      gap: 22px;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    #runStats b {
+      color: var(--gold);
+      font-variant-numeric: tabular-nums;
+    }
+
+    #tools {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .tool {
+      width: 42px;
+      height: 42px;
+      font-size: 19px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      user-select: none;
+      background: var(--panel);
+      border: 1px solid var(--edge);
+      border-radius: 12px;
+      backdrop-filter: blur(7px);
+      -webkit-backdrop-filter: blur(7px);
+      transition: transform 0.12s, background 0.12s;
+    }
+
+    .tool:hover {
+      transform: translateY(-2px);
+      background: rgba(20, 52, 24, 0.86);
+    }
+
+    .tool.off {
+      opacity: 0.45;
+    }
+
+    #hubLink {
+      position: absolute;
+      left: 14px;
+      bottom: 12px;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: rgba(234, 251, 230, 0.6);
+      text-decoration: none;
+      pointer-events: auto;
+    }
+
+    #hubLink:hover {
+      color: var(--gold);
+    }
+
+    /* ---------- evolution track ---------- */
+
+    #track {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      width: min(92vw, 520px);
+      height: 58px;
+      overflow: hidden;
+      padding: 0;
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+    }
+
+    #trackInner {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+    }
+
+    .step {
+      width: 38px;
+      flex: 0 0 38px;
+      text-align: center;
+      font-size: 19px;
+      opacity: 0.26;
+      filter: grayscale(1);
+      transition: opacity 0.25s, transform 0.25s, filter 0.25s;
+    }
+
+    .step.done {
+      opacity: 0.5;
+      filter: grayscale(0.55);
+    }
+
+    .step.now {
+      opacity: 1;
+      filter: none;
+      transform: scale(1.75);
+      text-shadow: 0 0 14px rgba(255, 215, 106, 0.75);
+    }
+
+    .step.next {
+      opacity: 0.72;
+      filter: grayscale(0.2);
+      transform: scale(1.12);
+    }
+
+    /* ---------- banner ---------- */
+
+    #banner {
+      position: absolute;
+      left: 50%;
+      top: 30%;
+      transform: translate(-50%, -50%) scale(0.7);
+      font-size: 40px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      text-shadow: 0 4px 22px rgba(0, 0, 0, 0.75);
+      transition: opacity 0.2s, transform 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+    }
+
+    #banner.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    #banner small {
+      display: block;
+      font-size: 14px;
+      letter-spacing: 4px;
+      font-weight: 600;
+      color: var(--gold);
+      margin-top: 6px;
+    }
+
+    /* ---------- overlays ---------- */
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
-      color: white;
-      z-index: 20;
+      padding: 20px;
+      background: radial-gradient(circle at 50% 40%, rgba(16, 44, 20, 0.82), rgba(3, 10, 4, 0.94));
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+    }
+
+    .overlay[hidden] {
+      display: none;
+    }
+
+    .card {
+      background: rgba(10, 26, 13, 0.9);
+      border: 1px solid var(--edge);
+      border-radius: 20px;
+      padding: 30px 34px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+
+    .card h1 {
+      margin: 0 0 4px;
+      font-size: 34px;
+      letter-spacing: 1px;
+    }
+
+    .card h2 {
+      margin: 0 0 14px;
+      font-size: 26px;
+      letter-spacing: 1px;
+    }
+
+    .tag {
+      font-size: 12px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--leaf);
+      opacity: 0.8;
+      margin-bottom: 18px;
+    }
+
+    .rules {
+      text-align: left;
+      font-size: 14px;
+      line-height: 1.85;
+      margin: 0 auto 22px;
+      max-width: 340px;
+    }
+
+    .rules b {
+      color: var(--gold);
+    }
+
+    .ladder {
+      font-size: 20px;
+      letter-spacing: 3px;
+      line-height: 1.5;
+      opacity: 0.85;
+      margin-bottom: 18px;
     }
 
     button {
-      padding: 12px 20px;
-      font-size: 18px;
-      border-radius: 10px;
+      font: inherit;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 13px 30px;
+      border-radius: 12px;
       border: none;
       cursor: pointer;
+      color: #0a1d0c;
+      background: linear-gradient(135deg, var(--leaf), var(--gold));
+      box-shadow: 0 8px 22px rgba(127, 224, 138, 0.28);
+      transition: transform 0.12s, box-shadow 0.12s;
     }
 
-    .invincible {
-      filter: drop-shadow(0 0 10px yellow);
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(127, 224, 138, 0.38);
     }
 
-    .hide-cursor {
-      cursor: none;
+    button.ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--edge);
+      box-shadow: none;
+      font-weight: 600;
+    }
+
+    .btnRow {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .scores {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 4px 0 20px;
+    }
+
+    .score {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 12px;
+      padding: 12px 6px;
+    }
+
+    .score .v {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--gold);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .score .k {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      opacity: 0.6;
+      margin-top: 3px;
+    }
+
+    #bestLine {
+      font-size: 12px;
+      letter-spacing: 1px;
+      opacity: 0.65;
+      margin-bottom: 18px;
+    }
+
+    #finalForm {
+      font-size: 58px;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    @media (max-width: 620px) {
+      #runStats {
+        gap: 14px;
+        font-size: 12px;
+        padding: 7px 12px;
+      }
+
+      #formCard {
+        min-width: 0;
+        padding: 9px 12px 9px 9px;
+      }
+
+      #formEmoji {
+        font-size: 32px;
+        width: 40px;
+      }
+
+      #xpTrack {
+        width: 128px;
+      }
+
+      /* stack the run stats under the form card instead of colliding with it */
+      #runStats {
+        left: 14px;
+        top: 84px;
+        transform: none;
+      }
+
+      #hubLink {
+        bottom: 84px;
+      }
+
+      .card {
+        padding: 24px 20px;
+      }
     }
   </style>
 </head>
 
 <body>
+  <canvas id="cv"></canvas>
 
-  <div id="viewport">
-    <div id="world"></div>
-
-    <div id="ui">
-      Size: <span id="size">1</span><br />
-      Level: <span id="level">1</span><br />
-      XP: <span id="xp">0</span>
-      <div style="width:200px;height:10px;background:#555;margin-top:5px;border-radius:5px;">
-        <div id="xpBar" style="height:100%;width:0%;background:lime;border-radius:5px;"></div>
+  <div id="hud">
+    <div id="formCard" class="panel">
+      <div id="formEmoji">🐭</div>
+      <div>
+        <div id="formName">Mouse</div>
+        <div id="formMeta">TIER 1 · LV 1</div>
+        <div id="xpTrack">
+          <div id="xpFill"></div>
+        </div>
       </div>
-      <div id="statusText" style="margin-top:8px;font-size:13px;opacity:0.9;min-height:16px;"></div>
     </div>
 
-    <div id="startScreen">
+    <div id="runStats" class="panel">
+      <span>Eaten <b id="statEaten">0</b></span>
+      <span>Time <b id="statTime">0:00</b></span>
+    </div>
+
+    <div id="tools">
+      <div class="tool" id="btnSound" title="Sound">🔊</div>
+      <div class="tool" id="btnRules" title="How to play">📖</div>
+      <div class="tool" id="btnPause" title="Pause (Esc)">⏸</div>
+    </div>
+
+    <div id="track">
+      <div id="trackInner"></div>
+    </div>
+
+    <div id="banner"></div>
+
+    <a id="hubLink" href="../index.html">← ARCADE.SYS</a>
+  </div>
+
+  <!-- start -->
+  <div class="overlay" id="startScreen">
+    <div class="card">
       <h1>🐾 Jungle King</h1>
-
-      <div style="max-width:400px;text-align:left;font-size:14px;line-height:1.6;">
-        <b>🎮 How to play:</b><br /><br />
-        🐭 Move with your mouse<br />
-        🍖 Eat smaller or equal-sized animals to gain XP<br />
-        🧬 Level up to evolve<br />
-        🐅 Bigger animals will chase you<br />
-        🏃 Escape to survive!<br />
+      <div class="tag">eat · evolve · rule the jungle</div>
+      <div class="ladder">🐭 🐰 🐷 🐱 🐺 🦁 🐘 🦣</div>
+      <div class="rules">
+        🖱️ <b>Move</b> with your mouse — or drag on touch<br />
+        🍖 <b>Eat</b> anything your size or smaller<br />
+        🧬 <b>Evolve</b> each time you fill the XP bar<br />
+        🐅 <b>Run</b> — bigger animals hunt you, but they tire<br />
+        💀 One touch from a bigger animal ends the run<br />
+        🦣 Reach the mammoth to rule the jungle
       </div>
-
-
-      <button style="margin-top: 2rem;" onclick="startGame()">Start</button>
+      <div class="btnRow">
+        <button id="btnStart">Start</button>
+        <button class="ghost" id="btnRulesStart">How to play</button>
+      </div>
     </div>
+  </div>
 
-    <div id="gameOver" style="display:none;">
-      <h1>💀 Game Over</h1>
-      <button onclick="restart()">Restart</button>
+  <!-- rules -->
+  <div class="overlay" id="rulesScreen" hidden>
+    <div class="card">
+      <h2>📖 How to play</h2>
+      <div class="rules">
+        🖱️ Your animal follows the cursor. The bigger you get, the slower you turn.<br />
+        🍖 Touch an animal of <b>your tier or smaller</b> to eat it. Bigger prey is worth more XP.<br />
+        🧬 Filling the XP bar evolves you one step up the ladder of 20 animals.<br />
+        🐅 Predators only chase for a few seconds before they tire and give up — <b>outlast them</b>.<br />
+        🌿 The jungle lives without you: animals herd, panic and eat each other.<br />
+        ⏸ <b>Esc</b> or <b>P</b> pauses. <b>M</b> mutes.
+      </div>
+      <button id="btnRulesClose">Back</button>
+    </div>
+  </div>
+
+  <!-- pause -->
+  <div class="overlay" id="pauseScreen" hidden>
+    <div class="card">
+      <h2>⏸ Paused</h2>
+      <div class="tag">the jungle waits</div>
+      <div class="btnRow">
+        <button id="btnResume">Resume</button>
+        <button class="ghost" id="btnQuit">Give up</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- game over -->
+  <div class="overlay" id="overScreen" hidden>
+    <div class="card">
+      <div id="finalForm">💀</div>
+      <h2 id="overTitle">Game Over</h2>
+      <div class="tag" id="overSub">eaten by the jungle</div>
+      <div class="scores">
+        <div class="score">
+          <div class="v" id="finalTier">1</div>
+          <div class="k">Tier</div>
+        </div>
+        <div class="score">
+          <div class="v" id="finalEaten">0</div>
+          <div class="k">Eaten</div>
+        </div>
+        <div class="score">
+          <div class="v" id="finalTime">0:00</div>
+          <div class="k">Survived</div>
+        </div>
+      </div>
+      <div id="bestLine"></div>
+      <div class="btnRow">
+        <button id="btnAgain">Play again</button>
+        <a href="../index.html"><button class="ghost">Back to hub</button></a>
+      </div>
     </div>
   </div>
 
   <script>
-    const world = document.getElementById("world");
-    const sizeText = document.getElementById("size");
-    const levelText = document.getElementById("level");
-    const xpText = document.getElementById("xp");
-    const xpBar = document.getElementById("xpBar");
-    const statusText = document.getElementById("statusText");
-    let xp = 0;
-    let level = 1;
+    "use strict";
 
-    const animalsData = [
-      "🐭", "🐹", "🐰", "🐸", "🐔", "🦆", "🐷","🐮", "🐱", "🐶", "🐗", "🦊", "🐺",
-      "🐯", "🦁", "🐻", "🐼", "🐻‍❄️", "🐘", "🦣"
-    ].map((emoji, i) => ({ emoji, size: i + 1 }));
+    /* =========================================================
+       LADDER — the 20 animals. `tier` is the eat/eaten comparison.
+       ========================================================= */
 
-    let player, animals = [];
-    let mouseX = 0, mouseY = 0;
-    let running = false;
-    let invincible = false;
-    let statusTimer;
-
-    const WORLD_SIZE = 3000;
-    const BASE_POPULATION = 90;
-    const SAFE_SPAWN_RADIUS = 300;
-    const PLAYER_ACCEL = 0.5;
-    const WANDER_TURN_RATE = 0.02;
-    const WIN_LEVEL = animalsData.length;
-
-    document.addEventListener("mousemove", e => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
+    const LADDER = [
+      ["🐭", "Mouse"], ["🐹", "Hamster"], ["🐰", "Rabbit"], ["🐸", "Frog"],
+      ["🐔", "Chicken"], ["🦆", "Duck"], ["🐷", "Pig"], ["🐮", "Cow"],
+      ["🐱", "Cat"], ["🐶", "Dog"], ["🐗", "Boar"], ["🦊", "Fox"],
+      ["🐺", "Wolf"], ["🐯", "Tiger"], ["🦁", "Lion"], ["🐻", "Bear"],
+      ["🐼", "Panda"], ["🐻‍❄️", "Polar Bear"], ["🐘", "Elephant"], ["🦣", "Mammoth"]
+    ].map(([emoji, name], i) => {
+      const tier = i + 1;
+      return {
+        tier, emoji, name,
+        r: 11 * Math.pow(tier, 0.55)         // sublinear: tier 1 ≈ 11px, tier 20 ≈ 57px
+      };
     });
 
-    function showStatus(message, ms = 900) {
-      statusText.innerText = message;
-      clearTimeout(statusTimer);
-      statusTimer = setTimeout(() => {
-        statusText.innerText = "";
-      }, ms);
-    }
+    const TOP_TIER = LADDER.length;
 
-    function getPlayerMaxSpeed(size) {
-      return Math.max(2.4, 6.8 - size * 0.2);
-    }
+    /* =========================================================
+       Constants
+       ========================================================= */
 
-    function getSpawnPosition(avoidPlayer = true) {
-      let x = Math.random() * WORLD_SIZE;
-      let y = Math.random() * WORLD_SIZE;
+    const WORLD = 4000;
+    const STEP = 1 / 60;             // fixed timestep, seconds
+    const POP = 240;                 // target population
+    const CELL = 170;                // spatial hash cell
+    const CHASE_TIME = 4.0;          // seconds before a hunter tires
+    const CHASE_COOL = 3.5;          // seconds it then ignores you
+    const SPAWN_GAP = 120;           // spawn ring starts this far past the view
+    const SPAWN_BAND = 580;
+    const START_GRACE = 3;           // seconds of invincibility
 
-      if (!avoidPlayer || !player) return { x, y };
+    /* Movement is expressed in px/second, but every value below is the original
+       per-frame number × 60, so the game moves at exactly the speed it always did. */
+    const CHASE_RANGE = 200;         // was `chaseRange`
+    const FLEE_BASE = 170;           // was `fleeRange` base
+    const FLEE_PER_TIER = 20;
+    const FLEE_MAX_GAP = 8;          // caps the scan radius; the original only fled the player
+    const SCAN = FLEE_BASE + FLEE_MAX_GAP * FLEE_PER_TIER;
 
-      let tries = 0;
-      while (tries < 30) {
-        const dx = x - player.x;
-        const dy = y - player.y;
-        if (Math.hypot(dx, dy) >= SAFE_SPAWN_RADIUS) break;
-        x = Math.random() * WORLD_SIZE;
-        y = Math.random() * WORLD_SIZE;
-        tries++;
+    const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+    const rand = (a, b) => a + Math.random() * (b - a);
+    const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+
+    // original: Math.max(2.4, 6.8 - size * 0.2) px/frame
+    function playerMaxSpeed(tier) { return Math.max(2.4, 6.8 - tier * 0.2) * 60; }
+    function xpNeeded(level) { return Math.floor(4 + level * 2.2 + level * level * 0.08); }
+
+    /* =========================================================
+       Sound — Web Audio synth, mute persisted (house convention)
+       ========================================================= */
+
+    const Sound = (() => {
+      let ac = null, master = null;
+      let muted = localStorage.getItem("jungleKing.muted") === "1";
+
+      function ensure() {
+        if (!ac) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return null;
+          ac = new AC();
+          master = ac.createGain();
+          master.gain.value = 0.5;
+          master.connect(ac.destination);
+        }
+        if (ac.state === "suspended") ac.resume();
+        return ac;
       }
-      return { x, y };
-    }
 
-    function createAnimal(data, isPlayer = false, avoidPlayerSpawn = true) {
-      const el = document.createElement("div");
-      el.className = "animal";
-      el.innerText = data.emoji;
-      const spawnPos = getSpawnPosition(avoidPlayerSpawn);
+      function tone({ freq = 440, type = "sine", dur = 0.15, gain = 0.2, attack = 0.006, slideTo = null, when = 0 }) {
+        if (muted || !ensure()) return;
+        const t0 = ac.currentTime + when;
+        const osc = ac.createOscillator();
+        const g = ac.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t0);
+        if (slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(1, slideTo), t0 + dur);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(gain, t0 + attack);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.connect(g); g.connect(master);
+        osc.start(t0); osc.stop(t0 + dur + 0.03);
+      }
 
-      let obj = {
-        el,
-        size: data.size,
-        x: spawnPos.x,
-        y: spawnPos.y,
-        speed: 1 + Math.random() * 1.5,
-        isPlayer,
-        vx: (Math.random() - 0.5) * 2,
-        vy: (Math.random() - 0.5) * 2
+      function noise({ dur = 0.2, gain = 0.2, freq = 1000, q = 1, when = 0 }) {
+        if (muted || !ensure()) return;
+        const t0 = ac.currentTime + when;
+        const n = Math.floor(ac.sampleRate * dur);
+        const buf = ac.createBuffer(1, n, ac.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+        const src = ac.createBufferSource(); src.buffer = buf;
+        const f = ac.createBiquadFilter();
+        f.type = "bandpass"; f.frequency.value = freq; f.Q.value = q;
+        const g = ac.createGain();
+        g.gain.setValueAtTime(gain, t0);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        src.connect(f); f.connect(g); g.connect(master);
+        src.start(t0); src.stop(t0 + dur);
+      }
+
+      return {
+        unlock: ensure,
+        get muted() { return muted; },
+        toggle() {
+          muted = !muted;
+          localStorage.setItem("jungleKing.muted", muted ? "1" : "0");
+          if (!muted) { ensure(); this.click(); }
+          return muted;
+        },
+        click() { tone({ freq: 520, type: "triangle", dur: 0.07, gain: 0.14 }); },
+        // pitch drops as the prey gets bigger — a satisfying "weight" cue
+        eat(tier) {
+          const f = 720 - tier * 22;
+          noise({ dur: 0.09, gain: 0.12, freq: 900, q: 0.8 });
+          tone({ freq: f, type: "triangle", dur: 0.11, gain: 0.16, slideTo: f * 1.6 });
+        },
+        evolve() {
+          [0, 0.08, 0.16, 0.26].forEach((w, i) =>
+            tone({ freq: 392 * Math.pow(1.26, i), type: "triangle", dur: 0.22, gain: 0.17, when: w }));
+          noise({ dur: 0.3, gain: 0.07, freq: 400, q: 0.6 });
+        },
+        die() {
+          noise({ dur: 0.34, gain: 0.24, freq: 260, q: 0.7 });
+          tone({ freq: 300, type: "sawtooth", dur: 0.6, gain: 0.2, slideTo: 60 });
+        },
+        win() {
+          [523, 659, 784, 1047, 1319].forEach((f, i) =>
+            tone({ freq: f, type: "triangle", dur: 0.42, gain: 0.19, when: i * 0.12 }));
+        }
       };
+    })();
 
-      const debug = document.createElement("div");
-      debug.style.position = "absolute";
-      debug.style.border = "1px solid red";
-      debug.style.borderRadius = "50%";
-      debug.style.pointerEvents = "none";
-      debug.style.display = "none"; // toggle later
+    /* =========================================================
+       Canvas + camera
+       ========================================================= */
 
-      world.appendChild(debug);
+    const cv = document.getElementById("cv");
+    const ctx = cv.getContext("2d");
+    let VW = 0, VH = 0, DPR = 1;
 
-      obj.debug = debug;
+    function resize() {
+      DPR = Math.min(window.devicePixelRatio || 1, 2);
+      VW = window.innerWidth;
+      VH = window.innerHeight;
+      cv.width = Math.round(VW * DPR);
+      cv.height = Math.round(VH * DPR);
+      cv.style.width = VW + "px";
+      cv.style.height = VH + "px";
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+    }
+    window.addEventListener("resize", resize);
+    resize();
 
-      world.appendChild(el);
-      animals.push(obj);
-      return obj;
+    const cam = { x: WORLD / 2, y: WORLD / 2, zoom: 1, targetZoom: 1 };
+    function viewHalfW() { return VW / (2 * cam.zoom); }
+    function viewHalfH() { return VH / (2 * cam.zoom); }
+    function viewRadius() { return Math.hypot(viewHalfW(), viewHalfH()); }
+
+    /* =========================================================
+       World — offscreen tiles, decorations, ambience
+       ========================================================= */
+
+    const World = (() => {
+      let groundPat = null, canopyPat = null, canopyTile = null;
+      let sky = null, skyCtx = null;          // offscreen layer for the overhead foliage
+      let decos = [];
+      let motes = [];
+
+      // draw a blob 9× so the tile wraps without a visible seam
+      function wrapBlob(g, s, fn) {
+        for (let ox = -1; ox <= 1; ox++)
+          for (let oy = -1; oy <= 1; oy++) fn(ox * s, oy * s);
+      }
+
+      function buildGround() {
+        const s = 300;
+        const c = document.createElement("canvas");
+        c.width = c.height = s;
+        const g = c.getContext("2d");
+        g.fillStyle = "#20401f";
+        g.fillRect(0, 0, s, s);
+
+        for (let i = 0; i < 130; i++) {
+          const x = Math.random() * s, y = Math.random() * s, r = rand(10, 44);
+          const l = randInt(-8, 10);
+          g.fillStyle = `rgba(${44 + l},${86 + l * 2},${40 + l},0.5)`;
+          wrapBlob(g, s, (dx, dy) => {
+            g.beginPath(); g.arc(x + dx, y + dy, r, 0, 6.2832); g.fill();
+          });
+        }
+        for (let i = 0; i < 34; i++) {           // dirt patches
+          const x = Math.random() * s, y = Math.random() * s, r = rand(12, 30);
+          g.fillStyle = `rgba(92,72,44,${rand(0.12, 0.24).toFixed(2)})`;
+          wrapBlob(g, s, (dx, dy) => {
+            g.beginPath(); g.ellipse(x + dx, y + dy, r, r * 0.62, rand(0, 3), 0, 6.2832); g.fill();
+          });
+        }
+        for (let i = 0; i < 220; i++) {          // grass tufts
+          const x = Math.random() * s, y = Math.random() * s, h = rand(4, 10);
+          g.strokeStyle = `rgba(${randInt(96, 140)},${randInt(170, 210)},${randInt(88, 120)},0.34)`;
+          g.lineWidth = 1.4;
+          wrapBlob(g, s, (dx, dy) => {
+            g.beginPath();
+            g.moveTo(x + dx, y + dy);
+            g.quadraticCurveTo(x + dx + h * 0.4, y + dy - h * 0.7, x + dx + rand(-3, 3), y + dy - h);
+            g.stroke();
+          });
+        }
+        groundPat = ctx.createPattern(c, "repeat");
+      }
+
+      function buildCanopy() {
+        const s = 460;
+        const c = document.createElement("canvas");
+        c.width = c.height = s;
+        const g = c.getContext("2d");
+        for (let i = 0; i < 26; i++) {
+          const x = Math.random() * s, y = Math.random() * s;
+          const n = randInt(4, 8), sc = rand(26, 62);
+          g.fillStyle = `rgba(${randInt(6, 18)},${randInt(28, 46)},${randInt(10, 22)},${rand(0.5, 0.8).toFixed(2)})`;
+          wrapBlob(g, s, (dx, dy) => {
+            for (let k = 0; k < n; k++) {
+              const a = (k / n) * 6.2832 + i;
+              g.beginPath();
+              g.ellipse(x + dx + Math.cos(a) * sc * 0.6, y + dy + Math.sin(a) * sc * 0.6,
+                sc * 0.6, sc * 0.38, a, 0, 6.2832);
+              g.fill();
+            }
+          });
+        }
+        canopyTile = c;
+      }
+
+      // the foliage gets its own layer so its middle can be erased before compositing
+      function ensureSky() {
+        if (!sky) {
+          sky = document.createElement("canvas");
+          skyCtx = sky.getContext("2d");
+        }
+        if (sky.width !== cv.width || sky.height !== cv.height) {
+          sky.width = cv.width;
+          sky.height = cv.height;
+          canopyPat = null;
+        }
+        if (!canopyPat) canopyPat = skyCtx.createPattern(canopyTile, "repeat");
+      }
+
+      function buildDecos() {
+        decos = [];
+        for (let i = 0; i < 820; i++) {
+          const roll = Math.random();
+          decos.push({
+            x: Math.random() * WORLD,
+            y: Math.random() * WORLD,
+            s: rand(0.7, 1.5),
+            a: rand(0, 6.2832),
+            t: roll < 0.42 ? "bush" : roll < 0.66 ? "rock" : roll < 0.88 ? "flower" : "log",
+            h: randInt(0, 3)
+          });
+        }
+      }
+
+      function drawDeco(d) {
+        const s = d.s;
+        if (d.t === "bush") {
+          ctx.fillStyle = ["#1d4423", "#22502a", "#1a3d1f"][d.h % 3];
+          for (let k = 0; k < 4; k++) {
+            const a = d.a + k * 1.57;
+            ctx.beginPath();
+            ctx.arc(d.x + Math.cos(a) * 9 * s, d.y + Math.sin(a) * 6 * s, 12 * s, 0, 6.2832);
+            ctx.fill();
+          }
+          ctx.fillStyle = "rgba(120,190,110,0.18)";
+          ctx.beginPath();
+          ctx.arc(d.x - 4 * s, d.y - 6 * s, 8 * s, 0, 6.2832);
+          ctx.fill();
+        } else if (d.t === "rock") {
+          ctx.fillStyle = "#4a5148";
+          ctx.beginPath();
+          ctx.ellipse(d.x, d.y, 11 * s, 8 * s, d.a, 0, 6.2832);
+          ctx.fill();
+          ctx.fillStyle = "rgba(190,200,185,0.16)";
+          ctx.beginPath();
+          ctx.ellipse(d.x - 2 * s, d.y - 2.4 * s, 6 * s, 3.6 * s, d.a, 0, 6.2832);
+          ctx.fill();
+        } else if (d.t === "flower") {
+          ctx.fillStyle = ["#e8d36a", "#e07fb0", "#8fd6ff", "#ff9c6b"][d.h % 4];
+          for (let k = 0; k < 3; k++) {
+            ctx.beginPath();
+            ctx.arc(d.x + Math.cos(d.a + k * 2.1) * 4 * s, d.y + Math.sin(d.a + k * 2.1) * 4 * s, 2.4 * s, 0, 6.2832);
+            ctx.fill();
+          }
+        } else {
+          ctx.save();
+          ctx.translate(d.x, d.y); ctx.rotate(d.a);
+          ctx.fillStyle = "#4a3520";
+          ctx.fillRect(-18 * s, -5 * s, 36 * s, 10 * s);
+          ctx.fillStyle = "rgba(255,240,200,0.09)";
+          ctx.fillRect(-18 * s, -5 * s, 36 * s, 3 * s);
+          ctx.restore();
+        }
+      }
+
+      function buildMotes() {
+        motes = [];
+        for (let i = 0; i < 80; i++) {
+          motes.push({
+            x: rand(0, WORLD), y: rand(0, WORLD),
+            p: rand(0, 6.2832), sp: rand(0.4, 1.4),
+            fly: Math.random() < 0.45, r: rand(1.2, 2.6)
+          });
+        }
+      }
+
+      return {
+        build() { buildGround(); buildCanopy(); buildDecos(); buildMotes(); },
+
+        // keep ambience around the camera so it is never wasted off-screen
+        update(dt, t) {
+          const R = viewRadius() + 60;
+          for (const m of motes) {
+            m.p += dt * m.sp;
+            m.x += Math.cos(m.p) * m.sp * 14 * dt;
+            m.y += Math.sin(m.p * 0.7) * m.sp * 10 * dt;
+            if (Math.hypot(m.x - cam.x, m.y - cam.y) > R) {
+              const a = rand(0, 6.2832), d = rand(0, R * 0.9);
+              m.x = cam.x + Math.cos(a) * d;
+              m.y = cam.y + Math.sin(a) * d;
+            }
+          }
+        },
+
+        drawGround() {
+          const hw = viewHalfW() + 4, hh = viewHalfH() + 4;
+          const x0 = cam.x - hw, y0 = cam.y - hh, x1 = cam.x + hw, y1 = cam.y + hh;
+
+          ctx.fillStyle = "#0a1a0c";                 // outside the arena
+          ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+
+          const gx0 = Math.max(x0, 0), gy0 = Math.max(y0, 0);
+          const gx1 = Math.min(x1, WORLD), gy1 = Math.min(y1, WORLD);
+          if (gx1 > gx0 && gy1 > gy0) {
+            ctx.fillStyle = groundPat;
+            ctx.fillRect(gx0, gy0, gx1 - gx0, gy1 - gy0);
+            const vig = ctx.createRadialGradient(cam.x, cam.y, 0, cam.x, cam.y, Math.max(hw, hh) * 1.1);
+            vig.addColorStop(0, "rgba(255,240,180,0.05)");
+            vig.addColorStop(1, "rgba(0,10,0,0.18)");
+            ctx.fillStyle = vig;
+            ctx.fillRect(gx0, gy0, gx1 - gx0, gy1 - gy0);
+          }
+
+          // scalloped foliage wall along whichever edges are in view
+          ctx.fillStyle = "#12291491";
+          const step = 46;
+          const edge = (fx, fy, from, to) => {
+            for (let v = Math.floor(from / step) * step; v < to; v += step) {
+              ctx.beginPath();
+              ctx.arc(fx(v), fy(v), 30, 0, 6.2832);
+              ctx.fill();
+            }
+          };
+          if (x0 < 0) edge(() => 0, v => v, y0, y1);
+          if (x1 > WORLD) edge(() => WORLD, v => v, y0, y1);
+          if (y0 < 0) edge(v => v, () => 0, x0, x1);
+          if (y1 > WORLD) edge(v => v, () => WORLD, x0, x1);
+
+          // decorations (culled)
+          const pad = 60;
+          for (const d of decos) {
+            if (d.x < x0 - pad || d.x > x1 + pad || d.y < y0 - pad || d.y > y1 + pad) continue;
+            drawDeco(d);
+          }
+        },
+
+        drawMotes(t) {
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          for (const m of motes) {
+            const pulse = m.fly ? 0.35 + 0.65 * Math.abs(Math.sin(t * 2.2 + m.p)) : 0.5;
+            ctx.fillStyle = m.fly
+              ? `rgba(226,255,150,${(0.55 * pulse).toFixed(3)})`
+              : `rgba(255,244,200,${(0.16 * pulse).toFixed(3)})`;
+            ctx.beginPath();
+            ctx.arc(m.x, m.y, m.r * (m.fly ? 1.6 : 1), 0, 6.2832);
+            ctx.fill();
+          }
+          ctx.restore();
+        },
+
+        /* Canopy + light shafts, composited on their own layer. The middle of the
+           layer is erased before it lands on the scene, so the play area is never
+           behind foliage — the atmosphere only frames the edges. */
+        drawOverhead(t) {
+          ensureSky();
+          const g2 = skyCtx;
+          g2.setTransform(DPR, 0, 0, DPR, 0, 0);
+          g2.clearRect(0, 0, VW, VH);
+
+          g2.save();
+          g2.globalAlpha = 0.5;
+          g2.translate(-cam.x * 0.3 * cam.zoom + VW / 2, -cam.y * 0.3 * cam.zoom + VH / 2);
+          g2.translate(Math.sin(t * 0.09) * 26, Math.cos(t * 0.07) * 18);
+          g2.fillStyle = canopyPat;
+          const span = Math.max(VW, VH) * 2;
+          g2.fillRect(cam.x * 0.3 * cam.zoom - VW / 2 - span, cam.y * 0.3 * cam.zoom - VH / 2 - span,
+            VW + span * 2, VH + span * 2);
+          g2.restore();
+
+          g2.save();
+          g2.globalCompositeOperation = "lighter";
+          const drift = ((t * 9) % (VW + 700)) - 350;
+          for (let i = 0; i < 4; i++) {
+            const x = drift + i * ((VW + 700) / 4) - cam.x * 0.12;
+            const g = g2.createLinearGradient(x, 0, x + 190, VH);
+            g.addColorStop(0, "rgba(255,245,190,0.09)");
+            g.addColorStop(1, "rgba(255,245,190,0)");
+            g2.fillStyle = g;
+            g2.beginPath();
+            g2.moveTo(x, -20); g2.lineTo(x + 130, -20);
+            g2.lineTo(x + 320, VH + 20); g2.lineTo(x + 190, VH + 20);
+            g2.closePath();
+            g2.fill();
+          }
+          g2.restore();
+
+          // erase the centre — the player is always here, so it must stay clean
+          const R = Math.max(VW, VH) * 0.58;
+          const hole = g2.createRadialGradient(VW / 2, VH / 2, R * 0.44, VW / 2, VH / 2, R);
+          hole.addColorStop(0, "rgba(0,0,0,1)");
+          hole.addColorStop(1, "rgba(0,0,0,0)");
+          g2.globalCompositeOperation = "destination-out";
+          g2.fillStyle = hole;
+          g2.fillRect(0, 0, VW, VH);
+          g2.globalCompositeOperation = "source-over";
+
+          ctx.drawImage(sky, 0, 0, VW, VH);
+        }
+      };
+    })();
+
+    /* =========================================================
+       FX — particles, floating text, rings, trail, shake
+       ========================================================= */
+
+    const FX = {
+      parts: [], texts: [], rings: [], trail: [],
+      shake: 0, shakeMag: 0,
+
+      reset() { this.parts.length = 0; this.texts.length = 0; this.rings.length = 0; this.trail.length = 0; this.shake = 0; },
+
+      burst(x, y, n, color, spd = 150) {
+        for (let i = 0; i < n; i++) {
+          const a = rand(0, 6.2832), s = rand(spd * 0.35, spd);
+          this.parts.push({
+            x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+            life: rand(0.35, 0.75), t: 0, r: rand(2, 5.5), color
+          });
+        }
+      },
+      text(x, y, str, color = "#ffd76a") {
+        this.texts.push({ x, y, str, color, t: 0, life: 0.85 });
+      },
+      ring(x, y, maxR, color) {
+        this.rings.push({ x, y, r: maxR * 0.15, maxR, t: 0, life: 0.5, color });
+      },
+      kick(mag) { this.shakeMag = Math.max(this.shakeMag, mag); this.shake = 0.35; },
+
+      update(dt) {
+        for (let i = this.parts.length - 1; i >= 0; i--) {
+          const p = this.parts[i];
+          p.t += dt;
+          if (p.t >= p.life) { this.parts.splice(i, 1); continue; }
+          p.x += p.vx * dt; p.y += p.vy * dt;
+          p.vx *= 0.93; p.vy *= 0.93;
+        }
+        for (let i = this.texts.length - 1; i >= 0; i--) {
+          const s = this.texts[i];
+          s.t += dt; s.y -= 34 * dt;
+          if (s.t >= s.life) this.texts.splice(i, 1);
+        }
+        for (let i = this.rings.length - 1; i >= 0; i--) {
+          const r = this.rings[i];
+          r.t += dt;
+          if (r.t >= r.life) this.rings.splice(i, 1);
+        }
+        for (let i = this.trail.length - 1; i >= 0; i--) {
+          const s = this.trail[i];
+          s.t += dt;
+          if (s.t >= 0.4) this.trail.splice(i, 1);
+        }
+        if (this.shake > 0) {
+          this.shake -= dt;
+          if (this.shake <= 0) { this.shake = 0; this.shakeMag = 0; }
+        }
+      },
+
+      drawTrail() {
+        for (const s of this.trail) {
+          const k = 1 - s.t / 0.4;
+          ctx.fillStyle = `rgba(190,240,170,${(k * 0.16).toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r * (0.5 + k * 0.5), 0, 6.2832);
+          ctx.fill();
+        }
+      },
+
+      draw() {
+        for (const r of this.rings) {
+          const k = r.t / r.life;
+          ctx.strokeStyle = r.color;
+          ctx.globalAlpha = 1 - k;
+          ctx.lineWidth = 4 * (1 - k) + 1;
+          ctx.beginPath();
+          ctx.arc(r.x, r.y, r.r + (r.maxR - r.r) * k, 0, 6.2832);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+        for (const p of this.parts) {
+          const k = 1 - p.t / p.life;
+          ctx.globalAlpha = k;
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * k, 0, 6.2832);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        for (const s of this.texts) {
+          const k = 1 - s.t / s.life;
+          ctx.globalAlpha = k;
+          ctx.font = "700 20px 'Segoe UI', system-ui, sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = "rgba(0,0,0,0.55)";
+          ctx.strokeText(s.str, s.x, s.y);
+          ctx.fillStyle = s.color;
+          ctx.fillText(s.str, s.x, s.y);
+          ctx.globalAlpha = 1;
+        }
+      }
+    };
+
+    /* =========================================================
+       Spatial hash
+       ========================================================= */
+
+    const Grid = {
+      map: new Map(),
+      rebuild(list) {
+        this.map.clear();
+        for (const a of list) {
+          const k = (Math.floor(a.x / CELL) << 16) ^ (Math.floor(a.y / CELL) & 0xffff);
+          let b = this.map.get(k);
+          if (!b) this.map.set(k, b = []);
+          b.push(a);
+        }
+      },
+      each(x, y, rad, cb) {
+        const c0 = Math.floor((x - rad) / CELL), c1 = Math.floor((x + rad) / CELL);
+        const r0 = Math.floor((y - rad) / CELL), r1 = Math.floor((y + rad) / CELL);
+        for (let cx = c0; cx <= c1; cx++) {
+          for (let cy = r0; cy <= r1; cy++) {
+            const b = this.map.get((cx << 16) ^ (cy & 0xffff));
+            if (!b) continue;
+            for (let i = 0; i < b.length; i++) cb(b[i]);
+          }
+        }
+      }
+    };
+
+    /* =========================================================
+       Game state
+       ========================================================= */
+
+    const S = {
+      mode: "menu",            // menu | playing | paused | over
+      animals: [],
+      player: null,
+      level: 1,
+      xp: 0,
+      eaten: 0,
+      time: 0,
+      grace: 0,
+      threat: 0,               // 0..1, drives the danger vignette
+      tick: 0,
+      won: false
+    };
+
+    let pointerX = 0, pointerY = 0;
+    window.addEventListener("pointermove", e => { pointerX = e.clientX; pointerY = e.clientY; }, { passive: true });
+    window.addEventListener("pointerdown", e => { pointerX = e.clientX; pointerY = e.clientY; }, { passive: true });
+
+    function makeAnimal(tier, x, y) {
+      const d = LADDER[tier - 1];
+      return {
+        tier, r: d.r, emoji: d.emoji,
+        x, y, vx: 0, vy: 0,
+        cruise: (1 + Math.random() * 1.5) * 60,   // original: 1 + rand*1.5 px/frame
+        state: "wander", stateT: 0, cool: 0,
+        target: null, heading: rand(0, 6.2832), graze: 0,
+        phase: rand(0, 6.2832), flip: Math.random() < 0.5,
+        herd: tier <= 6, isPlayer: false
+      };
     }
 
-    function pickSpawnDataByLevel() {
-      const maxSize = animalsData[animalsData.length - 1].size;
-      const playerSize = player ? player.size : 1;
-      const levelPressure = Math.min(level / maxSize, 1);
-
-      let preferredMin = Math.max(1, playerSize - 2);
-      let preferredMax = Math.min(maxSize, playerSize + 3 + Math.floor(levelPressure * 4));
-      if (preferredMin > preferredMax) {
-        preferredMin = preferredMax;
+    // spawn just outside the view so nothing ever pops in on screen
+    function ringPosition() {
+      const R = viewRadius();
+      for (let i = 0; i < 24; i++) {
+        const a = rand(0, 6.2832);
+        const d = R + SPAWN_GAP + Math.random() * SPAWN_BAND;
+        const x = cam.x + Math.cos(a) * d;
+        const y = cam.y + Math.sin(a) * d;
+        if (x > 20 && x < WORLD - 20 && y > 20 && y < WORLD - 20) return { x, y };
       }
-
-      const pool = animalsData.filter(a => a.size >= preferredMin && a.size <= preferredMax);
-      if (pool.length === 0) {
-        return animalsData[0];
+      // arena corner: fall back to any point far enough away
+      for (let i = 0; i < 40; i++) {
+        const x = rand(20, WORLD - 20), y = rand(20, WORLD - 20);
+        if (Math.hypot(x - cam.x, y - cam.y) > R + SPAWN_GAP) return { x, y };
       }
-
-      const preyPool = pool.filter(a => a.size <= playerSize);
-      const threatPool = pool.filter(a => a.size > playerSize);
-      const preyChance = Math.max(0.42, 0.74 - levelPressure * 0.34);
-
-      if (preyPool.length > 0 && Math.random() < preyChance) {
-        return preyPool[Math.floor(Math.random() * preyPool.length)];
-      }
-      if (threatPool.length > 0) {
-        return threatPool[Math.floor(Math.random() * threatPool.length)];
-      }
-      return pool[Math.floor(Math.random() * pool.length)];
+      return { x: rand(20, WORLD - 20), y: rand(20, WORLD - 20) };
     }
 
-    function spawnInitialAnimals() {
-      for (let i = 0; i < BASE_POPULATION; i++) {
-        const data = pickSpawnDataByLevel();
-        createAnimal(data, false, true);
-      }
-
-      // keep early game smooth with extra edible animals
-      for (let i = 0; i < 20; i++) {
-        createAnimal(animalsData[0], false, true);
-      }
+    // bell around the player's tier with an upward tail that grows with level
+    function pickTier(forcePrey) {
+      const pt = S.player ? S.player.tier : 1;
+      if (forcePrey) return clamp(pt - randInt(0, 3), 1, TOP_TIER);
+      const preyChance = Math.max(0.40, 0.56 - S.level * 0.006);
+      const roll = Math.random();
+      if (roll < preyChance) return clamp(pt - randInt(0, 3), 1, TOP_TIER);
+      if (roll < preyChance + 0.2) return clamp(pt, 1, TOP_TIER);
+      return clamp(pt + 1 + randInt(0, 2 + Math.floor(S.level / 5)), 1, TOP_TIER);
     }
 
-    function spawnAnimalsRandomly() {
+    // used for the very first fill, where the area around the player must NOT be empty
+    function scatterPosition(minDist, spread) {
       for (let i = 0; i < 30; i++) {
-        let data = animalsData[Math.floor(Math.random() * animalsData.length)];
-        createAnimal(data);
+        const a = rand(0, 6.2832), d = rand(minDist, spread);
+        const x = clamp(cam.x + Math.cos(a) * d, 20, WORLD - 20);
+        const y = clamp(cam.y + Math.sin(a) * d, 20, WORLD - 20);
+        if (Math.hypot(x - cam.x, y - cam.y) >= minDist) return { x, y };
       }
+      return { x: clamp(cam.x + minDist, 20, WORLD - 20), y: clamp(cam.y, 20, WORLD - 20) };
     }
 
-    function respawnOneAnimal() {
-      if (!running) return;
-      const data = pickSpawnDataByLevel();
-      createAnimal(data, false, true);
+    function spawnOne(forcePrey, pos) {
+      const p = pos || ringPosition();
+      const a = makeAnimal(pickTier(forcePrey), p.x, p.y);
+      S.animals.push(a);
+      return a;
     }
 
     function maintainPopulation() {
-      const targetPopulation = BASE_POPULATION + Math.min(20, level);
-      while (animals.length - 1 < targetPopulation) {
-        respawnOneAnimal();
+      const p = S.player;
+      const cullR = viewRadius() * 1.9 + 1100;
+
+      // recycle strays; count how much food is actually within reach
+      let edibleNear = 0;
+      for (let i = S.animals.length - 1; i >= 0; i--) {
+        const a = S.animals[i];
+        if (a.isPlayer) continue;
+        const d = Math.hypot(a.x - p.x, a.y - p.y);
+        // mark dead so any hunter still holding a reference drops it
+        if (d > cullR) { a.dead = true; S.animals.splice(i, 1); continue; }
+        if (a.tier <= p.tier && d < viewRadius() * 1.5) edibleNear++;
+      }
+
+      const target = POP + Math.min(30, S.level);
+      let guard = 0;
+      while (S.animals.length - 1 < target && guard++ < 80) {
+        spawnOne(edibleNear < 14 && guard < 20);
       }
     }
 
-    function startGame() {
-      document.getElementById("startScreen").style.display = "none";
-      document.getElementById("gameOver").style.display = "none";
-      document.querySelector("#gameOver h1").innerText = "💀 Game Over";
-      running = true;
-      xp = 0;
-      level = 1;
-      animals = [];
-      world.innerHTML = "";
-      showStatus("Eat smaller animals to grow!");
+    /* =========================================================
+       AI — wander / herd / hunt / flee, with hunter fatigue
+       ========================================================= */
 
-      player = createAnimal(animalsData[level - 1], true, false);
+    function decide(a) {
+      let threat = null, threatD = Infinity;
+      let prey = null, preyD = Infinity;
 
-      // spawn away from center for fairness
-      player.x = WORLD_SIZE / 2;
-      player.y = WORLD_SIZE / 2;
-      player.vx = 0;
-      player.vy = 0;
+      Grid.each(a.x, a.y, SCAN, o => {
+        if (o === a) return;
+        const dx = o.x - a.x, dy = o.y - a.y;
+        const d2 = dx * dx + dy * dy;
+        if (o.tier > a.tier) {
+          // original fleeRange: 170 + gap * 20
+          const fr = FLEE_BASE + Math.min(o.tier - a.tier, FLEE_MAX_GAP) * FLEE_PER_TIER;
+          if (d2 < fr * fr && d2 < threatD) { threatD = d2; threat = o; }
+        } else if (o.tier < a.tier) {
+          if (d2 < CHASE_RANGE * CHASE_RANGE && d2 < preyD) { preyD = d2; prey = o; }
+        }
+      });
 
-      spawnAnimalsRandomly();
-      spawnInitialAnimals();
-
-      // 🛡️ INVINCIBLE 3s
-      invincible = true;
-      player.el.classList.add("invincible");
-
-      setTimeout(() => {
-        invincible = false;
-        player.el.classList.remove("invincible");
-      }, 3000);
-
-      //viewport.classList.add("hide-cursor");
-
-      gameLoop();
-    }
-
-    function restart() {
-      location.reload();
-    }
-
-    function getXPNeeded(level) {
-      // quick early growth, tighter mid/late pacing
-      return Math.floor(4 + level * 2.2 + level * level * 0.08);
-    }
-
-    function endGame(win = false) {
-      running = false;
-      const title = document.querySelector("#gameOver h1");
-      title.innerText = win ? "🏆 You Rule The Jungle!" : "💀 Game Over";
-      document.getElementById("gameOver").style.display = "flex";
-      if (win) {
-        showStatus("Final evolution reached!", 1600);
+      if (threat) {
+        a.state = "flee";
+        a.target = threat;
+        a.stateT = 0;
+        // panic is contagious: nearby kin scatter too
+        if (a.herd) {
+          Grid.each(a.x, a.y, 150, o => {
+            if (o !== a && !o.isPlayer && o.tier === a.tier && o.state === "wander") {
+              o.state = "flee"; o.target = threat; o.stateT = 0;
+            }
+          });
+        }
+        return;
       }
+
+      if (prey && a.cool <= 0) {
+        // only reset the fatigue clock on ENTERING hunt — switching targets
+        // mid-chase must not buy a hunter a fresh 4 seconds
+        if (a.state !== "hunt") { a.state = "hunt"; a.stateT = 0; }
+        a.target = prey;
+        return;
+      }
+
+      if (a.state !== "wander") { a.state = "wander"; a.target = null; a.stateT = 0; }
+    }
+
+    /* Returns a UNIT direction in `out`. Every term below has to be unitless —
+       mixing a raw px/s velocity in here makes animals rocket off the map. */
+    const HERD_R = 130, HERD_SEP = 46;
+
+    function herdSteer(a, out) {
+      let cx = 0, cy = 0, ax = 0, ay = 0, sx = 0, sy = 0, n = 0;
+      Grid.each(a.x, a.y, HERD_R, o => {
+        if (o === a || o.isPlayer || o.tier !== a.tier || n >= 5) return;
+        const dx = o.x - a.x, dy = o.y - a.y;
+        const d = Math.hypot(dx, dy);
+        if (d > HERD_R || d < 0.001) return;
+        cx += dx / HERD_R; cy += dy / HERD_R;                   // cohesion, ≤ 1
+        const s = Math.hypot(o.vx, o.vy);
+        if (s > 1) { ax += o.vx / s; ay += o.vy / s; }           // alignment, unit heading
+        if (d < HERD_SEP) {                                      // separation, ≤ 1
+          const push = (HERD_SEP - d) / HERD_SEP;
+          sx -= dx / d * push; sy -= dy / d * push;
+        }
+        n++;
+      });
+      if (!n) return false;
+
+      const vx = (cx / n) * 0.6 + (ax / n) * 0.7 + sx * 0.9;
+      const vy = (cy / n) * 0.6 + (ay / n) * 0.7 + sy * 0.9;
+      const m = Math.hypot(vx, vy);
+      if (m < 0.0001) return false;
+      out.x = vx / m; out.y = vy / m;
+      return true;
+    }
+
+    const _steer = { x: 0, y: 0 };
+
+    function updateAnimal(a, dt) {
+      a.stateT += dt;
+      if (a.cool > 0) a.cool -= dt;
+
+      let dvx = 0, dvy = 0, accel = 5;
+
+      if (a.state === "hunt") {
+        const t = a.target;
+        if (!t || t.dead) { a.state = "wander"; a.target = null; }
+        else if (a.stateT > CHASE_TIME) {
+          // fatigue — the key fairness rule: no chase lasts forever
+          a.state = "wander"; a.target = null; a.cool = CHASE_COOL; a.stateT = 0;
+        } else {
+          const dx = t.x - a.x, dy = t.y - a.y;
+          const d = Math.hypot(dx, dy) || 1;
+          // original: speed * (1.45 + sizeGap * 0.1)
+          const sp = a.cruise * (1.45 + (a.tier - t.tier) * 0.1);
+          dvx = dx / d * sp; dvy = dy / d * sp;
+          accel = 30;
+        }
+      } else if (a.state === "flee") {
+        const t = a.target;
+        if (!t || t.dead || a.stateT > 2.6) { a.state = "wander"; a.target = null; a.stateT = 0; }
+        else {
+          const dx = a.x - t.x, dy = a.y - t.y;
+          const d = Math.hypot(dx, dy) || 1;
+          // perpendicular jitter so prey does not sprint in a straight readable line
+          const j = Math.sin(a.stateT * 5 + a.phase) * 0.55;
+          const ux = dx / d, uy = dy / d;
+          const sp = a.cruise * 1.8;                 // original flee multiplier
+          dvx = (ux - uy * j) * sp;
+          dvy = (uy + ux * j) * sp;
+          accel = 30;
+        }
+      }
+
+      if (a.state === "wander") {
+        a.graze -= dt;
+        if (a.graze < -1.4 && Math.random() < 0.012) a.graze = rand(0.5, 1.6);
+        if (a.graze > 0) {
+          dvx = 0; dvy = 0; accel = 3;
+        } else {
+          a.heading += rand(-1, 1) * 1.6 * dt;
+          // original wander drifted at speed × a [-1,1] vector — mean magnitude ≈ 0.52
+          const sp = a.cruise * 0.52;
+          if (a.herd && herdSteer(a, _steer)) {
+            // blend, never add — the result must stay within one cruise speed
+            dvx = (Math.cos(a.heading) * 0.45 + _steer.x * 0.55) * sp;
+            dvy = (Math.sin(a.heading) * 0.45 + _steer.y * 0.55) * sp;
+          } else {
+            dvx = Math.cos(a.heading) * sp;
+            dvy = Math.sin(a.heading) * sp;
+          }
+          accel = 3.2;
+        }
+      }
+
+      // steer away from the arena walls before hitting them
+      const m = 140;
+      if (a.x < m) dvx += (m - a.x) * 2.4;
+      if (a.x > WORLD - m) dvx -= (a.x - (WORLD - m)) * 2.4;
+      if (a.y < m) dvy += (m - a.y) * 2.4;
+      if (a.y > WORLD - m) dvy -= (a.y - (WORLD - m)) * 2.4;
+
+      const k = Math.min(1, accel * dt);
+      a.vx += (dvx - a.vx) * k;
+      a.vy += (dvy - a.vy) * k;
+
+      // safety net: above the fastest legitimate chase (cruise × 3.35) plus wall push
+      const cap = a.cruise * 3.5 + 360;
+      const sp = Math.hypot(a.vx, a.vy);
+      if (sp > cap) { a.vx = a.vx / sp * cap; a.vy = a.vy / sp * cap; }
+
+      a.x = clamp(a.x + a.vx * dt, 8, WORLD - 8);
+      a.y = clamp(a.y + a.vy * dt, 8, WORLD - 8);
+      if (Math.abs(a.vx) > 12) a.flip = a.vx > 0;
+
+      // a hunter that reaches its NPC target eats it
+      const t = a.target;
+      if (a.state === "hunt" && t && !t.isPlayer && !t.dead) {
+        const rr = (a.r + t.r) * 0.7;
+        if ((t.x - a.x) ** 2 + (t.y - a.y) ** 2 < rr * rr) {
+          t.dead = true;
+          a.state = "wander"; a.target = null; a.cool = rand(1.2, 2.6);
+          // read as a kill, not as an animal popping out of existence
+          FX.burst(t.x, t.y, 7 + Math.min(10, t.tier), "rgba(205,120,90,0.9)", 80 + t.tier * 6);
+          FX.ring(t.x, t.y, t.r * 2.4, "rgba(232,150,110,0.5)");
+        }
+      }
+    }
+
+    function updatePlayer(p, dt) {
+      const wx = cam.x + (pointerX - VW / 2) / cam.zoom;
+      const wy = cam.y + (pointerY - VH / 2) / cam.zoom;
+      const max = playerMaxSpeed(p.tier);
+      const dx = wx - p.x, dy = wy - p.y;
+      const d = Math.hypot(dx, dy);
+
+      let dvx = 0, dvy = 0;
+      if (d > 2) {
+        const sp = Math.min(max, d * 7.2);
+        dvx = dx / d * sp; dvy = dy / d * sp;
+      }
+      const k = Math.min(1, 30 * dt);          // original PLAYER_ACCEL 0.5 per frame
+      p.vx += (dvx - p.vx) * k;
+      p.vy += (dvy - p.vy) * k;
+
+      const sp = Math.hypot(p.vx, p.vy);
+      if (sp > max) { p.vx = p.vx / sp * max; p.vy = p.vy / sp * max; }
+
+      p.x = clamp(p.x + p.vx * dt, 8, WORLD - 8);
+      p.y = clamp(p.y + p.vy * dt, 8, WORLD - 8);
+      if (Math.abs(p.vx) > 12) p.flip = p.vx > 0;
+
+      if (sp > max * 0.45 && S.tick % 3 === 0) {
+        FX.trail.push({ x: p.x, y: p.y + p.r * 0.35, r: p.r * 0.75, t: 0 });
+      }
+    }
+
+    /* =========================================================
+       Collision with the player + XP
+       ========================================================= */
+
+    function playerCollisions() {
+      const p = S.player;
+      const reach = p.r + LADDER[TOP_TIER - 1].r;
+      let died = false;
+
+      Grid.each(p.x, p.y, reach, a => {
+        if (died || a.isPlayer || a.dead) return;
+        const rr = (p.r + a.r) * 0.78;
+        const dx = a.x - p.x, dy = a.y - p.y;
+        if (dx * dx + dy * dy > rr * rr) return;
+
+        if (p.tier >= a.tier) {
+          a.dead = true;
+          S.eaten++;
+          FX.burst(a.x, a.y, 9 + Math.min(12, a.tier), "rgba(255,214,120,0.95)", 90 + a.tier * 8);
+          FX.text(a.x, a.y - a.r, "+" + a.tier);
+          Sound.eat(a.tier);
+          gainXP(a.tier);
+        } else if (S.grace <= 0) {
+          died = true;
+        }
+      });
+
+      if (died) endRun(false);
     }
 
     function gainXP(amount) {
-      xp += amount;
-
-      while (xp >= getXPNeeded(level)) {
-        xp -= getXPNeeded(level);
-        level++;
-        if (level >= WIN_LEVEL) {
-          level = WIN_LEVEL;
-          evolveByLevel();
-          endGame(true);
+      S.xp += amount;
+      let need = xpNeeded(S.level);
+      while (S.xp >= need) {
+        S.xp -= need;
+        S.level++;
+        if (S.level >= TOP_TIER) {
+          S.level = TOP_TIER;
+          S.xp = 0;
+          evolve();
+          endRun(true);
           return;
         }
-        evolveByLevel();
+        evolve();
+        need = xpNeeded(S.level);
       }
     }
 
-    function evolveByLevel() {
-      let next = animalsData.find(a => a.size === level);
-      if (next) {
-        player.size = next.size;
-        player.el.innerText = next.emoji;
+    function evolve() {
+      const p = S.player;
+      const from = LADDER[p.tier - 1];
+      const d = LADDER[S.level - 1];
+      p.tier = d.tier;
+      p.r = d.r;
+      p.emoji = d.emoji;
 
-        // ✨ small visual feedback
-        player.el.style.transform = "scale(1.5)";
-        setTimeout(() => {
-          player.el.style.transform = "scale(1)";
-        }, 200);
-      }
+      FX.kick(14);
+      FX.ring(p.x, p.y, p.r * 4.5, "rgba(255,215,106,0.9)");
+      FX.burst(p.x, p.y, 26, "rgba(190,255,160,0.95)", 260);
+      Sound.evolve();
+      HUD.banner(`${from.emoji} → ${d.emoji}`, d.name);
+      HUD.pop();
+      HUD.syncTrack();
     }
 
-    function updateCamera() {
-      let offsetX = window.innerWidth / 2 - player.x;
-      let offsetY = window.innerHeight / 2 - player.y;
+    /* =========================================================
+       HUD
+       ========================================================= */
 
-      world.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
-    }
+    const HUD = {
+      el: {
+        emoji: document.getElementById("formEmoji"),
+        name: document.getElementById("formName"),
+        meta: document.getElementById("formMeta"),
+        xp: document.getElementById("xpFill"),
+        eaten: document.getElementById("statEaten"),
+        time: document.getElementById("statTime"),
+        track: document.getElementById("track"),
+        inner: document.getElementById("trackInner"),
+        banner: document.getElementById("banner")
+      },
+      steps: [],
+      last: { tier: 0, level: 0, xp: -1, eaten: -1, time: -1 },
+      bannerT: null,
 
-    let debugMode = false;
-
-    document.addEventListener("keydown", e => {
-      if (e.key === "d") {
-        debugMode = !debugMode;
-
-        animals.forEach(a => {
-          a.debug.style.display = debugMode ? "block" : "none";
+      buildTrack() {
+        this.el.inner.innerHTML = "";
+        this.steps = LADDER.map(d => {
+          const s = document.createElement("div");
+          s.className = "step";
+          s.textContent = d.emoji;
+          this.el.inner.appendChild(s);
+          return s;
         });
+      },
+
+      syncTrack() {
+        const cur = S.player ? S.player.tier : 1;
+        this.steps.forEach((s, i) => {
+          const t = i + 1;
+          s.className = "step" + (t < cur ? " done" : t === cur ? " now" : t === cur + 1 ? " next" : "");
+        });
+        const stride = 38;
+        const w = this.el.track.clientWidth;
+        this.el.inner.style.transform = `translateX(${w / 2 - (cur - 1) * stride - stride / 2}px)`;
+      },
+
+      pop() {
+        this.el.emoji.classList.add("pop");
+        setTimeout(() => this.el.emoji.classList.remove("pop"), 190);
+      },
+
+      banner(main, sub) {
+        this.el.banner.innerHTML = main + (sub ? `<small>${sub}</small>` : "");
+        this.el.banner.classList.add("show");
+        clearTimeout(this.bannerT);
+        this.bannerT = setTimeout(() => this.el.banner.classList.remove("show"), 1300);
+      },
+
+      sync() {
+        const p = S.player;
+        if (!p) return;
+        const d = LADDER[p.tier - 1];
+        if (this.last.tier !== p.tier) {
+          this.el.emoji.textContent = d.emoji;
+          this.el.name.textContent = d.name;
+          this.last.tier = p.tier;
+        }
+        if (this.last.level !== S.level) {
+          this.el.meta.textContent = `TIER ${p.tier} · LV ${S.level}`;
+          this.last.level = S.level;
+        }
+        const pct = Math.round(clamp(S.xp / xpNeeded(S.level), 0, 1) * 100);
+        if (this.last.xp !== pct) {
+          this.el.xp.style.width = pct + "%";
+          this.last.xp = pct;
+        }
+        if (this.last.eaten !== S.eaten) {
+          this.el.eaten.textContent = S.eaten;
+          this.last.eaten = S.eaten;
+        }
+        const secs = Math.floor(S.time);
+        if (this.last.time !== secs) {
+          this.el.time.textContent = fmtTime(secs);
+          this.last.time = secs;
+        }
+      },
+
+      resetCache() { this.last = { tier: 0, level: 0, xp: -1, eaten: -1, time: -1 }; }
+    };
+
+    function fmtTime(s) {
+      const m = Math.floor(s / 60);
+      return m + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+    }
+
+    /* =========================================================
+       Rendering
+       ========================================================= */
+
+    function drawAnimal(a, t) {
+      const bob = Math.sin(t * 3.4 + a.phase) * a.r * 0.07;
+      const size = Math.round(a.r * 2.1);      // integer font size renders crisper
+
+      ctx.save();
+      ctx.translate(a.x, a.y + bob);
+
+      // contact shadow only — kept clear of the body so nothing dims the sprite
+      ctx.fillStyle = "rgba(0,0,0,0.26)";
+      ctx.beginPath();
+      ctx.ellipse(0, a.r * 1.02 - bob, a.r * 0.6, a.r * 0.2, 0, 0, 6.2832);
+      ctx.fill();
+
+      if (a.isPlayer && S.grace > 0) {
+        ctx.strokeStyle = `rgba(255,236,140,${(0.35 + 0.35 * Math.sin(t * 9)).toFixed(2)})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, a.r * 1.35, 0, 6.2832);
+        ctx.stroke();
+      }
+
+      if (a.flip) ctx.scale(-1, 1);
+      ctx.font = `${size}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      /* Colour emoji ignore the fill COLOUR but still honour its ALPHA, so a
+         leftover translucent fillStyle (the shadow above) draws the whole sprite
+         see-through. Reset to an opaque fill before every fillText. */
+      ctx.fillStyle = "#ffffff";
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+      ctx.fillText(a.emoji, 0, 0);
+      ctx.restore();
+    }
+
+    let visible = [];
+
+    function render(t) {
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.clearRect(0, 0, VW, VH);
+
+      let sx = 0, sy = 0;
+      if (FX.shake > 0) {
+        const k = FX.shake / 0.35;
+        sx = rand(-1, 1) * FX.shakeMag * k;
+        sy = rand(-1, 1) * FX.shakeMag * k;
+      }
+
+      const world = () => {
+        ctx.save();
+        ctx.translate(VW / 2 + sx, VH / 2 + sy);
+        ctx.scale(cam.zoom, cam.zoom);
+        ctx.translate(-cam.x, -cam.y);
+      };
+
+      world();
+      World.drawGround();
+      FX.drawTrail();
+      ctx.restore();
+
+      // foliage sits BELOW the animals — emoji must stay readable above everything
+      World.drawOverhead(t);
+
+      world();
+      const hw = viewHalfW() + 90, hh = viewHalfH() + 90;
+      visible.length = 0;
+      for (const a of S.animals) {
+        if (Math.abs(a.x - cam.x) > hw + a.r || Math.abs(a.y - cam.y) > hh + a.r) continue;
+        visible.push(a);
+      }
+      visible.sort((p, q) => p.y - q.y);
+      for (const a of visible) drawAnimal(a, t);
+
+      FX.draw();
+      World.drawMotes(t);
+      ctx.restore();
+
+      // danger vignette — the only threat warning the player gets
+      if (S.threat > 0.01) {
+        const g = ctx.createRadialGradient(VW / 2, VH / 2, Math.min(VW, VH) * 0.28,
+          VW / 2, VH / 2, Math.max(VW, VH) * 0.72);
+        g.addColorStop(0, "rgba(180,20,20,0)");
+        g.addColorStop(1, `rgba(150,12,12,${(S.threat * 0.62).toFixed(3)})`);
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, VW, VH);
+      }
+    }
+
+    /* =========================================================
+       Simulation step
+       ========================================================= */
+
+    function step(dt) {
+      S.time += dt;
+      S.tick++;
+      if (S.grace > 0) {
+        S.grace -= dt;
+        if (S.grace <= 0) FX.ring(S.player.x, S.player.y, S.player.r * 3, "rgba(255,236,140,0.7)");
+      }
+
+      Grid.rebuild(S.animals);
+
+      const p = S.player;
+      updatePlayer(p, dt);
+
+      // AI decisions are staggered across 6 ticks; movement runs every tick
+      let danger = 0;
+      for (let i = 0; i < S.animals.length; i++) {
+        const a = S.animals[i];
+        if (a.isPlayer) continue;
+        if ((i + S.tick) % 6 === 0) decide(a);
+        updateAnimal(a, dt);
+        if (a.state === "hunt" && a.target === p) {
+          const d = Math.hypot(a.x - p.x, a.y - p.y);
+          danger = Math.max(danger, clamp(1 - d / CHASE_RANGE, 0, 1));
+        }
+      }
+      S.threat += (danger - S.threat) * Math.min(1, 3 * dt);
+
+      playerCollisions();
+      if (S.mode !== "playing") return;
+
+      for (let i = S.animals.length - 1; i >= 0; i--) {
+        if (S.animals[i].dead) S.animals.splice(i, 1);
+      }
+
+      maintainPopulation();
+      FX.update(dt);
+      World.update(dt, S.time);
+
+      // never above 1: scaling emoji up resamples them and looks soft
+      cam.targetZoom = clamp(1 - (p.tier - 1) * 0.022, 0.6, 1);
+      cam.zoom += (cam.targetZoom - cam.zoom) * Math.min(1, 1.8 * dt);
+      cam.x += (p.x - cam.x) * Math.min(1, 8 * dt);
+      cam.y += (p.y - cam.y) * Math.min(1, 8 * dt);
+    }
+
+    /* =========================================================
+       Attract mode — a living jungle behind the start screen
+       ========================================================= */
+
+    const ATTRACT_POP = 110;
+
+    function startAttract() {
+      S.mode = "attract";
+      S.animals = [];
+      S.player = null;
+      S.threat = 0;
+      S.tick = 0;
+      FX.reset();
+      cam.x = WORLD / 2; cam.y = WORLD / 2;
+      cam.zoom = cam.targetZoom = 0.92;
+      for (let i = 0; i < ATTRACT_POP; i++) {
+        const p = scatterPosition(0, viewRadius() * 1.8);
+        S.animals.push(makeAnimal(randInt(1, TOP_TIER), p.x, p.y));
+      }
+    }
+
+    function attractStep(dt) {
+      S.time += dt;
+      S.tick++;
+      Grid.rebuild(S.animals);
+
+      for (let i = 0; i < S.animals.length; i++) {
+        const a = S.animals[i];
+        if ((i + S.tick) % 6 === 0) decide(a);
+        updateAnimal(a, dt);
+      }
+
+      const cull = viewRadius() * 2.6;
+      for (let i = S.animals.length - 1; i >= 0; i--) {
+        const a = S.animals[i];
+        if (a.dead || Math.hypot(a.x - cam.x, a.y - cam.y) > cull) S.animals.splice(i, 1);
+      }
+      let guard = 0;
+      while (S.animals.length < ATTRACT_POP && guard++ < 20) {
+        const p = ringPosition();
+        S.animals.push(makeAnimal(randInt(1, TOP_TIER), p.x, p.y));
+      }
+
+      FX.update(dt);
+      World.update(dt, S.time);
+
+      const ang = S.time * 0.045;
+      cam.x += (WORLD / 2 + Math.cos(ang) * 720 - cam.x) * Math.min(1, 1.2 * dt);
+      cam.y += (WORLD / 2 + Math.sin(ang * 0.8) * 620 - cam.y) * Math.min(1, 1.2 * dt);
+    }
+
+    /* =========================================================
+       Loop
+       ========================================================= */
+
+    let lastT = 0, acc = 0;
+
+    function frame(now) {
+      requestAnimationFrame(frame);
+      const t = now / 1000;
+      let dt = lastT ? t - lastT : 0;
+      lastT = t;
+      if (dt > 0.25) dt = 0.25;          // tab was hidden / long stall
+
+      if (S.mode === "playing" || S.mode === "attract") {
+        acc += dt;
+        let guard = 0;
+        while (acc >= STEP && guard++ < 6) {
+          if (S.mode === "playing") step(STEP); else attractStep(STEP);
+          acc -= STEP;
+          if (S.mode !== "playing" && S.mode !== "attract") break;
+        }
+        if (S.mode === "playing") HUD.sync();
+      } else {
+        acc = 0;                          // paused / game over: the world freezes
+      }
+
+      render(t);
+    }
+
+    /* =========================================================
+       Flow — start, pause, end
+       ========================================================= */
+
+    const startScreen = document.getElementById("startScreen");
+    const rulesScreen = document.getElementById("rulesScreen");
+    const pauseScreen = document.getElementById("pauseScreen");
+    const overScreen = document.getElementById("overScreen");
+
+    function startGame() {
+      Sound.unlock();
+      startScreen.hidden = true;
+      rulesScreen.hidden = true;
+      pauseScreen.hidden = true;
+      overScreen.hidden = true;
+
+      S.animals = [];
+      S.level = 1;
+      S.xp = 0;
+      S.eaten = 0;
+      S.time = 0;
+      S.tick = 0;
+      S.threat = 0;
+      S.won = false;
+      S.grace = START_GRACE;
+      FX.reset();
+      HUD.resetCache();
+
+      const p = makeAnimal(1, WORLD / 2, WORLD / 2);
+      p.isPlayer = true;
+      p.herd = false;
+      S.player = p;
+      S.animals.push(p);
+
+      cam.x = p.x; cam.y = p.y;
+      cam.zoom = cam.targetZoom = 1;
+      pointerX = VW / 2; pointerY = VH / 2;
+
+      Grid.rebuild(S.animals);
+      const spread = viewRadius() * 1.9;
+      for (let i = 0; i < POP; i++) spawnOne(i % 3 === 0, scatterPosition(300, spread));
+
+      S.mode = "playing";
+      HUD.syncTrack();
+      HUD.sync();
+    }
+
+    function endRun(won) {
+      if (S.mode === "over") return;
+      S.mode = "over";
+      S.won = won;
+      const p = S.player;
+
+      if (won) {
+        Sound.win();
+        FX.kick(20);
+        FX.burst(p.x, p.y, 60, "rgba(255,215,106,0.95)", 320);
+      } else {
+        Sound.die();
+        FX.kick(16);
+        FX.burst(p.x, p.y, 22, "rgba(220,70,60,0.9)", 220);
+      }
+
+      const secs = Math.floor(S.time);
+      document.getElementById("finalForm").textContent = won ? "👑" : p.emoji;
+      document.getElementById("overTitle").textContent = won ? "You Rule The Jungle!" : "Game Over";
+      document.getElementById("overSub").textContent = won
+        ? "the mammoth bows to no one"
+        : "eaten by the jungle";
+      document.getElementById("finalTier").textContent = p.tier;
+      document.getElementById("finalEaten").textContent = S.eaten;
+      document.getElementById("finalTime").textContent = fmtTime(secs);
+
+      let best = null;
+      try { best = JSON.parse(localStorage.getItem("jungleKing.best") || "null"); } catch (e) { best = null; }
+      const isBest = !best || p.tier > best.tier || (p.tier === best.tier && S.eaten > best.eaten);
+      if (isBest) {
+        best = { tier: p.tier, eaten: S.eaten, time: secs };
+        localStorage.setItem("jungleKing.best", JSON.stringify(best));
+      }
+      document.getElementById("bestLine").textContent = isBest
+        ? "★ New personal best"
+        : `Best: ${LADDER[best.tier - 1].emoji} tier ${best.tier} · ${best.eaten} eaten · ${fmtTime(best.time)}`;
+
+      setTimeout(() => { overScreen.hidden = false; }, 620);
+    }
+
+    function setPaused(on) {
+      if (on && S.mode === "playing") {
+        S.mode = "paused";
+        pauseScreen.hidden = false;
+      } else if (!on && S.mode === "paused") {
+        pauseScreen.hidden = true;
+        S.mode = "playing";
+        lastT = 0;
+        acc = 0;
+      }
+    }
+
+    /* =========================================================
+       Controls
+       ========================================================= */
+
+    const btnSound = document.getElementById("btnSound");
+    function paintSound() {
+      btnSound.textContent = Sound.muted ? "🔇" : "🔊";
+      btnSound.classList.toggle("off", Sound.muted);
+    }
+    paintSound();
+
+    btnSound.addEventListener("click", () => { Sound.toggle(); paintSound(); });
+    document.getElementById("btnPause").addEventListener("click", () => setPaused(S.mode === "playing"));
+    document.getElementById("btnRules").addEventListener("click", () => {
+      if (S.mode === "playing") setPaused(true);
+      rulesScreen.hidden = false;
+      Sound.click();
+    });
+    document.getElementById("btnRulesStart").addEventListener("click", () => {
+      rulesScreen.hidden = false;
+      Sound.click();
+    });
+    document.getElementById("btnRulesClose").addEventListener("click", () => {
+      rulesScreen.hidden = true;
+      Sound.click();
+    });
+    document.getElementById("btnStart").addEventListener("click", startGame);
+    document.getElementById("btnAgain").addEventListener("click", startGame);
+    document.getElementById("btnResume").addEventListener("click", () => setPaused(false));
+    document.getElementById("btnQuit").addEventListener("click", () => { S.mode = "playing"; endRun(false); });
+
+    window.addEventListener("keydown", e => {
+      const k = e.key.toLowerCase();
+      if (k === "escape" || k === "p") {
+        if (!rulesScreen.hidden) { rulesScreen.hidden = true; return; }
+        setPaused(S.mode === "playing");
+      } else if (k === "m") {
+        Sound.toggle(); paintSound();
+      } else if (k === " " && S.mode === "menu") {
+        e.preventDefault(); startGame();
       }
     });
 
-    function gameLoop() {
-      if (!running) return;
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) setPaused(true);
+    });
 
-      animals.forEach(a => {
-        const rect = a.el.getBoundingClientRect();
-        let radius = rect.width * 0.4;
+    window.addEventListener("resize", () => HUD.syncTrack());
 
-        a.debug.style.width = radius * 2 + "px";
-        a.debug.style.height = radius * 2 + "px";
-        a.debug.style.left = (a.x - radius) + "px";
-        a.debug.style.top = (a.y - radius) + "px";
-        if (a.isPlayer) {
-          let worldMouseX = player.x + (mouseX - window.innerWidth / 2);
-          let worldMouseY = player.y + (mouseY - window.innerHeight / 2);
+    /* =========================================================
+       Boot
+       ========================================================= */
 
-          const maxSpeed = getPlayerMaxSpeed(a.size);
-          const dx = worldMouseX - a.x;
-          const dy = worldMouseY - a.y;
-          const dist = Math.hypot(dx, dy);
-
-          if (dist > 1) {
-            const targetVx = (dx / dist) * Math.min(maxSpeed, dist * 0.12);
-            const targetVy = (dy / dist) * Math.min(maxSpeed, dist * 0.12);
-            a.vx += (targetVx - a.vx) * PLAYER_ACCEL;
-            a.vy += (targetVy - a.vy) * PLAYER_ACCEL;
-          } else {
-            a.vx *= 0.85;
-            a.vy *= 0.85;
-          }
-
-          const speed = Math.hypot(a.vx, a.vy);
-          if (speed > maxSpeed) {
-            a.vx = (a.vx / speed) * maxSpeed;
-            a.vy = (a.vy / speed) * maxSpeed;
-          }
-
-          a.x += a.vx;
-          a.y += a.vy;
-        } else {
-          let dx = player.x - a.x;
-          let dy = player.y - a.y;
-          let dist = Math.hypot(dx, dy);
-          let dirX = dist > 0 ? dx / dist : 0;
-          let dirY = dist > 0 ? dy / dist : 0;
-
-          const sizeGap = a.size - player.size;
-          const chaseRange = 200;
-          const fleeRange = 170 + Math.max(0, player.size - a.size) * 20;
-
-          if (a.size > player.size && dist < chaseRange) {
-            // chase
-            a.x += dirX * a.speed * (1.45 + sizeGap * 0.1);
-            a.y += dirY * a.speed * (1.45 + sizeGap * 0.1);
-          } else if (a.size < player.size && dist < fleeRange) {
-            // flee from larger player
-            a.x -= dirX * a.speed * 1.8;
-            a.y -= dirY * a.speed * 1.8;
-          } else {
-            a.x += a.vx * a.speed;
-            a.y += a.vy * a.speed;
-
-            if (Math.random() < WANDER_TURN_RATE) {
-              a.vx = (Math.random() - 0.5) * 2;
-              a.vy = (Math.random() - 0.5) * 2;
-            }
-          }
-        }
-
-        a.x = Math.max(0, Math.min(WORLD_SIZE, a.x));
-        a.y = Math.max(0, Math.min(WORLD_SIZE, a.y));
-
-        //const rect = a.el.getBoundingClientRect();
-        let halfW = rect.width / 2;
-        let halfH = rect.height / 2;
-
-        a.el.style.left = (a.x - halfW) + "px";
-        a.el.style.top = (a.y - halfH) + "px";
-        a.el.style.fontSize = (16 + a.size * 7) + "px";
-      });
-
-      // collision
-      animals.forEach(a => {
-        if (a === player) return;
-
-        let dx = player.x - a.x;
-        let dy = player.y - a.y;
-        let dist = Math.hypot(dx, dy);
-
-        const rectA = player.el.getBoundingClientRect();
-        const rectB = a.el.getBoundingClientRect();
-
-        let playerRadius = rectA.width * 0.4;
-        let targetRadius = rectB.width * 0.4;
-
-        if (dist < playerRadius + targetRadius) {
-          if (player.size >= a.size) {
-            a.el.remove();
-            a.debug.remove();
-            animals = animals.filter(x => x !== a);
-
-            // 🍖 XP based on prey size
-            gainXP(a.size);
-            respawnOneAnimal();
-          } else if (!invincible) {
-            endGame(false);
-          } else {
-            showStatus("Too big to eat!", 450);
-          }
-        }
-      });
-
-      maintainPopulation();
-      updateCamera();
-      sizeText.innerText = player.size;
-
-      xpText.innerText = xp;
-      levelText.innerText = level;
-
-      let percent = (xp / getXPNeeded(level)) * 100;
-      xpBar.style.width = percent + "%";
-
-
-
-      requestAnimationFrame(gameLoop);
-    }
+    World.build();
+    HUD.buildTrack();
+    HUD.syncTrack();
+    startAttract();
+    requestAnimationFrame(frame);
   </script>
 
 </body>
