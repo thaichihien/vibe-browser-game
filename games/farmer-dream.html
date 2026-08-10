@@ -460,6 +460,15 @@ function onDropCell(i, e) {
     save(); render();
     return;
   }
+  if (type === 'water' && S.tiles[i]) {
+    const before = S.tiles[i];
+    const after = waterTile(before, now);
+    if (after === before) return reject(i);   // not thirsty — nothing to do
+    S.tiles[i] = after;
+    Sound.water();
+    save(); render();
+    return;
+  }
   reject(i);
 }
 
