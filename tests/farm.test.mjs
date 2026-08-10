@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FARM_GAME, load, readGame } from './harness.mjs';
+import vm from 'node:vm';
+import { FARM_GAME, load, readGame, extract } from './harness.mjs';
 
 test('harness can read farmer-dream, not just monster-battle', () => {
   assert.match(readGame(FARM_GAME), /Farmer Dream|farm/i);
@@ -184,8 +185,15 @@ test('the offline cap is four hours', () => {
 });
 
 test('a short absence is returned untouched', () => {
-  const s = { tiles: [waterTile(plantTile('rice', 0), 0)] };
-  assert.deepEqual(advance(s, HOUR), s);
+  // Test object identity (===) inside the VM to preserve coverage of the fast path,
+  // since bridge() always deep-clones results when crossing the realm boundary.
+  const code = extract('FARM', FARM_GAME);
+  const ctx = { console, Math, JSON };
+  vm.createContext(ctx);
+  vm.runInContext(`${code}
+    const s = { tiles: [] };
+    globalThis.__same = advance(s, ${HOUR}) === s;`, ctx);
+  assert.equal(ctx.__same, true, 'advance(state, shortTime) must return the same object reference (fast path)');
 });
 
 test('a long absence shifts tiles so only the capped window counted', () => {
