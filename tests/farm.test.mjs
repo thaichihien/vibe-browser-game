@@ -249,3 +249,62 @@ test('every product name and icon is unique', () => {
   const icons = Object.keys(PRODUCTS).map(k => PRODUCTS[k].icon);
   assert.equal(new Set(icons).size, icons.length);
 });
+
+const { ANIMALS, FEED_YIELD, animalState } =
+  load(['FARM'], ['ANIMALS', 'FEED_YIELD', 'animalState'], FARM_GAME);
+
+const beast = (over = {}) => ({ id:'a1', type:'cow', name:'Bella', x:10, y:10, fedAt:0, made:0, ...over });
+
+test('ANIMALS holds the seven animals in ascending cost order', () => {
+  const costs = Object.keys(ANIMALS).map(k => ANIMALS[k].cost);
+  assert.deepEqual(costs, [...costs].sort((a, b) => a - b));
+  assert.equal(Object.keys(ANIMALS).length, 7);
+  assert.equal(ANIMALS.cow.cost, 500);
+  assert.equal(ANIMALS.duck.level, 10);
+});
+
+test('every animal eats a real crop and makes a real product', () => {
+  Object.keys(ANIMALS).forEach(k => {
+    assert.ok(CROPS[ANIMALS[k].eats], `${k} eats an unknown crop: ${ANIMALS[k].eats}`);
+    assert.ok(PRODUCTS[ANIMALS[k].makes], `${k} makes an unknown product`);
+  });
+});
+
+test('a feeding yields three products', () => {
+  assert.equal(FEED_YIELD, 3);
+});
+
+test('a never-fed animal is hungry', () => {
+  const s = animalState(beast({ fedAt: null }), 999999);
+  assert.equal(s.phase, 'hungry');
+  assert.equal(s.ready, 0);
+});
+
+test('a just-fed animal is working with nothing ready', () => {
+  const s = animalState(beast(), 0);
+  assert.equal(s.phase, 'working');
+  assert.equal(s.ready, 0);
+  assert.equal(s.progress, 0);
+});
+
+test('products become ready one cycle at a time', () => {
+  const c = ANIMALS.cow.cycle;
+  assert.equal(animalState(beast(), c - 1).ready, 0);
+  assert.equal(animalState(beast(), c).ready, 1);
+  assert.equal(animalState(beast(), c * 2).ready, 2);
+});
+
+test('an animal goes hungry after the third product and produces no more', () => {
+  const c = ANIMALS.cow.cycle;
+  const s = animalState(beast(), c * 3);
+  assert.equal(s.phase, 'hungry');
+  assert.equal(s.ready, FEED_YIELD);
+
+  const later = animalState(beast(), c * 50);
+  assert.equal(later.ready, FEED_YIELD, 'the cap is what stops it, so time away cannot overrun');
+});
+
+test('progress reports the fraction of the current cycle', () => {
+  const c = ANIMALS.cow.cycle;
+  assert.equal(animalState(beast(), c * 1.5).progress, 0.5);
+});

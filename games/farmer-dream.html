@@ -323,6 +323,30 @@ function advance(state, elapsedMs, capMs = OFFLINE_CAP_MS) {
       t && t.wateredAt != null ? { ...t, wateredAt: t.wateredAt + skip } : t)
   };
 }
+
+const ANIMALS = {
+  chicken: { icon:'🐔', name:'Chicken', cost:120,  eats:'corn',      makes:'egg',     cycle:25000, level:2  },
+  sheep:   { icon:'🐑', name:'Sheep',   cost:350,  eats:'cabbage',   makes:'wool',    cycle:60000, level:4  },
+  cow:     { icon:'🐄', name:'Cow',     cost:500,  eats:'rice',      makes:'milk',    cycle:40000, level:5  },
+  pig:     { icon:'🐖', name:'Pig',     cost:700,  eats:'potato',    makes:'truffle', cycle:70000, level:7  },
+  hive:    { icon:'🐝', name:'Beehive', cost:900,  eats:'sunflower', makes:'honey',   cycle:55000, level:8  },
+  goat:    { icon:'🐐', name:'Goat',    cost:1100, eats:'rice',      makes:'butter',  cycle:45000, level:9  },
+  duck:    { icon:'🦆', name:'Duck',    cost:1400, eats:'corn',      makes:'feather', cycle:40000, level:10 }
+};
+
+const FEED_YIELD = 3;
+
+// An animal is { id, type, name, x, y, fedAt, made }. One feeding yields
+// FEED_YIELD products and then the animal is hungry again — which is also
+// what stops a long absence from overrunning: the cap is the hunger.
+function animalState(a, now) {
+  const A = ANIMALS[a.type];
+  if (a.fedAt == null) return { phase:'hungry', ready:0, progress:0 };
+  const elapsed = Math.max(0, now - a.fedAt);
+  const ready = Math.min(FEED_YIELD, Math.floor(elapsed / A.cycle));
+  if (ready >= FEED_YIELD) return { phase:'hungry', ready:FEED_YIELD, progress:1 };
+  return { phase:'working', ready, progress:(elapsed % A.cycle) / A.cycle };
+}
 /* ==== FARM:END ==== */
 
 const $ = id => document.getElementById(id);
