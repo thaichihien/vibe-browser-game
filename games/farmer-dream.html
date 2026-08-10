@@ -285,6 +285,21 @@ function xpBar(xp) {
   const floor = LEVELS[level - 1];
   return { level, into: xp - floor, need: LEVELS[level] - floor };
 }
+
+const OFFLINE_CAP_MS = 4 * 3600000;
+
+// Tiles carry absolute timestamps, so time away already counts. To cap it we
+// push every running tile forward by the excess, which is equivalent to the
+// player having been gone only `capMs`. Pure: returns a new state.
+function advance(state, elapsedMs, capMs = OFFLINE_CAP_MS) {
+  if (elapsedMs <= capMs) return state;
+  const skip = elapsedMs - capMs;
+  return {
+    ...state,
+    tiles: state.tiles.map(t =>
+      t && t.wateredAt != null ? { ...t, wateredAt: t.wateredAt + skip } : t)
+  };
+}
 /* ==== FARM:END ==== */
 </script>
 

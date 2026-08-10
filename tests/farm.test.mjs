@@ -173,3 +173,46 @@ test('xpBar reports progress into the current level', () => {
   assert.deepEqual(xpBar(60), { level: 2, into: 20, need: 50 });
   assert.deepEqual(xpBar(2000), { level: 10, into: 0, need: 0 });
 });
+
+const { OFFLINE_CAP_MS, advance } =
+  load(['FARM'], ['OFFLINE_CAP_MS', 'advance'], FARM_GAME);
+
+const HOUR = 3600000;
+
+test('the offline cap is four hours', () => {
+  assert.equal(OFFLINE_CAP_MS, 4 * HOUR);
+});
+
+test('a short absence is returned untouched', () => {
+  const s = { tiles: [waterTile(plantTile('rice', 0), 0)] };
+  assert.deepEqual(advance(s, HOUR), s);
+});
+
+test('a long absence shifts tiles so only the capped window counted', () => {
+  const t = waterTile(plantTile('pumpkin', 0), 0);
+  const away = 10 * HOUR;
+  const out = advance({ tiles: [t] }, away);
+  assert.equal(out.tiles[0].wateredAt, away - OFFLINE_CAP_MS,
+    'the excess is absorbed by moving the watering forward');
+});
+
+test('advance leaves empty and thirsty tiles alone', () => {
+  const thirsty = plantTile('rice', 0);
+  const out = advance({ tiles: [null, thirsty] }, 10 * HOUR);
+  assert.equal(out.tiles[0], null);
+  assert.deepEqual(out.tiles[1], thirsty, 'an unwatered tile has no clock to shift');
+});
+
+test('a bigger cap lets more of the absence count', () => {
+  const t = waterTile(plantTile('pumpkin', 0), 0);
+  const away = 10 * HOUR;
+  const out = advance({ tiles: [t] }, away, 8 * HOUR);
+  assert.equal(out.tiles[0].wateredAt, 2 * HOUR);
+});
+
+test('advance does not mutate the state it was given', () => {
+  const t = waterTile(plantTile('rice', 0), 0);
+  const s = { tiles: [t] };
+  advance(s, 10 * HOUR);
+  assert.equal(s.tiles[0].wateredAt, 0);
+});
