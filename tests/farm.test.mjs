@@ -6,7 +6,8 @@ test('harness can read farmer-dream, not just monster-battle', () => {
   assert.match(readGame(FARM_GAME), /Farmer Dream|farm/i);
 });
 
-const { CROPS, cropStage } = load(['FARM'], ['CROPS', 'cropStage'], FARM_GAME);
+const { CROPS, cropStage, plantTile, waterTile, harvestTile } =
+  load(['FARM'], ['CROPS', 'cropStage', 'plantTile', 'waterTile', 'harvestTile'], FARM_GAME);
 
 const tile = (over = {}) => ({
   crop: 'rice', waterings: 1, wateredAt: 1000, grownMs: 0, harvestsLeft: 1, ...over
@@ -67,4 +68,77 @@ test('pumpkin watered a second time grows on to ripe', () => {
 test('sprout icon changes as the crop grows', () => {
   assert.equal(cropStage(tile(), 1000).icon, '🌱');
   assert.equal(cropStage(tile(), 1000 + CROPS.rice.grow * 0.75).icon, '🌿');
+});
+
+test('a newly planted tile is thirsty and holds no growth', () => {
+  const t = plantTile('rice', 500);
+  assert.equal(t.crop, 'rice');
+  assert.equal(t.waterings, 0);
+  assert.equal(t.wateredAt, null);
+  assert.equal(t.grownMs, 0);
+  assert.equal(t.harvestsLeft, 1);
+  assert.equal(cropStage(t, 999999).phase, 'thirsty');
+});
+
+test('strawberry is planted with three harvests', () => {
+  assert.equal(plantTile('strawberry', 0).harvestsLeft, 3);
+});
+
+test('watering a thirsty tile starts its clock', () => {
+  const t = waterTile(plantTile('rice', 0), 700);
+  assert.equal(t.waterings, 1);
+  assert.equal(t.wateredAt, 700);
+  assert.equal(cropStage(t, 700).phase, 'growing');
+});
+
+test('watering a growing tile is a no-op, so water cannot be wasted for speed', () => {
+  const t = waterTile(plantTile('rice', 0), 100);
+  const again = waterTile(t, 200);
+  assert.deepEqual(again, t);
+});
+
+test('watering pumpkin the second time banks the first segment', () => {
+  const half = CROPS.pumpkin.grow / 2;
+  let t = waterTile(plantTile('pumpkin', 0), 0);
+  t = waterTile(t, half);
+  assert.equal(t.waterings, 2);
+  assert.equal(t.grownMs, half);
+  assert.equal(cropStage(t, half + half).phase, 'ripe');
+});
+
+test('harvesting a single-harvest crop empties the tile and yields the crop', () => {
+  const t = waterTile(plantTile('rice', 0), 0);
+  const out = harvestTile(t, CROPS.rice.grow);
+  assert.equal(out.crop, 'rice');
+  assert.equal(out.tile, null);
+});
+
+test('harvesting an unripe tile yields nothing and leaves it alone', () => {
+  const t = waterTile(plantTile('rice', 0), 0);
+  const out = harvestTile(t, 1);
+  assert.equal(out.crop, null);
+  assert.deepEqual(out.tile, t);
+});
+
+test('a regrowing crop stays planted and ripens again after its regrow time', () => {
+  let t = waterTile(plantTile('strawberry', 0), 0);
+  const first = harvestTile(t, CROPS.strawberry.grow);
+  assert.equal(first.crop, 'strawberry');
+  assert.notEqual(first.tile, null);
+  assert.equal(first.tile.harvestsLeft, 2);
+
+  const now = CROPS.strawberry.grow;
+  assert.equal(cropStage(first.tile, now).phase, 'growing', 'not instantly ripe again');
+  assert.equal(cropStage(first.tile, now + CROPS.strawberry.regrow).phase, 'ripe');
+});
+
+test('a regrowing crop empties the tile on its final harvest', () => {
+  let t = waterTile(plantTile('grapes', 0), 0);
+  let now = CROPS.grapes.grow;
+  for (let i = 0; i < 3; i++) {
+    t = harvestTile(t, now).tile;
+    assert.notEqual(t, null, `harvest ${i + 1} should leave the plant`);
+    now += CROPS.grapes.regrow;
+  }
+  assert.equal(harvestTile(t, now).tile, null, 'fourth harvest clears the tile');
 });

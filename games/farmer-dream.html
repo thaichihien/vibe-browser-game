@@ -224,6 +224,46 @@ function cropStage(tile, now) {
   const phase = tile.waterings <= done ? 'thirsty' : 'growing';
   return { phase, progress, icon, segment: done };
 }
+
+function plantTile(cropId, now) {
+  return {
+    crop: cropId,
+    waterings: 0,
+    wateredAt: null,
+    grownMs: 0,
+    harvestsLeft: CROPS[cropId].harvests
+  };
+}
+
+function waterTile(tile, now) {
+  if (cropStage(tile, now).phase !== 'thirsty') return tile;
+  const C = CROPS[tile.crop];
+  const segment = C.grow / C.waterings;
+  return {
+    ...tile,
+    waterings: tile.waterings + 1,
+    wateredAt: now,
+    // Bank exactly the segments already completed, so no fraction is lost or gained.
+    grownMs: segment * tile.waterings
+  };
+}
+
+function harvestTile(tile, now) {
+  if (cropStage(tile, now).phase !== 'ripe') return { crop: null, tile };
+  const C = CROPS[tile.crop];
+  if (tile.harvestsLeft <= 1) return { crop: tile.crop, tile: null };
+  return {
+    crop: tile.crop,
+    tile: {
+      ...tile,
+      harvestsLeft: tile.harvestsLeft - 1,
+      wateredAt: now,
+      // Start the regrow clock: it needs `regrow` more ms to reach `grow` again.
+      grownMs: C.grow - C.regrow,
+      waterings: C.waterings
+    }
+  };
+}
 /* ==== FARM:END ==== */
 </script>
 
