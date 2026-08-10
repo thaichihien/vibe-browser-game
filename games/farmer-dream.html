@@ -367,7 +367,16 @@ function load() {
   let data;
   try { data = JSON.parse(raw); } catch (e) { return false; }
   if (!data || data.v !== 1) return false;      // unknown schema: discard, never migrate
-  S = advance(data, Date.now() - data.savedAt);
+  const elapsedMs = Date.now() - data.savedAt;
+  // advance() caps tile growth at OFFLINE_CAP_MS worth of elapsed time by
+  // shifting tile timestamps forward by the excess. S.dayStartedAt lives
+  // outside the { tiles } shape advance() operates on, so it needs the same
+  // shift here, or the day-rollover loop in tick() would burn through the
+  // full uncapped absence next tick — silently disagreeing with the capped
+  // "away X min" message welcomeBack() shows from this same elapsedMs.
+  const skip = Math.max(0, elapsedMs - OFFLINE_CAP_MS);
+  data.dayStartedAt += skip;
+  S = advance(data, elapsedMs);
   return true;
 }
 
@@ -424,13 +433,18 @@ function render() {
   cellEls.forEach((el, i) => {
     const t = S.tiles[i];
     if (!t) {
-      el.className = 'cell empty';
+      // classList (not className) so the drag handlers' own `drop` class
+      // — added/removed by ondragover/ondragleave, independent of render() —
+      // is never clobbered by this per-tick refresh.
+      el.classList.add('empty');
+      el.classList.remove('ripe', 'thirsty');
       el.innerHTML = '';
       return;
     }
     const st = cropStage(t, now);
-    el.className = 'cell' + (st.phase === 'ripe' ? ' ripe' : '') +
-                            (st.phase === 'thirsty' ? ' thirsty' : '');
+    el.classList.remove('empty');
+    el.classList.toggle('ripe', st.phase === 'ripe');
+    el.classList.toggle('thirsty', st.phase === 'thirsty');
     el.innerHTML = st.icon +
       (st.phase === 'ripe' ? '' :
         `<div class="bar"><i style="width:${Math.round(st.progress * 100)}%"></i></div>`);
@@ -448,9 +462,17 @@ function render() {
 }
 
 const shopEl = $('seedShop');
+let lastShopSig = null;
 
 function renderShop() {
   const lv = levelFor(S.xp);
+  // Only level and money affect what the shop draws (locked rows, afford
+  // state); skip the innerHTML wipe + rebuild when neither changed, so the
+  // 11 shop rows aren't torn down and recreated ~4x/sec forever.
+  const sig = `${lv}|${S.money}`;
+  if (sig === lastShopSig) return;
+  lastShopSig = sig;
+
   shopEl.innerHTML = '';
 
   Object.keys(CROPS).forEach(id => {
@@ -481,6 +503,7 @@ function renderShop() {
 }
 
 const invEl = $('inv');
+let lastInvSig = null;
 
 function addInv(item, n = 1) { S.inv[item] = (S.inv[item] || 0) + n; }
 
@@ -492,6 +515,14 @@ function takeInv(item, n = 1) {
 }
 
 function renderInv() {
+  // S.inv's contents are the only thing that changes what's drawn here.
+  // Skipping the rebuild when unchanged lets a dragged inv-item's native
+  // tooltip (the sell-price hint) survive long enough on the same DOM node
+  // to actually appear, instead of being destroyed/recreated every tick.
+  const sig = JSON.stringify(S.inv);
+  if (sig === lastInvSig) return;
+  lastInvSig = sig;
+
   const keys = Object.keys(S.inv);
   if (!keys.length) {
     invEl.innerHTML = '<span style="opacity:.5;font-size:13px">Nothing yet — harvest a ripe plot</span>';
@@ -590,9 +621,13 @@ function boot() {
     if (e.dataTransfer.getData('type') !== 'inv') return;
 
     const item = e.dataTransfer.getData('item');
-    if (!takeInv(item)) return;
+    // Sell the whole dragged stack, not just one unit — renderInv() already
+    // shows the full count on the stack, so a single-unit sell per drag
+    // would silently contradict what the player just dragged.
+    const qty = S.inv[item] || 0;
+    if (!qty || !takeInv(item, qty)) return;
 
-    const value = CROPS[item].sell;
+    const value = CROPS[item].sell * qty;
     S.money += value;
     const r = sellEl.getBoundingClientRect();
     floatText(r.left + r.width / 2 - 20, r.top + 20, '+$' + value);
