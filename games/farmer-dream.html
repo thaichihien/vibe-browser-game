@@ -307,8 +307,41 @@ function advance(state, elapsedMs, capMs = OFFLINE_CAP_MS) {
 const $ = id => document.getElementById(id);
 const SAVE_KEY = 'farmerDream.save';
 
-// TEMP stub — the real Web Audio Sound object arrives in Task 13. Delete this then.
-const Sound = { plant(){}, water(){}, harvest(){}, sell(){}, level(){}, bad(){} };
+const Sound = (() => {
+  let ctx = null;
+  let muted = localStorage.getItem('farmerDream.muted') === '1';
+
+  function ensure() {
+    if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return false; } }
+    return !!ctx;
+  }
+
+  function beep(freq, dur, type = 'sine', gain = 0.06) {
+    if (muted || !ensure()) return;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(gain, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + dur);
+  }
+
+  return {
+    plant()   { beep(392, 0.12, 'triangle'); },
+    water()   { beep(660, 0.16, 'sine'); },
+    harvest() { beep(523, 0.14, 'triangle'); setTimeout(() => beep(784, 0.16, 'triangle'), 90); },
+    sell()    { beep(880, 0.10, 'square', 0.04); },
+    level()   { beep(523, 0.14); setTimeout(() => beep(659, 0.14), 120); setTimeout(() => beep(784, 0.24), 240); },
+    bad()     { beep(150, 0.14, 'sawtooth', 0.05); },
+    get muted() { return muted; },
+    toggle() {
+      muted = !muted;
+      localStorage.setItem('farmerDream.muted', muted ? '1' : '0');
+      if (!muted) { ensure(); this.plant(); }
+      return muted;
+    }
+  };
+})();
 
 function fresh() {
   return {
@@ -573,8 +606,48 @@ function boot() {
   window.addEventListener('beforeunload', save);
 }
 
-// TEMP (Task 7 scaffolding, removed in Task 13 once the start screen wires boot()):
-$('startScreen').hidden = true; boot();
+function syncSoundBtn() { $('soundBtn').textContent = Sound.muted ? '🔇' : '🔊'; }
+
+$('soundBtn').onclick = () => { Sound.toggle(); syncSoundBtn(); };
+$('helpBtn').onclick  = () => { $('rulesModal').hidden = false; };
+$('closeRules').onclick = () => { $('rulesModal').hidden = true; };
+$('closeEnd').onclick   = () => { $('endOverlay').hidden = true; };
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { $('rulesModal').hidden = true; $('endOverlay').hidden = true; }
+});
+
+syncSoundBtn();
+
+const hasSave = (() => {
+  try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; }
+})();
+
+if (hasSave) {
+  $('continueBtn').hidden = false;
+  $('startBtn').textContent = 'New farm';
+}
+
+$('continueBtn').onclick = () => {
+  // Read savedAt from the raw save, not from S: load() runs advance(), which
+  // rewrites timestamps, so S.savedAt is no longer the moment they left.
+  let stamp = Date.now();
+  try { stamp = JSON.parse(localStorage.getItem(SAVE_KEY)).savedAt; } catch (e) {}
+  if (load()) {
+    $('startScreen').hidden = true;
+    boot();
+    welcomeBack(Date.now() - stamp);
+  }
+};
+
+$('startBtn').onclick = () => {
+  if (hasSave && !confirm('Start over? Your current farm will be lost.')) return;
+  S = fresh();
+  save();
+  $('startScreen').hidden = true;
+  boot();
+  $('rulesModal').hidden = false;      // first-time players see the rules
+};
 </script>
 </body>
 </html>
