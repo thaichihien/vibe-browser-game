@@ -363,6 +363,7 @@ function buildGrid() {
       c.classList.remove('drop');
       onDropCell(i, e);
     };
+    c.onclick = () => harvestAt(i);
     farmEl.appendChild(c);
     return c;
   });
@@ -430,7 +431,37 @@ function renderShop() {
   shopEl.appendChild(water);
 }
 
-function renderInv() {}
+const invEl = $('inv');
+
+function addInv(item, n = 1) { S.inv[item] = (S.inv[item] || 0) + n; }
+
+function takeInv(item, n = 1) {
+  if ((S.inv[item] || 0) < n) return false;
+  S.inv[item] -= n;
+  if (S.inv[item] <= 0) delete S.inv[item];
+  return true;
+}
+
+function renderInv() {
+  const keys = Object.keys(S.inv);
+  if (!keys.length) {
+    invEl.innerHTML = '<span style="opacity:.5;font-size:13px">Nothing yet — harvest a ripe plot</span>';
+    return;
+  }
+  invEl.innerHTML = '';
+  keys.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'inv-item';
+    el.draggable = true;
+    el.innerHTML = `${CROPS[item].icon}<span>${S.inv[item]}</span>`;
+    el.title = CROPS[item].name + ' — $' + CROPS[item].sell + ' each';
+    el.ondragstart = e => {
+      e.dataTransfer.setData('type', 'inv');
+      e.dataTransfer.setData('item', item);
+    };
+    invEl.appendChild(el);
+  });
+}
 
 function floatText(x, y, text, colour) {
   const el = document.createElement('div');
@@ -470,6 +501,25 @@ function onDropCell(i, e) {
     return;
   }
   reject(i);
+}
+
+function harvestAt(i) {
+  const t = S.tiles[i];
+  if (!t) return;
+  const out = harvestTile(t, Date.now());
+  if (!out.crop) return;                       // not ripe yet — silent, not an error
+
+  const before = levelFor(S.xp);
+  S.tiles[i] = out.tile;
+  addInv(out.crop);
+  S.xp += CROPS[out.crop].tier;
+
+  const r = cellEls[i].getBoundingClientRect();
+  floatText(r.left + 10, r.top, CROPS[out.crop].icon);
+  Sound.harvest();
+  if (levelFor(S.xp) > before) { Sound.level(); floatText(r.left, r.top - 24, 'LEVEL UP!', '#f9a825'); }
+
+  save(); render();
 }
 
 function reject(i) {
