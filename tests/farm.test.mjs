@@ -225,6 +225,49 @@ test('advance does not mutate the state it was given', () => {
   assert.equal(s.tiles[0].wateredAt, 0);
 });
 
+test('advance shifts fed animals by the same excess as tiles', () => {
+  const a = feedAnimal(makeAnimal('cow', 'a1', 0, 0), 0);
+  const away = 10 * HOUR;
+  const out = advance({ tiles: [], animals: [a] }, away);
+  assert.equal(out.animals[0].fedAt, away - OFFLINE_CAP_MS);
+});
+
+test('advance leaves never-fed animals alone', () => {
+  const a = makeAnimal('cow', 'a1', 0, 0);
+  const out = advance({ tiles: [], animals: [a] }, 10 * HOUR);
+  assert.equal(out.animals[0].fedAt, null);
+});
+
+test('advance still returns the same object under the cap', () => {
+  // Test object identity (===) inside the VM to preserve coverage of the fast path,
+  // since bridge() always deep-clones results when crossing the realm boundary.
+  const code = extract('FARM', FARM_GAME);
+  const ctx = { console, Math, JSON };
+  vm.createContext(ctx);
+  vm.runInContext(`${code}
+    const a = feedAnimal(makeAnimal('cow', 'a1', 0, 0), 0);
+    const s = { tiles: [], animals: [a] };
+    globalThis.__same = advance(s, ${HOUR}) === s;`, ctx);
+  assert.equal(ctx.__same, true);
+});
+
+test('advance tolerates a state with no animals array', () => {
+  assert.doesNotThrow(() => advance({ tiles: [] }, 10 * HOUR));
+});
+
+test('a fed animal still caps at three products across a long absence', () => {
+  const a = feedAnimal(makeAnimal('cow', 'a1', 0, 0), 0);
+  const away = 10 * HOUR;
+  const out = advance({ tiles: [], animals: [a] }, away);
+  assert.equal(animalState(out.animals[0], away).ready, FEED_YIELD);
+});
+
+test('advance does not mutate the animals it was given', () => {
+  const a = feedAnimal(makeAnimal('cow', 'a1', 0, 0), 0);
+  advance({ tiles: [], animals: [a] }, 10 * HOUR);
+  assert.equal(a.fedAt, 0);
+});
+
 const { PRODUCTS, itemInfo } = load(['FARM'], ['PRODUCTS', 'itemInfo'], FARM_GAME);
 
 test('PRODUCTS holds the seven animal goods with sell prices', () => {

@@ -320,7 +320,9 @@ function advance(state, elapsedMs, capMs = OFFLINE_CAP_MS) {
   return {
     ...state,
     tiles: state.tiles.map(t =>
-      t && t.wateredAt != null ? { ...t, wateredAt: t.wateredAt + skip } : t)
+      t && t.wateredAt != null ? { ...t, wateredAt: t.wateredAt + skip } : t),
+    animals: (state.animals || []).map(a =>
+      a.fedAt != null ? { ...a, fedAt: a.fedAt + skip } : a)
   };
 }
 
