@@ -264,6 +264,27 @@ function harvestTile(tile, now) {
     }
   };
 }
+
+// Cumulative XP required to reach level index+1. Level is capped at 10.
+const LEVELS = [0, 40, 90, 170, 290, 460, 700, 1020, 1450, 2000];
+
+const UNLOCKS = {
+  rice: 1, carrot: 1, corn: 2, tomato: 3, cabbage: 3,
+  potato: 5, strawberry: 6, pumpkin: 7, sunflower: 8, grapes: 9
+};
+
+function levelFor(xp) {
+  let lv = 1;
+  for (let i = 1; i < LEVELS.length; i++) if (xp >= LEVELS[i]) lv = i + 1;
+  return lv;
+}
+
+function xpBar(xp) {
+  const level = levelFor(xp);
+  if (level >= LEVELS.length) return { level, into: 0, need: 0 };
+  const floor = LEVELS[level - 1];
+  return { level, into: xp - floor, need: LEVELS[level] - floor };
+}
 /* ==== FARM:END ==== */
 </script>
 

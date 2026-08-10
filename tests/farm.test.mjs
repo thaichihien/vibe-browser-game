@@ -142,3 +142,34 @@ test('a regrowing crop empties the tile on its final harvest', () => {
   }
   assert.equal(harvestTile(t, now).tile, null, 'fourth harvest clears the tile');
 });
+
+const { LEVELS, UNLOCKS, levelFor, xpBar } =
+  load(['FARM'], ['LEVELS', 'UNLOCKS', 'levelFor', 'xpBar'], FARM_GAME);
+
+test('LEVELS matches the spec thresholds', () => {
+  assert.deepEqual(LEVELS, [0, 40, 90, 170, 290, 460, 700, 1020, 1450, 2000]);
+});
+
+test('levelFor maps XP onto levels at the boundaries', () => {
+  assert.equal(levelFor(0), 1);
+  assert.equal(levelFor(39), 1);
+  assert.equal(levelFor(40), 2);
+  assert.equal(levelFor(289), 4);
+  assert.equal(levelFor(290), 5);
+  assert.equal(levelFor(2000), 10);
+  assert.equal(levelFor(999999), 10, 'level is capped at 10');
+});
+
+test('every crop has an unlock level and the starters are level 1', () => {
+  assert.deepEqual(Object.keys(UNLOCKS).sort(), Object.keys(CROPS).sort());
+  assert.equal(UNLOCKS.rice, 1);
+  assert.equal(UNLOCKS.carrot, 1);
+  assert.equal(UNLOCKS.pumpkin, 7);
+  assert.equal(UNLOCKS.grapes, 9);
+});
+
+test('xpBar reports progress into the current level', () => {
+  assert.deepEqual(xpBar(0), { level: 1, into: 0, need: 40 });
+  assert.deepEqual(xpBar(60), { level: 2, into: 20, need: 50 });
+  assert.deepEqual(xpBar(2000), { level: 10, into: 0, need: 0 });
+});
