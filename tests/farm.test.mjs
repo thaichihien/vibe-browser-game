@@ -224,3 +224,28 @@ test('advance does not mutate the state it was given', () => {
   advance(s, 10 * HOUR);
   assert.equal(s.tiles[0].wateredAt, 0);
 });
+
+const { PRODUCTS, itemInfo } = load(['FARM'], ['PRODUCTS', 'itemInfo'], FARM_GAME);
+
+test('PRODUCTS holds the seven animal goods with sell prices', () => {
+  assert.deepEqual(Object.keys(PRODUCTS).sort(),
+    ['butter', 'egg', 'feather', 'honey', 'milk', 'truffle', 'wool']);
+  assert.equal(PRODUCTS.milk.sell, 60);
+  assert.equal(PRODUCTS.egg.icon, '🥚');
+});
+
+test('itemInfo resolves crops and products through one lookup', () => {
+  assert.equal(itemInfo('rice').sell, 15);
+  assert.equal(itemInfo('milk').sell, 60);
+  assert.equal(itemInfo('rice').icon, '🌾');
+  assert.equal(itemInfo('milk').icon, '🥛');
+});
+
+test('itemInfo returns null for an unknown id rather than throwing', () => {
+  assert.equal(itemInfo('nonsense'), null);
+});
+
+test('every product name and icon is unique', () => {
+  const icons = Object.keys(PRODUCTS).map(k => PRODUCTS[k].icon);
+  assert.equal(new Set(icons).size, icons.length);
+});
