@@ -186,341 +186,45 @@
 </div>
 
 <script>
-let money = 50;
-const moneyEl = document.getElementById("money");
+/* ==== FARM:START ==== */
+/* Pure economy. No DOM, no Date.now(), no localStorage — time arrives as `now`.
+   tests/farm.test.mjs evaluates this region in a bare node:vm context. */
 
-const PLANTS = {
-  rice: {
-    stages: ["🌱","🌿","🌾"],
-    growTime: 10000,
-    price: 15,
-    seedCost: 5
-  },
-  carrot: {
-    stages: ["🌱","🥬","🥕"],
-    growTime: 14000,
-    price: 25,
-    seedCost: 8
-  },
-  tomato: {
-    stages: ["🌱","🌿","🍅"],
-    growTime: 18000,
-    price: 40,
-    seedCost: 12
-  }
+const CROPS = {
+  rice:       { icon:'🌾', name:'Rice',       tier:1,  seed:5,  sell:15,  grow:10000, waterings:1, harvests:1, regrow:0 },
+  carrot:     { icon:'🥕', name:'Carrot',     tier:2,  seed:8,  sell:25,  grow:14000, waterings:1, harvests:1, regrow:0 },
+  corn:       { icon:'🌽', name:'Corn',       tier:3,  seed:10, sell:30,  grow:16000, waterings:1, harvests:1, regrow:0 },
+  tomato:     { icon:'🍅', name:'Tomato',     tier:4,  seed:12, sell:40,  grow:18000, waterings:1, harvests:1, regrow:0 },
+  cabbage:    { icon:'🥬', name:'Cabbage',    tier:5,  seed:12, sell:32,  grow:18000, waterings:1, harvests:1, regrow:0 },
+  potato:     { icon:'🥔', name:'Potato',     tier:6,  seed:15, sell:45,  grow:20000, waterings:1, harvests:1, regrow:0 },
+  sunflower:  { icon:'🌻', name:'Sunflower',  tier:7,  seed:20, sell:30,  grow:15000, waterings:1, harvests:1, regrow:0 },
+  strawberry: { icon:'🍓', name:'Strawberry', tier:8,  seed:30, sell:35,  grow:20000, waterings:1, harvests:3, regrow:12000 },
+  grapes:     { icon:'🍇', name:'Grapes',     tier:9,  seed:45, sell:50,  grow:26000, waterings:1, harvests:4, regrow:14000 },
+  pumpkin:    { icon:'🎃', name:'Pumpkin',    tier:10, seed:60, sell:220, grow:50000, waterings:2, harvests:1, regrow:0 }
 };
 
-function updateMoney(v){
-  money += v;
-  moneyEl.innerText = money;
-}
+// A tile is { crop, waterings, wateredAt, grownMs, harvestsLeft } or null.
+// `grownMs` is growth banked before the current watering; `wateredAt` is null
+// while the tile is waiting for water, so no time accrues.
+function cropStage(tile, now) {
+  const C = CROPS[tile.crop];
+  const segment = C.grow / C.waterings;
+  const running = tile.wateredAt == null ? 0 : now - tile.wateredAt;
+  // Growth is capped by available waterings: each watering unlocks one segment.
+  const maxGrowth = Math.min(tile.waterings * segment, C.grow);
+  const total = Math.min(tile.grownMs + Math.max(0, running), maxGrowth);
+  const progress = total / C.grow;
 
-function toggleTutorial(){
-  const el = document.getElementById("tutorialContent");
-  el.style.display = el.style.display === "none" ? "block" : "none";
-}
-//// FARM GRID
-const farm = document.getElementById("farm");
-for(let i=0;i<15;i++){
-  let cell = document.createElement("div");
-  cell.className = "cell";
-  cell.dataset.state = "empty";
-
-  cell.ondragover = e => e.preventDefault();
-
-  cell.ondrop = e => {
-  let type = e.dataTransfer.getData("type");
-
-  // Plant seed
-//   if(type === "seed" && cell.dataset.state === "empty" && money >= 5){
-//     updateMoney(-5);
-//     cell.innerText = "🌱";
-//     cell.dataset.state = "planted";
-//   }
-if(type === "seed" && cell.dataset.state === "empty"){
-  const plantType = e.dataTransfer.getData("plant");
-  const plant = PLANTS[plantType];
-
-  if(money >= plant.seedCost){
-    updateMoney(-plant.seedCost);
-    cell.innerText = plant.stages[0];
-    cell.dataset.state = "planted";
-    cell.dataset.plant = plantType;
+  if (total >= C.grow) {
+    return { phase: 'ripe', progress: 1, icon: C.icon, segment: C.waterings };
   }
+  const done = Math.floor(total / segment);
+  const icon = progress < 0.5 ? '🌱' : '🌿';
+  // Once a segment finishes, the tile stops until it is watered again.
+  const phase = tile.waterings <= done ? 'thirsty' : 'growing';
+  return { phase, progress, icon, segment: done };
 }
-
-  // Water → turn brown soil first
-//   if(type === "water" && cell.dataset.state === "planted"){
-//   cell.innerText = "";
-//   cell.style.background = "#8d6e63"; // brown soil
-//   cell.dataset.state = "growing";
-
-//   cell.classList.add("growing");
-
-//   // Stage 1: sprout 🌱
-//   setTimeout(()=>{
-//     cell.innerText = "🌱";
-//   },1000);
-
-//   // Stage 2: mid growth 🌿
-//   setTimeout(()=>{
-//     cell.innerText = "🌿";
-//   },5000);
-
-//   // Stage 3: full grown 🌾
-//   setTimeout(()=>{
-//     cell.innerText = "🌾";
-//     cell.style.background = "";
-//     cell.dataset.state = "grown";
-//     cell.draggable = true;
-//  cell.classList.remove("growing");
-//     cell.ondragstart = e=>{
-//       e.dataTransfer.setData("type","rice");
-//       e.dataTransfer.setData("source","farm");
-//       e.dataTransfer.setData("cellIndex", [...farm.children].indexOf(cell));
-//     };
-//   },10000);
-// }
-if(type === "water" && cell.dataset.state === "planted"){
-  const plantType = cell.dataset.plant;
-  const plant = PLANTS[plantType];
-
-  cell.innerText = "";
-  cell.style.background = "#8d6e63";
-  cell.dataset.state = "growing";
-
-  cell.classList.add("growing");
-
-  const stepTime = plant.growTime / plant.stages.length;
-
-  plant.stages.forEach((stage, index)=>{
-    setTimeout(()=>{
-      cell.innerText = stage;
-    }, stepTime * (index + 1));
-  });
-
-  setTimeout(()=>{
-    cell.style.background = "";
-    cell.dataset.state = "grown";
-    cell.draggable = true;
-    cell.classList.remove("growing");
-
-    cell.ondragstart = e=>{
-      e.dataTransfer.setData("type","plant");
-      e.dataTransfer.setData("plant", plantType);
-      e.dataTransfer.setData("source","farm");
-      e.dataTransfer.setData("cellIndex", [...farm.children].indexOf(cell));
-    };
-  }, plant.growTime);
-}
-};
-
-  farm.appendChild(cell);
-}
-
-//// SELL AREA
-const sell = document.getElementById("sell");
-sell.ondragover = e => e.preventDefault();
-
-sell.ondrop = e => {
-  let type = e.dataTransfer.getData("type");
-  let source = e.dataTransfer.getData("source");
-  let index = e.dataTransfer.getData("cellIndex");
-
-//   if(type === "rice"){
-//     updateMoney(15);
-
-//     // remove from farm
-//     if(source === "farm"){
-//       let cell = farm.children[index];
-//       cell.innerText = "";
-//       cell.dataset.state = "empty";
-//       cell.draggable = false;
-//     }
-//   }
-if(type === "plant"){
-  const plantType = e.dataTransfer.getData("plant");
-  const plant = PLANTS[plantType];
-
-  updateMoney(plant.price);
-
-  if(source === "farm"){
-    let cell = farm.children[index];
-    cell.innerText = "";
-    cell.dataset.state = "empty";
-    cell.draggable = false;
-    cell.classList.remove("growing");
-  }
-}
-
-  if(type === "milk"){
-  updateMoney(25);
-
-  let milkEl = document.querySelector(`[data-id="${e.dataTransfer.getData("milkElId")}"]`);
-  if(milkEl) milkEl.remove();
-}
-};
-
-//// DRAG ITEMS
-// document.querySelectorAll(".shop-item").forEach(el=>{
-//   el.ondragstart = e=>{
-//     e.dataTransfer.setData("type", el.dataset.type);
-//   };
-// });
-
-document.querySelectorAll(".shop-item").forEach(el=>{
-  el.ondragstart = e=>{
-    e.dataTransfer.setData("type", el.dataset.type);
-    e.dataTransfer.setData("plant", el.dataset.plant || "");
-  };
-});
-
-//// COWS
-const cowArea = document.getElementById("cowArea");
-
-let cows = [];
-
-function moveCowSmooth(cow){
-  const maxX = cowArea.clientWidth - 40;
-  const maxY = cowArea.clientHeight - 40;
-
-  const newX = Math.random() * maxX;
-  const newY = Math.random() * maxY;
-
-  cow.style.left = newX + "px";
-  cow.style.top = newY + "px";
-}
-
-for(let i=0;i<3;i++){
-  let cow = document.createElement("div");
-  cow.className = "cow";
-  cow.innerText = "🐄";
-
-  cow.style.left = Math.random()*200+"px";
-  cow.style.top = Math.random()*150+"px";
-
-  cowArea.appendChild(cow);
-  cows.push(cow);
-
-  // smooth continuous movement loop
-  setInterval(()=>{
-    moveCowSmooth(cow);
-  },2000);
-}
-
-// cowArea.ondragover = e => e.preventDefault();
-
-// cowArea.ondrop = e=>{
-//   let type = e.dataTransfer.getData("type");
-//   let source = e.dataTransfer.getData("source");
-//   let index = e.dataTransfer.getData("cellIndex");
-
-//   if(type === "rice"){
-
-//     // remove from farm
-//     if(source === "farm"){
-//       let cell = farm.children[index];
-//       cell.innerText = "";
-//       cell.dataset.state = "empty";
-//       cell.draggable = false;
-//     }
-
-//     // produce milk after delay
-//     setTimeout(()=>{
-//       let milk = document.createElement("div");
-//       milk.innerText = "🥛";
-//       milk.className = "draggable";
-//       milk.draggable = true;
-
-//       milk.ondragstart = ev=>{
-//         ev.dataTransfer.setData("type","milk");
-//         ev.dataTransfer.setData("milkElId", milk.dataset.id);
-//         };
-
-//         milk.dataset.id = Date.now();
-
-//       cowArea.appendChild(milk);
-//     },8000);
-//   }
-// };
-cowArea.ondragover = e => e.preventDefault();
-
-cowArea.ondrop = e=>{
-  let type = e.dataTransfer.getData("type");
-  let plantType = e.dataTransfer.getData("plant");
-  let source = e.dataTransfer.getData("source");
-  let index = e.dataTransfer.getData("cellIndex");
-
-  // ✅ ONLY allow rice
-  if(type === "plant" && plantType === "rice"){
-
-    // remove from farm
-    if(source === "farm"){
-      let cell = farm.children[index];
-      cell.innerText = "";
-      cell.dataset.state = "empty";
-      cell.draggable = false;
-      cell.classList.remove("growing");
-    }
-
-    // produce milk
-    setTimeout(()=>{
-      let milk = document.createElement("div");
-      milk.innerText = "🥛";
-      milk.className = "draggable";
-      milk.draggable = true;
-
-      milk.dataset.id = Date.now();
-
-      milk.ondragstart = ev=>{
-        ev.dataTransfer.setData("type","milk");
-        ev.dataTransfer.setData("milkElId", milk.dataset.id);
-      };
-
-      cowArea.appendChild(milk);
-    },8000);
-
-  } else {
-    // ❌ Reject non-rice (optional feedback)
-    cowArea.style.background = "#ffcdd2"; // flash red
-    setTimeout(()=>{
-      cowArea.style.background = "#c8e6c9";
-    },300);
-  }
-};
-
-//// BIG SHOP
-const items = [
-  "🪑","📺","🛏️","🪟","🚪","🛋️","🖼️","🧸","💡","🪞",
-  "🏠","🏡","🏢","🏬","🏭","🚗","🚲","🛵","🛺","✈️"
-];
-
-const bigShop = document.getElementById("bigShop");
-const owned = document.getElementById("owned");
-
-items.forEach((it,i)=>{
-  let div = document.createElement("div");
-  div.className = "shop-item";
-  div.innerText = it + " ($"+(20+i*5)+")";
-
-  div.onclick = ()=>{
-    let price = 20+i*5;
-    if(money >= price){
-      updateMoney(-price);
-         let ownedItem = document.createElement("span");
-        ownedItem.className = "owned-item";
-        ownedItem.innerText = it+" "
-      owned.appendChild(ownedItem);
-      div.remove();
-
-      if(bigShop.children.length === 0){
-        alert("🎉 YOU WIN!");
-      }
-    }
-  };
-
-  bigShop.appendChild(div);
-});
+/* ==== FARM:END ==== */
 </script>
 
 </body>
