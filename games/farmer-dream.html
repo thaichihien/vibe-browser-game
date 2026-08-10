@@ -338,6 +338,22 @@ function load() {
   return true;
 }
 
+function ripeCount() {
+  const now = Date.now();
+  return S.tiles.filter(t => t && cropStage(t, now).phase === 'ripe').length;
+}
+
+function welcomeBack(awayMs) {
+  if (awayMs < 60000) return;                 // under a minute is not an absence
+  const mins = Math.round(Math.min(awayMs, OFFLINE_CAP_MS) / 60000);
+  const ripe = ripeCount();
+  $('endText').textContent = ripe
+    ? `You were away ${mins} min. ${ripe} plot${ripe > 1 ? 's are' : ' is'} ready to harvest. 🌾`
+    : `You were away ${mins} min. Your crops kept growing. 🌱`;
+  $('endOverlay').querySelector('h1').textContent = '👋 Welcome back!';
+  $('endOverlay').hidden = false;
+}
+
 const DAY_MS = 180000;   // 3 real minutes per in-game day
 
 function tick() {
