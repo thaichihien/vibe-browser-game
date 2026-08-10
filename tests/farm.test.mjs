@@ -308,3 +308,67 @@ test('progress reports the fraction of the current cycle', () => {
   const c = ANIMALS.cow.cycle;
   assert.equal(animalState(beast(), c * 1.5).progress, 0.5);
 });
+
+const { makeAnimal, canBuyAnimal, canFeed, feedAnimal, DEFAULT_NAMES } =
+  load(['FARM'], ['makeAnimal', 'canBuyAnimal', 'canFeed', 'feedAnimal', 'DEFAULT_NAMES'], FARM_GAME);
+
+test('a bought animal starts hungry with a default name', () => {
+  const a = makeAnimal('cow', 'a1', 5, 6);
+  assert.equal(a.type, 'cow');
+  assert.equal(a.fedAt, null);
+  assert.equal(a.made, 0);
+  assert.equal(a.name, DEFAULT_NAMES.cow);
+  assert.equal(animalState(a, 999999).phase, 'hungry');
+});
+
+test('every animal type has a default name', () => {
+  Object.keys(ANIMALS).forEach(k => assert.ok(DEFAULT_NAMES[k], `${k} has no default name`));
+});
+
+test('canBuyAnimal refuses below the unlock level', () => {
+  const s = { xp: 0, money: 99999, animals: [], barn: 4 };
+  assert.deepEqual(canBuyAnimal('cow', s), { ok: false, why: 'level' });
+});
+
+test('canBuyAnimal refuses when the barn is full', () => {
+  const s = { xp: 2000, money: 99999, animals: [1, 2, 3, 4], barn: 4 };
+  assert.deepEqual(canBuyAnimal('chicken', s), { ok: false, why: 'slots' });
+});
+
+test('canBuyAnimal refuses when the money is short', () => {
+  const s = { xp: 2000, money: 10, animals: [], barn: 4 };
+  assert.deepEqual(canBuyAnimal('cow', s), { ok: false, why: 'money' });
+});
+
+test('canBuyAnimal accepts when level, slots and money all allow it', () => {
+  const s = { xp: 2000, money: 99999, animals: [], barn: 4 };
+  assert.deepEqual(canBuyAnimal('cow', s), { ok: true, why: null });
+});
+
+test('canFeed needs the animal hungry and the crop in the inventory', () => {
+  const hungry = makeAnimal('cow', 'a1', 0, 0);
+  assert.equal(canFeed(hungry, 0, { rice: 1 }), true);
+  assert.equal(canFeed(hungry, 0, { rice: 0 }), false, 'no rice');
+  assert.equal(canFeed(hungry, 0, {}), false, 'no rice at all');
+
+  const busy = feedAnimal(hungry, 0);
+  assert.equal(canFeed(busy, 1000, { rice: 5 }), false, 'already working');
+});
+
+test('feeding resets the clock and the product counter', () => {
+  let a = makeAnimal('cow', 'a1', 0, 0);
+  a = feedAnimal(a, 500);
+  assert.equal(a.fedAt, 500);
+  assert.equal(a.made, 0);
+  assert.equal(animalState(a, 500).phase, 'working');
+});
+
+test('an exhausted animal can be fed again and starts over', () => {
+  const c = ANIMALS.cow.cycle;
+  let a = feedAnimal(makeAnimal('cow', 'a1', 0, 0), 0);
+  a = { ...a, made: FEED_YIELD };
+  assert.equal(animalState(a, c * 3).phase, 'hungry');
+  a = feedAnimal(a, c * 3);
+  assert.equal(animalState(a, c * 3).phase, 'working');
+  assert.equal(a.made, 0);
+});

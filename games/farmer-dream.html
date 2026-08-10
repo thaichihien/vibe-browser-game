@@ -347,6 +347,32 @@ function animalState(a, now) {
   if (ready >= FEED_YIELD) return { phase:'hungry', ready:FEED_YIELD, progress:1 };
   return { phase:'working', ready, progress:(elapsed % A.cycle) / A.cycle };
 }
+
+const DEFAULT_NAMES = {
+  chicken:'Pip', sheep:'Cloud', cow:'Bella', pig:'Truffle',
+  hive:'Buzz', goat:'Nibbles', duck:'Puddle'
+};
+
+function makeAnimal(type, id, x, y) {
+  return { id, type, name: DEFAULT_NAMES[type], x, y, fedAt: null, made: 0 };
+}
+
+function canBuyAnimal(type, state) {
+  const A = ANIMALS[type];
+  if (levelFor(state.xp) < A.level)      return { ok:false, why:'level' };
+  if (state.animals.length >= state.barn) return { ok:false, why:'slots' };
+  if (state.money < A.cost)               return { ok:false, why:'money' };
+  return { ok:true, why:null };
+}
+
+function canFeed(a, now, inv) {
+  if (animalState(a, now).phase !== 'hungry') return false;
+  return (inv[ANIMALS[a.type].eats] || 0) > 0;
+}
+
+function feedAnimal(a, now) {
+  return { ...a, fedAt: now, made: 0 };
+}
 /* ==== FARM:END ==== */
 
 const $ = id => document.getElementById(id);
