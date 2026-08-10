@@ -307,6 +307,9 @@ function advance(state, elapsedMs, capMs = OFFLINE_CAP_MS) {
 const $ = id => document.getElementById(id);
 const SAVE_KEY = 'farmerDream.save';
 
+// TEMP stub — the real Web Audio Sound object arrives in Task 13. Delete this then.
+const Sound = { plant(){}, water(){}, harvest(){}, sell(){}, level(){}, bad(){} };
+
 function fresh() {
   return {
     v: 1, savedAt: Date.now(),
@@ -353,6 +356,13 @@ function buildGrid() {
     const c = document.createElement('div');
     c.className = 'cell';
     c.dataset.i = i;
+    c.ondragover = e => { e.preventDefault(); c.classList.add('drop'); };
+    c.ondragleave = () => c.classList.remove('drop');
+    c.ondrop = e => {
+      e.preventDefault();
+      c.classList.remove('drop');
+      onDropCell(i, e);
+    };
     farmEl.appendChild(c);
     return c;
   });
@@ -387,8 +397,78 @@ function render() {
   renderInv();
 }
 
-function renderShop() {}
+const shopEl = $('seedShop');
+
+function renderShop() {
+  const lv = levelFor(S.xp);
+  shopEl.innerHTML = '';
+
+  Object.keys(CROPS).forEach(id => {
+    const C = CROPS[id];
+    const need = UNLOCKS[id];
+    const locked = lv < need;
+    const row = document.createElement('div');
+    row.className = 'shop-item' + (locked ? ' locked' : '');
+    row.draggable = !locked;
+    row.dataset.type = 'seed';
+    row.dataset.crop = id;
+    row.innerHTML = locked
+      ? `<span>🔒</span><span>${C.name}</span><span class="price">Lv${need}</span>`
+      : `<span>${C.icon}</span><span>${C.name}</span><span class="price">$${C.seed}</span>`;
+    if (!locked) row.ondragstart = e => {
+      e.dataTransfer.setData('type', 'seed');
+      e.dataTransfer.setData('crop', id);
+    };
+    shopEl.appendChild(row);
+  });
+
+  const water = document.createElement('div');
+  water.className = 'shop-item';
+  water.draggable = true;
+  water.innerHTML = `<span>💧</span><span>Water</span><span class="price">free</span>`;
+  water.ondragstart = e => e.dataTransfer.setData('type', 'water');
+  shopEl.appendChild(water);
+}
+
 function renderInv() {}
+
+function floatText(x, y, text, colour) {
+  const el = document.createElement('div');
+  el.className = 'float';
+  el.textContent = text;
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  if (colour) el.style.color = colour;
+  $('toast').appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+function onDropCell(i, e) {
+  const type = e.dataTransfer.getData('type');
+  const now = Date.now();
+
+  if (type === 'seed' && S.tiles[i] === null) {
+    const id = e.dataTransfer.getData('crop');
+    const C = CROPS[id];
+    if (levelFor(S.xp) < UNLOCKS[id]) return reject(i);
+    if (S.money < C.seed) return reject(i);
+    S.money -= C.seed;
+    S.tiles[i] = plantTile(id, now);
+    const r = cellEls[i].getBoundingClientRect();
+    floatText(r.left, r.top, '-$' + C.seed, '#c62828');
+    Sound.plant();
+    save(); render();
+    return;
+  }
+  reject(i);
+}
+
+function reject(i) {
+  const el = cellEls[i];
+  el.style.outline = '3px solid #e53935';
+  setTimeout(() => { el.style.outline = ''; }, 250);
+  Sound.bad();
+}
 
 function boot() {
   buildGrid();
