@@ -531,6 +531,26 @@ function reject(i) {
 
 function boot() {
   buildGrid();
+
+  const sellEl = $('sell');
+  sellEl.ondragover = e => { e.preventDefault(); sellEl.classList.add('drop'); };
+  sellEl.ondragleave = () => sellEl.classList.remove('drop');
+  sellEl.ondrop = e => {
+    e.preventDefault();
+    sellEl.classList.remove('drop');
+    if (e.dataTransfer.getData('type') !== 'inv') return;
+
+    const item = e.dataTransfer.getData('item');
+    if (!takeInv(item)) return;
+
+    const value = CROPS[item].sell;
+    S.money += value;
+    const r = sellEl.getBoundingClientRect();
+    floatText(r.left + r.width / 2 - 20, r.top + 20, '+$' + value);
+    Sound.sell();
+    save(); render();
+  };
+
   render();
   setInterval(tick, 250);
   setInterval(save, 5000);
