@@ -28,6 +28,8 @@
     border:0; border-radius:8px; padding:6px 12px; cursor:pointer; text-decoration:none;
   }
   #topbar button:hover, #topbar a:hover { background:rgba(0,0,0,.32); }
+  #waterBtn { cursor:grab; }
+  #waterBtn:active { cursor:grabbing; }
   .stat { font-size:18px; font-weight:bold; white-space:nowrap; }
   #xpWrap { width:150px; height:12px; background:rgba(0,0,0,.3); border-radius:6px; overflow:hidden; }
   #xpFill { height:100%; width:0; background:linear-gradient(90deg,var(--gold),#ffd54f); transition:width .3s; }
@@ -89,14 +91,19 @@
 
   /* ---- pen ---- */
   #pen {
-    position:relative; height:190px; overflow:hidden;
-    background:linear-gradient(180deg,#aed581,#8bc34a);
-    border:3px solid var(--wood-dark); border-radius:12px;
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(96px,1fr)); gap:10px;
   }
-  #pen.drop { outline:3px solid var(--gold); outline-offset:2px; }
-  #pen .empty-note {
+  .slot {
+    position:relative; height:110px; overflow:hidden;
+    background:linear-gradient(180deg,#aed581,#8bc34a);
+    border:3px dashed var(--wood-dark); border-radius:12px;
+  }
+  .slot.filled { border-style:solid; }
+  .slot .decor { position:absolute; bottom:3px; right:4px; font-size:16px; opacity:.75; pointer-events:none; }
+  .slot .empty-note {
     position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    font-size:13px; color:var(--wood-dark); opacity:.65;
+    font-size:11px; line-height:1.3; text-align:center; color:var(--wood-dark); opacity:.65;
+    pointer-events:none;
   }
   .beast {
     position:absolute; font-size:32px; cursor:pointer; user-select:none;
@@ -156,6 +163,25 @@
     text-shadow:0 1px 0 #fff; animation:rise 1s ease-out forwards;
   }
   @keyframes rise { to { transform:translateY(-46px); opacity:0; } }
+
+  /* ---- ambient background: swaying grass & flowers, behind everything ---- */
+  .flora { position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden; }
+  .flora span {
+    position:absolute; display:inline-block; opacity:.5;
+    transform-origin:50% 90%; animation:sway ease-in-out infinite; will-change:transform;
+  }
+  @keyframes sway {
+    0%,100% { transform:rotate(var(--rotA,-6deg)) translateY(0); }
+    50%     { transform:rotate(var(--rotB,6deg)) translateY(-4px); }
+  }
+
+  /* ---- wind overlay: drifting leaves, in front of everything but modals ---- */
+  #windLayer { position:fixed; inset:0; z-index:45; pointer-events:none; overflow:hidden; }
+  .leaf { position:absolute; left:-40px; opacity:.85; will-change:transform; animation:gust linear forwards; }
+  @keyframes gust {
+    0%   { transform:translate(0,0) rotate(0deg); }
+    100% { transform:translate(120vw, 60px) rotate(400deg); }
+  }
 </style>
 </head>
 <body>
@@ -167,6 +193,7 @@
   <div id="xpWrap"><div id="xpFill"></div></div>
   <span id="xpText">0/40</span>
   <span class="stat">📅 Day <span id="dayNum">1</span></span>
+  <button id="waterBtn" draggable="true" title="Drag onto a thirsty plot">🪣 Water</button>
   <span class="spacer"></span>
   <button id="soundBtn">🔊</button>
   <button id="helpBtn">❓ How to play</button>
@@ -213,7 +240,7 @@
     <h1>How to play</h1>
     <ul>
       <li>🌱 Drag a seed from the shop onto an empty plot.</li>
-      <li>💧 Drag water onto a 💧 thirsty plot to start it growing. Water is free.</li>
+      <li>🪣 Drag the water bucket from the top bar onto a 💧 thirsty plot to start it growing. Water is free.</li>
       <li>🎃 Pumpkins need watering <b>twice</b> — they pause halfway.</li>
       <li>✨ Click a ripe plot to harvest it into your 🎒 inventory.</li>
       <li>🍓 Strawberries and 🍇 grapes regrow — harvest them again and again.</li>
@@ -528,22 +555,9 @@ function welcomeBack(awayMs) {
 
 const DAY_MS = 180000;   // 3 real minutes per in-game day
 
-// animalState() says how many products are *earned*; a.made is how many have
-// been shown. The gap is what appears in the pen this tick.
-function materialise() {
-  const now = Date.now();
-  let changed = false;
-  S.animals.forEach(a => {
-    const ready = animalState(a, now).ready;
-    if (ready > a.made) { a.made = ready; changed = true; }
-  });
-  if (changed) save();
-}
-
 function tick() {
   const now = Date.now();
   while (now - S.dayStartedAt >= DAY_MS) { S.dayStartedAt += DAY_MS; S.day++; }
-  materialise();
   wander();
   render();
 }
@@ -640,12 +654,6 @@ function renderShop() {
     shopEl.appendChild(row);
   });
 
-  const water = document.createElement('div');
-  water.className = 'shop-item';
-  water.draggable = true;
-  water.innerHTML = `<span>💧</span><span>Water</span><span class="price">free</span>`;
-  water.ondragstart = e => e.dataTransfer.setData('type', 'water');
-  shopEl.appendChild(water);
 }
 
 const barnEl = $('barnShop');
@@ -666,7 +674,7 @@ function buyAnimal(type) {
   }
   const A = ANIMALS[type];
   S.money -= A.cost;
-  S.animals.push(makeAnimal(type, nextAnimalId(), 10 + Math.random() * 70, 10 + Math.random() * 55));
+  S.animals.push(makeAnimal(type, nextAnimalId(), 8 + Math.random() * 30, 8 + Math.random() * 25));
   Sound.plant();
   save();
   buildPen();
@@ -700,15 +708,21 @@ function renderBarn() {
 
 const penEl = $('pen');
 const animalEls = new Map();
+const SLOT_DECOR = ['🌾', '🌼', '🪵', '🍀'];
 
 function buildPen() {
   penEl.innerHTML = '';
   animalEls.clear();
-  if (!S.animals.length) {
-    penEl.innerHTML = '<div class="empty-note">Buy an animal from the 🐄 Barn tab</div>';
-    return;
-  }
-  S.animals.forEach(a => {
+  for (let i = 0; i < S.barn; i++) {
+    const a = S.animals[i];
+    const slot = document.createElement('div');
+    slot.className = 'slot' + (a ? ' filled' : '');
+    slot.innerHTML = `<span class="decor">${SLOT_DECOR[i % SLOT_DECOR.length]}</span>`;
+    if (!a) {
+      slot.innerHTML += '<div class="empty-note">Buy in the<br>🐄 Barn</div>';
+      penEl.appendChild(slot);
+      continue;
+    }
     const el = document.createElement('div');
     el.className = 'beast';
     el.style.left = a.x + 'px';
@@ -722,9 +736,10 @@ function buildPen() {
       if (e.dataTransfer.getData('type') !== 'inv') return;
       feedAt(a.id, e.dataTransfer.getData('item'));
     };
-    penEl.appendChild(el);
+    slot.appendChild(el);
+    penEl.appendChild(slot);
     animalEls.set(a.id, el);
-  });
+  }
 }
 
 function feedAt(animalId, item) {
@@ -756,16 +771,21 @@ function feedAt(animalId, item) {
 
 function collectFrom(animalId) {
   const a = S.animals.find(x => x.id === animalId);
-  if (!a || a.made <= 0) return;
+  if (!a) return;
 
   const A = ANIMALS[a.type];
+  const st = animalState(a, Date.now());
+  const n = st.ready - a.made;          // earned since the last collection, not yet taken
+  if (n <= 0) return;
+
   const before = levelFor(S.xp);
-  const n = a.made;
   addInv(A.makes, n);
   S.xp += 5 * n;
-  a.made = 0;
-  // Collecting is also what un-sticks a hungry animal's counter, so the next
-  // feeding starts from a clean slate.
+  a.made = st.ready;
+  // a.made tracks how much of this feeding has already been collected, not
+  // how much is currently waiting — ready is time-based and never drops back
+  // down on its own, so zeroing made here (instead of marking it collected)
+  // let the very next tick hand out the same batch again for free.
 
   const el = animalEls.get(animalId);
   const r = el ? el.getBoundingClientRect() : penEl.getBoundingClientRect();
@@ -784,10 +804,10 @@ function renderPen() {
     if (!el) return;
     const st = animalState(a, now);
     const A = ANIMALS[a.type];
-    const waiting = a.made;                     // uncollected products sitting on this animal
+    const waiting = st.ready - a.made;           // earned but not yet collected
     el.innerHTML = A.icon +
       (st.phase === 'hungry' ? `<span class="bubble">${itemInfo(A.eats).icon}</span>` : '') +
-      (waiting ? `<span class="bubble" style="left:-16px">${itemInfo(A.makes).icon}${waiting > 1 ? waiting : ''}</span>` : '') +
+      (waiting > 0 ? `<span class="bubble" style="left:-16px">${itemInfo(A.makes).icon}${waiting > 1 ? waiting : ''}</span>` : '') +
       `<span class="tag">${a.name}</span>` +
       (st.phase === 'working' ? `<div class="ring"><i style="width:${Math.round(st.progress * 100)}%"></i></div>` : '');
     el.style.left = a.x + 'px';
@@ -796,15 +816,19 @@ function renderPen() {
 }
 
 // Each animal picks its own next hop time, so the herd never moves in lockstep.
+// Bounds come from the animal's own slot now, not one shared pen.
 function wander() {
-  const w = penEl.clientWidth - 44;
-  const h = penEl.clientHeight - 40;
   const now = Date.now();
   S.animals.forEach(a => {
     if (a.nextHop && now < a.nextHop) return;
+    const el = animalEls.get(a.id);
+    const slot = el && el.parentElement;
+    if (!slot) return;
+    const w = Math.max(4, slot.clientWidth - 34);
+    const h = Math.max(4, slot.clientHeight - 30);
     a.nextHop = now + 1600 + Math.random() * 3400;   // pause 1.6–5s between hops
-    a.x = Math.max(4, Math.min(w, a.x + (Math.random() - 0.5) * 90));
-    a.y = Math.max(4, Math.min(h, a.y + (Math.random() - 0.5) * 70));
+    a.x = Math.max(4, Math.min(w, a.x + (Math.random() - 0.5) * 40));
+    a.y = Math.max(4, Math.min(h, a.y + (Math.random() - 0.5) * 30));
   });
 }
 
@@ -970,6 +994,53 @@ document.querySelectorAll('.tab').forEach(btn => {
 
 $('soundBtn').onclick = () => { Sound.toggle(); syncSoundBtn(); };
 $('helpBtn').onclick  = () => { $('rulesModal').hidden = false; };
+$('waterBtn').ondragstart = e => e.dataTransfer.setData('type', 'water');
+
+// Ambient decoration: swaying grass/flowers behind the game, drifting leaves
+// in front of it. Purely cosmetic — runs from page load, independent of boot().
+function createFlora() {
+  const FLORA = ['🌾', '🌿', '🌸', '🌼', '🍀', '🌻'];
+  const layer = document.createElement('div');
+  layer.className = 'flora';
+  for (let i = 0; i < 22; i++) {
+    const el = document.createElement('span');
+    el.textContent = FLORA[Math.floor(Math.random() * FLORA.length)];
+    el.style.left = (Math.random() * 100).toFixed(1) + '%';
+    el.style.top = (Math.random() * 100).toFixed(1) + '%';
+    el.style.fontSize = (16 + Math.random() * 22).toFixed(0) + 'px';
+    el.style.opacity = (0.28 + Math.random() * 0.3).toFixed(2);
+    const amp = 4 + Math.random() * 7;
+    el.style.setProperty('--rotA', (-amp).toFixed(1) + 'deg');
+    el.style.setProperty('--rotB', amp.toFixed(1) + 'deg');
+    el.style.animationDuration = (2.6 + Math.random() * 3.4).toFixed(2) + 's';
+    el.style.animationDelay = (-Math.random() * 4).toFixed(2) + 's';
+    layer.appendChild(el);
+  }
+  document.body.appendChild(layer);
+}
+
+const windEl = document.createElement('div');
+windEl.id = 'windLayer';
+document.body.appendChild(windEl);
+
+function spawnLeafGust() {
+  const n = 3 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < n; i++) {
+    const leaf = document.createElement('span');
+    leaf.className = 'leaf';
+    leaf.textContent = Math.random() < 0.5 ? '🍃' : '🍂';
+    leaf.style.top = (Math.random() * 90).toFixed(1) + '%';
+    leaf.style.fontSize = (16 + Math.random() * 10).toFixed(0) + 'px';
+    leaf.style.animationDuration = (6 + Math.random() * 4).toFixed(2) + 's';
+    leaf.style.animationDelay = (Math.random() * 1.4).toFixed(2) + 's';
+    windEl.appendChild(leaf);
+    leaf.addEventListener('animationend', () => leaf.remove());
+  }
+  setTimeout(spawnLeafGust, 7000 + Math.random() * 8000);
+}
+
+createFlora();
+spawnLeafGust();
 $('closeRules').onclick = () => { $('rulesModal').hidden = true; };
 $('closeEnd').onclick   = () => { $('endOverlay').hidden = true; };
 
