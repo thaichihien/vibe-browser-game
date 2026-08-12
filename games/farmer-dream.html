@@ -698,9 +698,44 @@ function buildPen() {
     el.style.left = a.x + 'px';
     el.style.top = a.y + 'px';
     el.onclick = () => collectFrom(a.id);
+    el.ondragover = e => { e.preventDefault(); el.style.filter = 'brightness(1.25)'; };
+    el.ondragleave = () => { el.style.filter = ''; };
+    el.ondrop = e => {
+      e.preventDefault();
+      el.style.filter = '';
+      if (e.dataTransfer.getData('type') !== 'inv') return;
+      feedAt(a.id, e.dataTransfer.getData('item'));
+    };
     penEl.appendChild(el);
     animalEls.set(a.id, el);
   });
+}
+
+function feedAt(animalId, item) {
+  const idx = S.animals.findIndex(a => a.id === animalId);
+  if (idx < 0) return;
+  const a = S.animals[idx];
+  const A = ANIMALS[a.type];
+  const el = animalEls.get(animalId);
+  const r = el ? el.getBoundingClientRect() : penEl.getBoundingClientRect();
+
+  if (item !== A.eats) {
+    Sound.bad();
+    floatText(r.left, r.top - 10, `wants ${itemInfo(A.eats).icon}`, '#c62828');
+    return;
+  }
+  if (!canFeed(a, Date.now(), S.inv)) {
+    Sound.bad();
+    floatText(r.left, r.top - 10, 'not hungry', '#c62828');
+    return;
+  }
+  if (!takeInv(item)) return;
+
+  S.animals[idx] = feedAnimal(a, Date.now());
+  Sound.water();
+  floatText(r.left, r.top - 10, itemInfo(item).icon + ' yum');
+  save();
+  render();
 }
 
 function renderPen() {
