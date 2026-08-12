@@ -87,6 +87,36 @@
   @keyframes bob   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
 
+  /* ---- pen ---- */
+  #pen {
+    position:relative; height:190px; overflow:hidden;
+    background:linear-gradient(180deg,#aed581,#8bc34a);
+    border:3px solid var(--wood-dark); border-radius:12px;
+  }
+  #pen.drop { outline:3px solid var(--gold); outline-offset:2px; }
+  #pen .empty-note {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:13px; color:var(--wood-dark); opacity:.65;
+  }
+  .beast {
+    position:absolute; font-size:32px; cursor:pointer; user-select:none;
+    transition:left .9s ease-in-out, top .9s ease-in-out;
+  }
+  .beast .bubble {
+    position:absolute; top:-16px; left:18px; font-size:15px;
+    background:var(--cream); border:2px solid var(--wood);
+    border-radius:9px; padding:0 3px; animation:blink 1.4s infinite;
+  }
+  .beast .ring {
+    position:absolute; left:2px; right:2px; bottom:-5px; height:3px;
+    background:rgba(0,0,0,.25); border-radius:2px; overflow:hidden;
+  }
+  .beast .ring i { display:block; height:100%; background:var(--gold); }
+  .beast .tag {
+    position:absolute; top:32px; left:50%; transform:translateX(-50%);
+    font-size:9px; white-space:nowrap; color:var(--wood-dark);
+  }
+
   /* ---- inventory + sell ---- */
   #inv { display:flex; flex-wrap:wrap; gap:6px; min-height:56px; }
   .inv-item {
@@ -155,6 +185,8 @@
   <div class="panel" id="centre">
     <h3>🌾 Farm</h3>
     <div id="farm"></div>
+    <h3 style="margin-top:14px">🐄 Pen</h3>
+    <div id="pen"></div>
   </div>
 
   <div class="panel" id="right">
@@ -496,6 +528,7 @@ const DAY_MS = 180000;   // 3 real minutes per in-game day
 function tick() {
   const now = Date.now();
   while (now - S.dayStartedAt >= DAY_MS) { S.dayStartedAt += DAY_MS; S.day++; }
+  wander();
   render();
 }
 
@@ -555,6 +588,7 @@ function render() {
   renderShop();
   renderInv();
   renderBarn();
+  renderPen();
 }
 
 const shopEl = $('seedShop');
@@ -645,6 +679,58 @@ function renderBarn() {
       row.style.cursor = 'pointer';
     }
     barnEl.appendChild(row);
+  });
+}
+
+const penEl = $('pen');
+const animalEls = new Map();
+
+function buildPen() {
+  penEl.innerHTML = '';
+  animalEls.clear();
+  if (!S.animals.length) {
+    penEl.innerHTML = '<div class="empty-note">Buy an animal from the 🐄 Barn tab</div>';
+    return;
+  }
+  S.animals.forEach(a => {
+    const el = document.createElement('div');
+    el.className = 'beast';
+    el.style.left = a.x + 'px';
+    el.style.top = a.y + 'px';
+    el.onclick = () => collectFrom(a.id);
+    penEl.appendChild(el);
+    animalEls.set(a.id, el);
+  });
+}
+
+function renderPen() {
+  const now = Date.now();
+  S.animals.forEach(a => {
+    const el = animalEls.get(a.id);
+    if (!el) return;
+    const st = animalState(a, now);
+    const A = ANIMALS[a.type];
+    const waiting = a.made;                     // uncollected products sitting on this animal
+    el.innerHTML = A.icon +
+      (st.phase === 'hungry' ? `<span class="bubble">${itemInfo(A.eats).icon}</span>` : '') +
+      (waiting ? `<span class="bubble" style="left:-16px">${itemInfo(A.makes).icon}${waiting > 1 ? waiting : ''}</span>` : '') +
+      `<span class="tag">${a.name}</span>` +
+      (st.phase === 'working' ? `<div class="ring"><i style="width:${Math.round(st.progress * 100)}%"></i></div>` : '');
+    el.style.left = a.x + 'px';
+    el.style.top = a.y + 'px';
+  });
+}
+
+// Each animal picks its own next hop time, so the herd never moves in lockstep.
+function wander() {
+  const w = penEl.clientWidth - 44;
+  const h = penEl.clientHeight - 40;
+  const now = Date.now();
+  S.animals.forEach(a => {
+    if (a.nextHop && now < a.nextHop) return;
+    a.nextHop = now + 1600 + Math.random() * 3400;   // pause 1.6–5s between hops
+    a.x = Math.max(4, Math.min(w, a.x + (Math.random() - 0.5) * 90));
+    a.y = Math.max(4, Math.min(h, a.y + (Math.random() - 0.5) * 70));
   });
 }
 
@@ -758,6 +844,7 @@ function reject(i) {
 
 function boot() {
   buildGrid();
+  buildPen();
 
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === S.shopTab));
   $('seedShop').hidden = S.shopTab !== 'seeds';
