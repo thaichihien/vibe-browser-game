@@ -91,19 +91,13 @@
 
   /* ---- pen ---- */
   #pen {
-    display:grid; grid-template-columns:repeat(auto-fill, minmax(96px,1fr)); gap:10px;
-  }
-  .slot {
-    position:relative; height:110px; overflow:hidden;
+    position:relative; height:190px; overflow:hidden;
     background:linear-gradient(180deg,#aed581,#8bc34a);
-    border:3px dashed var(--wood-dark); border-radius:12px;
+    border:3px solid var(--wood-dark); border-radius:12px;
   }
-  .slot.filled { border-style:solid; }
-  .slot .decor { position:absolute; bottom:3px; right:4px; font-size:16px; opacity:.75; pointer-events:none; }
-  .slot .empty-note {
+  #pen .empty-note {
     position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    font-size:11px; line-height:1.3; text-align:center; color:var(--wood-dark); opacity:.65;
-    pointer-events:none;
+    font-size:13px; color:var(--wood-dark); opacity:.65;
   }
   .beast {
     position:absolute; font-size:32px; cursor:pointer; user-select:none;
@@ -674,7 +668,7 @@ function buyAnimal(type) {
   }
   const A = ANIMALS[type];
   S.money -= A.cost;
-  S.animals.push(makeAnimal(type, nextAnimalId(), 8 + Math.random() * 30, 8 + Math.random() * 25));
+  S.animals.push(makeAnimal(type, nextAnimalId(), 10 + Math.random() * 70, 10 + Math.random() * 55));
   Sound.plant();
   save();
   buildPen();
@@ -708,21 +702,15 @@ function renderBarn() {
 
 const penEl = $('pen');
 const animalEls = new Map();
-const SLOT_DECOR = ['🌾', '🌼', '🪵', '🍀'];
 
 function buildPen() {
   penEl.innerHTML = '';
   animalEls.clear();
-  for (let i = 0; i < S.barn; i++) {
-    const a = S.animals[i];
-    const slot = document.createElement('div');
-    slot.className = 'slot' + (a ? ' filled' : '');
-    slot.innerHTML = `<span class="decor">${SLOT_DECOR[i % SLOT_DECOR.length]}</span>`;
-    if (!a) {
-      slot.innerHTML += '<div class="empty-note">Buy in the<br>🐄 Barn</div>';
-      penEl.appendChild(slot);
-      continue;
-    }
+  if (!S.animals.length) {
+    penEl.innerHTML = '<div class="empty-note">Buy an animal from the 🐄 Barn tab</div>';
+    return;
+  }
+  S.animals.forEach(a => {
     const el = document.createElement('div');
     el.className = 'beast';
     el.style.left = a.x + 'px';
@@ -736,10 +724,9 @@ function buildPen() {
       if (e.dataTransfer.getData('type') !== 'inv') return;
       feedAt(a.id, e.dataTransfer.getData('item'));
     };
-    slot.appendChild(el);
-    penEl.appendChild(slot);
+    penEl.appendChild(el);
     animalEls.set(a.id, el);
-  }
+  });
 }
 
 function feedAt(animalId, item) {
@@ -816,19 +803,15 @@ function renderPen() {
 }
 
 // Each animal picks its own next hop time, so the herd never moves in lockstep.
-// Bounds come from the animal's own slot now, not one shared pen.
 function wander() {
+  const w = penEl.clientWidth - 44;
+  const h = penEl.clientHeight - 40;
   const now = Date.now();
   S.animals.forEach(a => {
     if (a.nextHop && now < a.nextHop) return;
-    const el = animalEls.get(a.id);
-    const slot = el && el.parentElement;
-    if (!slot) return;
-    const w = Math.max(4, slot.clientWidth - 34);
-    const h = Math.max(4, slot.clientHeight - 30);
     a.nextHop = now + 1600 + Math.random() * 3400;   // pause 1.6–5s between hops
-    a.x = Math.max(4, Math.min(w, a.x + (Math.random() - 0.5) * 40));
-    a.y = Math.max(4, Math.min(h, a.y + (Math.random() - 0.5) * 30));
+    a.x = Math.max(4, Math.min(w, a.x + (Math.random() - 0.5) * 90));
+    a.y = Math.max(4, Math.min(h, a.y + (Math.random() - 0.5) * 70));
   });
 }
 
