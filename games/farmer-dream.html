@@ -525,9 +525,22 @@ function welcomeBack(awayMs) {
 
 const DAY_MS = 180000;   // 3 real minutes per in-game day
 
+// animalState() says how many products are *earned*; a.made is how many have
+// been shown. The gap is what appears in the pen this tick.
+function materialise() {
+  const now = Date.now();
+  let changed = false;
+  S.animals.forEach(a => {
+    const ready = animalState(a, now).ready;
+    if (ready > a.made) { a.made = ready; changed = true; }
+  });
+  if (changed) save();
+}
+
 function tick() {
   const now = Date.now();
   while (now - S.dayStartedAt >= DAY_MS) { S.dayStartedAt += DAY_MS; S.day++; }
+  materialise();
   wander();
   render();
 }
@@ -734,6 +747,29 @@ function feedAt(animalId, item) {
   S.animals[idx] = feedAnimal(a, Date.now());
   Sound.water();
   floatText(r.left, r.top - 10, itemInfo(item).icon + ' yum');
+  save();
+  render();
+}
+
+function collectFrom(animalId) {
+  const a = S.animals.find(x => x.id === animalId);
+  if (!a || a.made <= 0) return;
+
+  const A = ANIMALS[a.type];
+  const before = levelFor(S.xp);
+  const n = a.made;
+  addInv(A.makes, n);
+  S.xp += 5 * n;
+  a.made = 0;
+  // Collecting is also what un-sticks a hungry animal's counter, so the next
+  // feeding starts from a clean slate.
+
+  const el = animalEls.get(animalId);
+  const r = el ? el.getBoundingClientRect() : penEl.getBoundingClientRect();
+  floatText(r.left + 6, r.top - 6, PRODUCTS[A.makes].icon + (n > 1 ? ' ×' + n : ''));
+  Sound.harvest();
+  if (levelFor(S.xp) > before) { Sound.level(); floatText(r.left, r.top - 30, 'LEVEL UP!', '#f9a825'); }
+
   save();
   render();
 }
