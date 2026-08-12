@@ -56,6 +56,16 @@
   .shop-item.locked { opacity:.45; cursor:not-allowed; filter:grayscale(1); }
   .shop-item .price { margin-left:auto; font-weight:bold; color:var(--grass-dark); }
 
+  /* ---- shop tabs ---- */
+  .tabs { display:flex; gap:6px; margin-bottom:10px; }
+  .tab {
+    flex:1; font:inherit; font-size:13px; cursor:pointer; padding:6px 4px;
+    color:var(--wood); background:var(--cream);
+    border:2px solid var(--wood); border-radius:8px 8px 0 0;
+  }
+  .tab.on { color:var(--wheat); background:var(--wood); }
+  .slots { font-size:12px; opacity:.7; margin-bottom:8px; }
+
   /* ---- farm grid ---- */
   #farm { display:grid; gap:6px; justify-content:start; }
   .cell {
@@ -134,8 +144,12 @@
 
 <div id="main">
   <div class="panel" id="left">
-    <h3>🌱 Seed Shop</h3>
+    <div class="tabs">
+      <button class="tab on" data-tab="seeds">🌱 Seeds</button>
+      <button class="tab" data-tab="barn">🐄 Barn</button>
+    </div>
     <div id="seedShop"></div>
+    <div id="barnShop" hidden></div>
   </div>
 
   <div class="panel" id="centre">
@@ -424,7 +438,8 @@ function fresh() {
     tiles: new Array(15).fill(null),
     inv: {},
     animals: [],
-    barn: 4
+    barn: 4,
+    shopTab: 'seeds'
   };
 }
 
@@ -446,6 +461,7 @@ function load() {
   // bumping `v`, which would throw the player's existing farm away.
   if (!Array.isArray(data.animals)) data.animals = [];
   if (typeof data.barn !== 'number') data.barn = 4;
+  if (data.shopTab !== 'barn') data.shopTab = 'seeds';
   const elapsedMs = Date.now() - data.savedAt;
   // advance() caps tile growth at OFFLINE_CAP_MS worth of elapsed time by
   // shifting tile timestamps forward by the excess. S.dayStartedAt lives
@@ -538,6 +554,7 @@ function render() {
 
   renderShop();
   renderInv();
+  renderBarn();
 }
 
 const shopEl = $('seedShop');
@@ -579,6 +596,56 @@ function renderShop() {
   water.innerHTML = `<span>💧</span><span>Water</span><span class="price">free</span>`;
   water.ondragstart = e => e.dataTransfer.setData('type', 'water');
   shopEl.appendChild(water);
+}
+
+const barnEl = $('barnShop');
+let lastBarnSig = null;
+
+function nextAnimalId() {
+  return 'a' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
+}
+
+function buyAnimal(type) {
+  const check = canBuyAnimal(type, S);
+  if (!check.ok) {
+    Sound.bad();
+    const msg = { level:'Level too low', slots:'Barn is full', money:'Not enough money' }[check.why];
+    const r = barnEl.getBoundingClientRect();
+    floatText(r.left + 10, r.top + 10, msg, '#c62828');
+    return;
+  }
+  const A = ANIMALS[type];
+  S.money -= A.cost;
+  S.animals.push(makeAnimal(type, nextAnimalId(), 10 + Math.random() * 70, 10 + Math.random() * 55));
+  Sound.plant();
+  save();
+  buildPen();
+  render();
+}
+
+function renderBarn() {
+  const lv = levelFor(S.xp);
+  const sig = lv + '|' + S.money + '|' + S.animals.length + '|' + S.barn;
+  if (sig === lastBarnSig) return;
+  lastBarnSig = sig;
+
+  barnEl.innerHTML = `<div class="slots">Barn slots: ${S.animals.length}/${S.barn}</div>`;
+
+  Object.keys(ANIMALS).forEach(type => {
+    const A = ANIMALS[type];
+    const locked = lv < A.level;
+    const row = document.createElement('div');
+    row.className = 'shop-item' + (locked ? ' locked' : '');
+    row.innerHTML = locked
+      ? `<span>🔒</span><span>${A.name}</span><span class="price">Lv${A.level}</span>`
+      : `<span>${A.icon}</span><span>${A.name}</span><span class="price">$${A.cost}</span>`;
+    if (!locked) {
+      row.title = `Eats ${itemInfo(A.eats).icon} ${itemInfo(A.eats).name} → makes ${itemInfo(A.makes).icon}`;
+      row.onclick = () => buyAnimal(type);
+      row.style.cursor = 'pointer';
+    }
+    barnEl.appendChild(row);
+  });
 }
 
 const invEl = $('inv');
@@ -692,6 +759,10 @@ function reject(i) {
 function boot() {
   buildGrid();
 
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === S.shopTab));
+  $('seedShop').hidden = S.shopTab !== 'seeds';
+  $('barnShop').hidden = S.shopTab !== 'barn';
+
   const sellEl = $('sell');
   sellEl.ondragover = e => { e.preventDefault(); sellEl.classList.add('drop'); };
   sellEl.ondragleave = () => sellEl.classList.remove('drop');
@@ -724,6 +795,17 @@ function boot() {
 }
 
 function syncSoundBtn() { $('soundBtn').textContent = Sound.muted ? '🔇' : '🔊'; }
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.onclick = () => {
+    S.shopTab = btn.dataset.tab;
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === S.shopTab));
+    $('seedShop').hidden = S.shopTab !== 'seeds';
+    $('barnShop').hidden = S.shopTab !== 'barn';
+    save();
+    render();
+  };
+});
 
 $('soundBtn').onclick = () => { Sound.toggle(); syncSoundBtn(); };
 $('helpBtn').onclick  = () => { $('rulesModal').hidden = false; };
