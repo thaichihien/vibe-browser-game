@@ -177,10 +177,10 @@
 
   /* ---- wind overlay: drifting leaves, in front of everything but modals ---- */
   #windLayer { position:fixed; inset:0; z-index:45; pointer-events:none; overflow:hidden; }
-  .leaf { position:absolute; left:-40px; opacity:.85; will-change:transform; animation:gust linear forwards; }
+  .leaf { position:absolute; right:-40px; opacity:.85; will-change:transform; animation:gust linear forwards; }
   @keyframes gust {
     0%   { transform:translate(0,0) rotate(0deg); }
-    100% { transform:translate(120vw, 60px) rotate(400deg); }
+    100% { transform:translate(-130vw, 85vh) rotate(-380deg); }
   }
 </style>
 </head>
@@ -1024,19 +1024,21 @@ windEl.id = 'windLayer';
 document.body.appendChild(windEl);
 
 function spawnLeafGust() {
-  const n = 3 + Math.floor(Math.random() * 3);
+  // Leaves enter along the top-right edge and drift down-left across the
+  // whole screen, so they start high (near the top) rather than anywhere.
+  const n = 7 + Math.floor(Math.random() * 5);
   for (let i = 0; i < n; i++) {
     const leaf = document.createElement('span');
     leaf.className = 'leaf';
     leaf.textContent = Math.random() < 0.5 ? '🍃' : '🍂';
-    leaf.style.top = (Math.random() * 90).toFixed(1) + '%';
+    leaf.style.top = (Math.random() * 45 - 5).toFixed(1) + '%';
     leaf.style.fontSize = (16 + Math.random() * 10).toFixed(0) + 'px';
     leaf.style.animationDuration = (6 + Math.random() * 4).toFixed(2) + 's';
-    leaf.style.animationDelay = (Math.random() * 1.4).toFixed(2) + 's';
+    leaf.style.animationDelay = (Math.random() * 1.8).toFixed(2) + 's';
     windEl.appendChild(leaf);
     leaf.addEventListener('animationend', () => leaf.remove());
   }
-  setTimeout(spawnLeafGust, 7000 + Math.random() * 8000);
+  setTimeout(spawnLeafGust, 5000 + Math.random() * 6000);
 }
 
 createFlora();
