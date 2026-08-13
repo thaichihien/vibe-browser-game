@@ -91,7 +91,7 @@
 
   /* ---- pen ---- */
   #pen {
-    position:relative; height:190px; overflow:hidden;
+    position:relative; height:260px; overflow:hidden;
     background:linear-gradient(180deg,#aed581,#8bc34a);
     border:3px solid var(--wood-dark); border-radius:12px;
   }
@@ -100,11 +100,11 @@
     font-size:13px; color:var(--wood-dark); opacity:.65;
   }
   .beast {
-    position:absolute; font-size:32px; cursor:pointer; user-select:none;
+    position:absolute; font-size:44px; cursor:pointer; user-select:none;
     transition:left .9s ease-in-out, top .9s ease-in-out;
   }
   .beast .bubble {
-    position:absolute; top:-16px; left:18px; font-size:15px;
+    position:absolute; top:-20px; left:26px; font-size:15px;
     background:var(--cream); border:2px solid var(--wood);
     border-radius:9px; padding:0 3px; animation:blink 1.4s infinite;
   }
@@ -114,7 +114,7 @@
   }
   .beast .ring i { display:block; height:100%; background:var(--gold); }
   .beast .tag {
-    position:absolute; top:32px; left:50%; transform:translateX(-50%);
+    position:absolute; top:44px; left:50%; transform:translateX(-50%);
     font-size:9px; white-space:nowrap; color:var(--wood-dark);
   }
 
@@ -802,16 +802,21 @@ function renderPen() {
   });
 }
 
-// Each animal picks its own next hop time, so the herd never moves in lockstep.
+// Each animal picks its own next hop time and a fresh random spot in the
+// pen, so the herd never moves in lockstep. A previous version nudged from
+// the current position and clamped to the bounds, which — combined with a
+// top-left spawn point — statistically piled animals up near that corner
+// instead of covering the pen. Picking a new uniform-random target every
+// hop covers the whole area instead.
 function wander() {
-  const w = penEl.clientWidth - 44;
-  const h = penEl.clientHeight - 40;
+  const w = Math.max(0, penEl.clientWidth - 60);
+  const h = Math.max(0, penEl.clientHeight - 56);
   const now = Date.now();
   S.animals.forEach(a => {
     if (a.nextHop && now < a.nextHop) return;
     a.nextHop = now + 1600 + Math.random() * 3400;   // pause 1.6–5s between hops
-    a.x = Math.max(4, Math.min(w, a.x + (Math.random() - 0.5) * 90));
-    a.y = Math.max(4, Math.min(h, a.y + (Math.random() - 0.5) * 70));
+    a.x = 4 + Math.random() * w;
+    a.y = 4 + Math.random() * h;
   });
 }
 
