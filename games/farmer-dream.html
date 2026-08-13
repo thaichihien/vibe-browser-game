@@ -619,6 +619,23 @@ const PET_RULES = {
 function petsEarned(ctx) {
   return Object.keys(PETS).filter(id => PET_RULES[id](ctx));
 }
+
+const DAY_MS = 180000;                       // 3 real minutes per in-game day
+const PHASES = ['dawn', 'day', 'dusk', 'night'];
+
+function dayPhase(dayStartedAt, now) {
+  const q = DAY_MS / 4;
+  const into = Math.max(0, now - dayStartedAt) % DAY_MS;
+  const index = Math.min(PHASES.length - 1, Math.floor(into / q));
+  return { phase: PHASES[index], index, into: (into % q) / q };
+}
+
+// Derived from the day number rather than stored, so weather survives a
+// reload with no new save field and is reproducible in tests.
+function isRainy(day) {
+  const h = Math.sin(day * 12.9898) * 43758.5453;
+  return (h - Math.floor(h)) < 0.2;
+}
 /* ==== FARM:END ==== */
 
 const $ = id => document.getElementById(id);
@@ -720,8 +737,6 @@ function welcomeBack(awayMs) {
   $('endOverlay').querySelector('h1').textContent = '👋 Welcome back!';
   $('endOverlay').hidden = false;
 }
-
-const DAY_MS = 180000;   // 3 real minutes per in-game day
 
 function tick() {
   const now = Date.now();

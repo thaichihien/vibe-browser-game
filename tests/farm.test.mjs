@@ -691,3 +691,41 @@ test('petsEarned returns ids in album order, not discovery order', () => {
   }));
   assert.deepEqual(all, Object.keys(PETS));
 });
+
+const { DAY_MS, PHASES, dayPhase, isRainy } =
+  load(['FARM'], ['DAY_MS', 'PHASES', 'dayPhase', 'isRainy'], FARM_GAME);
+
+test('a day is three real minutes in four phases', () => {
+  assert.equal(DAY_MS, 180000);
+  assert.deepEqual(PHASES, ['dawn', 'day', 'dusk', 'night']);
+});
+
+test('dayPhase walks the four phases across the day', () => {
+  const q = DAY_MS / 4;
+  assert.equal(dayPhase(0, 0).phase, 'dawn');
+  assert.equal(dayPhase(0, q).phase, 'day');
+  assert.equal(dayPhase(0, q * 2).phase, 'dusk');
+  assert.equal(dayPhase(0, q * 3).phase, 'night');
+  assert.equal(dayPhase(0, q * 3.99).phase, 'night');
+});
+
+test('dayPhase reports how far into the phase we are', () => {
+  const q = DAY_MS / 4;
+  assert.equal(dayPhase(0, q * 1.5).into, 0.5);
+  assert.equal(dayPhase(0, q * 1.5).index, 1);
+});
+
+test('dayPhase handles a day already in progress', () => {
+  const q = DAY_MS / 4;
+  assert.equal(dayPhase(1000, 1000 + q * 3).phase, 'night');
+});
+
+test('isRainy is stable for a given day, so a reload cannot reroll the weather', () => {
+  for (let d = 1; d <= 40; d++) assert.equal(isRainy(d), isRainy(d));
+});
+
+test('rain lands on roughly one day in five', () => {
+  let wet = 0;
+  for (let d = 1; d <= 400; d++) if (isRainy(d)) wet++;
+  assert.ok(wet > 40 && wet < 120, `expected ~80 rainy days in 400, got ${wet}`);
+});
