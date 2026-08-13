@@ -802,21 +802,39 @@ function renderPen() {
   });
 }
 
-// Each animal picks its own next hop time and a fresh random spot in the
-// pen, so the herd never moves in lockstep. A previous version nudged from
-// the current position and clamped to the bounds, which — combined with a
-// top-left spawn point — statistically piled animals up near that corner
-// instead of covering the pen. Picking a new uniform-random target every
-// hop covers the whole area instead.
+// Each animal picks its own next hop time, so the herd never moves in
+// lockstep. A hop is a modest step from the current position, *reflected*
+// off the pen's edges rather than clamped to them or teleported to a fresh
+// random spot — clamping used to pile animals up against whichever edge
+// they spawned near, and jumping anywhere in the pen looked like
+// teleporting rather than walking. The transition duration scales with
+// how far this particular hop travels, so a short step ambles and a long
+// one actually takes proportionally longer, instead of every hop covering
+// wildly different distances in the same fixed time.
+const WALK_SPEED = 90; // px/s — how fast a hop's CSS transition plays out
+
+function reflect(v, max) {
+  if (max <= 0) return 0;
+  const span = 2 * max;
+  v = ((v % span) + span) % span;
+  return v > max ? span - v : v;
+}
+
 function wander() {
   const w = Math.max(0, penEl.clientWidth - 60);
   const h = Math.max(0, penEl.clientHeight - 56);
   const now = Date.now();
   S.animals.forEach(a => {
     if (a.nextHop && now < a.nextHop) return;
-    a.nextHop = now + 1600 + Math.random() * 3400;   // pause 1.6–5s between hops
-    a.x = 4 + Math.random() * w;
-    a.y = 4 + Math.random() * h;
+    const dx = (Math.random() - 0.5) * 140;
+    const dy = (Math.random() - 0.5) * 110;
+    a.x = reflect(a.x + dx, w);
+    a.y = reflect(a.y + dy, h);
+
+    const hopS = Math.min(1.8, Math.max(0.5, Math.hypot(dx, dy) / WALK_SPEED));
+    const el = animalEls.get(a.id);
+    if (el) el.style.transitionDuration = hopS.toFixed(2) + 's';
+    a.nextHop = now + hopS * 1000 + 1000 + Math.random() * 2200;   // walk, then pause
   });
 }
 
