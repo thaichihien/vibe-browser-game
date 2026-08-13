@@ -141,6 +141,21 @@
   #room.night .band.wall { filter:brightness(.55); }
   #room.night.lit .band.wall { filter:brightness(.55) drop-shadow(0 0 12px #ffe082); }
 
+  /* ---- pets ---- */
+  #viewPets { display:flex; flex-wrap:wrap; gap:10px; }
+  .petcard {
+    width:120px; padding:10px 6px; text-align:center;
+    background:var(--cream); border:2px solid var(--wood); border-radius:12px;
+  }
+  .petcard.locked { filter:grayscale(1); opacity:.5; }
+  .petcard .big { font-size:38px; }
+  .petcard .nm { font-weight:bold; font-size:13px; }
+  .petcard .sub { font-size:11px; opacity:.75; }
+  .petcard button { font:inherit; font-size:11px; margin-top:4px; cursor:pointer;
+                    border:1px solid var(--wood); border-radius:6px; background:var(--panel); }
+  .pet { position:absolute; font-size:26px; cursor:pointer; user-select:none;
+         transition:left 1.1s ease-in-out, top 1.1s ease-in-out; z-index:5; }
+
   /* ---- workshop ---- */
   #machines { display:flex; flex-wrap:wrap; gap:8px; min-height:40px; }
   .machine {
@@ -851,6 +866,11 @@ function tick() {
       }
     });
   }
+  if (S.stats.daysPlayed.indexOf(S.day) < 0) S.stats.daysPlayed.push(S.day);
+  if (dayPhase(S.dayStartedAt, now).phase === 'night') S.stats.sawNight = true;
+  checkPets();
+  roamPets();
+  foxRaid();
   wander();
   render();
 }
@@ -916,6 +936,7 @@ function render() {
   renderBuild();
   renderOrder();
   if (S.view === 'home') renderHome();
+  if (S.view === 'pets') renderPets();
 }
 
 const shopEl = $('seedShop');
@@ -1414,6 +1435,105 @@ bandDrop($('wallBand'), 'wall');
 bandDrop($('floorBand'), 'floor');
 bandDrop($('yard'), 'yard');
 
+function petCtx() { return { xp:S.xp, stats:S.stats, house:S.house }; }
+
+function checkPets() {
+  const earned = petsEarned(petCtx());
+  let gained = null;
+  earned.forEach(type => {
+    if (S.pets.some(p => p.type === type)) return;
+    S.pets.push({ type, name: PETS[type].name, x: 20 + Math.random() * 60, y: 20 + Math.random() * 50, nextHop: 0 });
+    gained = type;
+  });
+  if (gained) {
+    Sound.level();
+    const r = penEl.getBoundingClientRect();
+    floatText(r.left + 20, r.top + 20, PETS[gained].icon + ' joined!', '#f9a825');
+    save();
+  }
+}
+
+function petName(type) {
+  const p = S.pets.find(x => x.type === type);
+  if (!p) return;
+  const next = prompt(`Name your ${PETS[type].name}:`, p.name);
+  if (next && next.trim()) { p.name = next.trim().slice(0, 14); save(); render(); }
+}
+
+function renderPets() {
+  const el = $('viewPets');
+  el.innerHTML = '';
+  Object.keys(PETS).forEach(type => {
+    const P = PETS[type];
+    const mine = S.pets.find(p => p.type === type);
+    const card = document.createElement('div');
+    card.className = 'petcard' + (mine ? '' : ' locked');
+    card.innerHTML = `<div class="big">${mine ? P.icon : '❓'}</div>` +
+      `<div class="nm">${mine ? mine.name : '???'}</div>` +
+      `<div class="sub">${mine ? P.perk : P.hint}</div>`;
+    if (mine) {
+      const b = document.createElement('button');
+      b.textContent = 'Rename';
+      b.onclick = () => petName(type);
+      card.appendChild(b);
+    }
+    el.appendChild(card);
+  });
+}
+
+function roamPets() {
+  if (S.view !== 'farm' || !S.pets.length) return;
+  const w = penEl.clientWidth - 34, h = penEl.clientHeight - 30, now = Date.now();
+  S.pets.forEach(p => {
+    let el = penEl.querySelector(`[data-pet="${p.type}"]`);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'pet';
+      el.dataset.pet = p.type;
+      el.onclick = () => {
+        const r = el.getBoundingClientRect();
+        floatText(r.left + 6, r.top - 6, '❤️');
+        Sound.harvest();
+      };
+      penEl.appendChild(el);
+    }
+    el.textContent = PETS[p.type].icon;
+    el.title = p.name;
+    if (!p.nextHop || now >= p.nextHop) {
+      p.nextHop = now + 2000 + Math.random() * 4000;
+      p.x = Math.max(2, Math.min(w, p.x + (Math.random() - 0.5) * 100));
+      p.y = Math.max(2, Math.min(h, p.y + (Math.random() - 0.5) * 70));
+    }
+    el.style.left = p.x + 'px';
+    el.style.top = p.y + 'px';
+  });
+}
+
+// Once every 2–4 days, at night only, the fox takes ONE uncollected product
+// off one animal. Never inventory, never money — small enough to be watched
+// rather than punished. The dog blocks it outright.
+let lastRaidDay = 0;
+function foxRaid() {
+  if (!S.pets.some(p => p.type === 'fox')) return;
+  if (dayPhase(S.dayStartedAt, Date.now()).phase !== 'night') return;
+  if (S.day - lastRaidDay < 2 + Math.floor(Math.random() * 3)) return;
+  lastRaidDay = S.day;
+
+  if (S.pets.some(p => p.type === 'dog')) {
+    const r = penEl.getBoundingClientRect();
+    floatText(r.left + 20, r.top + 30, '🐕 saw off the 🦊');
+    return;
+  }
+  const victim = S.animals.find(a => a.made > 0);
+  if (!victim) return;
+  victim.made--;
+  const el = animalEls.get(victim.id);
+  const r = el ? el.getBoundingClientRect() : penEl.getBoundingClientRect();
+  floatText(r.left, r.top - 12, '🦊 stole one!', '#c62828');
+  Sound.bad();
+  save();
+}
+
 const orderEl = $('order');
 
 function refreshOrder() {
@@ -1541,6 +1661,7 @@ function harvestAt(i) {
   S.tiles[i] = out.tile;
   addInv(out.crop);
   S.xp += CROPS[out.crop].tier;
+  S.stats.harvested[out.crop] = (S.stats.harvested[out.crop] || 0) + 1;
 
   const r = cellEls[i].getBoundingClientRect();
   floatText(r.left + 10, r.top, CROPS[out.crop].icon);
