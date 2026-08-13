@@ -211,9 +211,11 @@
     <div class="tabs">
       <button class="tab on" data-tab="seeds">🌱 Seeds</button>
       <button class="tab" data-tab="barn">🐄 Barn</button>
+      <button class="tab" data-tab="build">🔨 Build</button>
     </div>
     <div id="seedShop"></div>
     <div id="barnShop" hidden></div>
+    <div id="buildShop" hidden></div>
   </div>
 
   <div class="panel" id="centre">
@@ -785,6 +787,15 @@ function welcomeBack(awayMs) {
 function tick() {
   const now = Date.now();
   while (now - S.dayStartedAt >= DAY_MS) { S.dayStartedAt += DAY_MS; S.day++; }
+  if (S.upgrades.sprinklerRows.length) {
+    S.upgrades.sprinklerRows.forEach(rowIdx => {
+      for (let x = 0; x < S.gridW; x++) {
+        const i = rowIdx * S.gridW + x;
+        const t = S.tiles[i];
+        if (t && cropStage(t, now).phase === 'thirsty') S.tiles[i] = waterTile(t, now);
+      }
+    });
+  }
   wander();
   render();
 }
@@ -847,6 +858,7 @@ function render() {
   renderBarn();
   renderPen();
   renderMachines();
+  renderBuild();
 }
 
 const shopEl = $('seedShop');
@@ -1132,6 +1144,95 @@ function renderMachines() {
   });
 }
 
+function buyMachine(type) {
+  const M = MACHINES[type];
+  if (levelFor(S.xp) < M.level || S.money < M.cost) return Sound.bad();
+  if (S.machines.some(m => m.type === type)) return Sound.bad();   // one of each
+  S.money -= M.cost;
+  S.machines.push({ type, startedAt: null });
+  Sound.plant(); save(); render();
+}
+
+function buyLand() {
+  const next = S.upgrades.land + 1;
+  const step = LAND_STEPS[next];
+  if (!step || S.money < step.cost) return Sound.bad();
+  const from = LAND_STEPS[S.upgrades.land];
+  S.money -= step.cost;
+  S.tiles = regrid(S.tiles, from.w, from.h, step.w, step.h);
+  S.gridW = step.w;
+  S.gridH = step.h;
+  S.upgrades.land = next;
+  Sound.level();
+  save();
+  buildGrid();            // the grid changed shape, so rebuild the cells
+  render();
+}
+
+function buyUpgrade(id) {
+  const U = UPGRADES[id];
+  if (id === 'sprinkler') {
+    const owned = S.upgrades.sprinklerRows.length;
+    if (owned >= S.gridH || S.money < sprinklerCost(owned)) return Sound.bad();
+    S.money -= sprinklerCost(owned);
+    S.upgrades.sprinklerRows.push(owned);      // rows fill top-down
+  } else {
+    if (S.upgrades[id] || S.money < U.cost) return Sound.bad();
+    S.money -= U.cost;
+    S.upgrades[id] = true;
+    if (id === 'barn') S.barn = 8;
+  }
+  Sound.plant(); save(); render();
+}
+
+const buildEl = $('buildShop');
+let lastBuildSig = null;
+
+function renderBuild() {
+  const lv = levelFor(S.xp);
+  const sig = [lv, S.money, S.machines.length, S.upgrades.land,
+               S.upgrades.sprinklerRows.length,
+               S.upgrades.bigCan, S.upgrades.scarecrow, S.upgrades.silo, S.upgrades.barn].join('|');
+  if (sig === lastBuildSig) return;
+  lastBuildSig = sig;
+  buildEl.innerHTML = '';
+
+  const row = (icon, name, right, onclick, dim, title) => {
+    const d = document.createElement('div');
+    d.className = 'shop-item' + (dim ? ' locked' : '');
+    d.innerHTML = `<span>${icon}</span><span>${name}</span><span class="price">${right}</span>`;
+    if (title) d.title = title;
+    if (!dim && onclick) { d.onclick = onclick; d.style.cursor = 'pointer'; }
+    buildEl.appendChild(d);
+  };
+
+  const next = LAND_STEPS[S.upgrades.land + 1];
+  if (next) row('🟫', `Farm ${next.w}×${next.h}`, '$' + next.cost, buyLand, S.money < next.cost);
+  else      row('🟫', 'Farm at full size', '✓', null, true);
+
+  const rows = S.upgrades.sprinklerRows.length;
+  row('🚿', 'Sprinkler row', rows >= S.gridH ? '✓' : '$' + sprinklerCost(rows),
+      () => buyUpgrade('sprinkler'), rows >= S.gridH || S.money < sprinklerCost(rows),
+      UPGRADES.sprinkler.desc);
+
+  ['bigCan', 'scarecrow', 'barn', 'silo'].forEach(id => {
+    const U = UPGRADES[id];
+    row(U.icon, U.name, S.upgrades[id] ? '✓' : '$' + U.cost,
+        () => buyUpgrade(id), S.upgrades[id] || S.money < U.cost, U.desc);
+  });
+
+  Object.keys(MACHINES).forEach(type => {
+    const M = MACHINES[type];
+    const owned = S.machines.some(m => m.type === type);
+    const locked = lv < M.level;
+    row(M.icon, M.name,
+        owned ? '✓' : locked ? 'Lv' + M.level : '$' + M.cost,
+        () => buyMachine(type), owned || locked || S.money < M.cost,
+        Object.keys(M.recipe).map(it => `${M.recipe[it]}× ${itemInfo(it).name}`).join(' + ')
+          + ' → ' + CRAFTED[M.makes].name);
+  });
+}
+
 const invEl = $('inv');
 let lastInvSig = null;
 
@@ -1247,6 +1348,7 @@ function boot() {
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === S.shopTab));
   $('seedShop').hidden = S.shopTab !== 'seeds';
   $('barnShop').hidden = S.shopTab !== 'barn';
+  $('buildShop').hidden = S.shopTab !== 'build';
 
   const sellEl = $('sell');
   sellEl.ondragover = e => { e.preventDefault(); sellEl.classList.add('drop'); };
@@ -1287,6 +1389,7 @@ document.querySelectorAll('.tab').forEach(btn => {
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === S.shopTab));
     $('seedShop').hidden = S.shopTab !== 'seeds';
     $('barnShop').hidden = S.shopTab !== 'barn';
+    $('buildShop').hidden = S.shopTab !== 'build';
     save();
     render();
   };
