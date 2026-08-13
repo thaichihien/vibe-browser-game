@@ -131,6 +131,14 @@
   .machine.done { animation:bob 1.2s ease-in-out infinite; border-color:var(--gold); }
   .machine .none { font-size:11px; opacity:.6; }
 
+  /* ---- order ---- */
+  #order { font-size:13px; margin-bottom:12px; }
+  #order .want { display:inline-block; margin-right:8px; font-size:19px; }
+  #order .want b { font-size:12px; }
+  #order .want.short { opacity:.4; }
+  #order .reward { font-weight:bold; color:var(--grass-dark); }
+  #order .none { opacity:.6; font-size:12px; }
+
   /* ---- inventory + sell ---- */
   #inv { display:flex; flex-wrap:wrap; gap:6px; min-height:56px; }
   .inv-item {
@@ -228,6 +236,8 @@
   </div>
 
   <div class="panel" id="right">
+    <h3>📋 Order</h3>
+    <div id="order"></div>
     <h3>🎒 Inventory</h3>
     <div id="inv"></div>
     <h3 style="margin-top:14px">💸 Sell</h3>
@@ -787,6 +797,7 @@ function welcomeBack(awayMs) {
 function tick() {
   const now = Date.now();
   while (now - S.dayStartedAt >= DAY_MS) { S.dayStartedAt += DAY_MS; S.day++; }
+  if (!S.order || orderExpired(S.order, S.day)) refreshOrder();
   if (S.upgrades.sprinklerRows.length) {
     S.upgrades.sprinklerRows.forEach(rowIdx => {
       for (let x = 0; x < S.gridW; x++) {
@@ -859,6 +870,7 @@ function render() {
   renderPen();
   renderMachines();
   renderBuild();
+  renderOrder();
 }
 
 const shopEl = $('seedShop');
@@ -1231,6 +1243,41 @@ function renderBuild() {
         Object.keys(M.recipe).map(it => `${M.recipe[it]}× ${itemInfo(it).name}`).join(' + ')
           + ' → ' + CRAFTED[M.makes].name);
   });
+}
+
+const orderEl = $('order');
+
+function refreshOrder() {
+  S.order = makeOrder(S.day, levelFor(S.xp), Math.random);
+}
+
+function deliverOrder() {
+  if (!S.order || !orderFilled(S.order, S.inv)) return Sound.bad();
+  S.order.wants.forEach(w => takeInv(w.item, w.qty));
+  const before = levelFor(S.xp);
+  S.money += S.order.reward;
+  S.xp += ORDER_XP;
+  S.stats.ordersDone++;
+  const r = orderEl.getBoundingClientRect();
+  floatText(r.left + 10, r.top, '+$' + S.order.reward);
+  Sound.sell();
+  if (levelFor(S.xp) > before) { Sound.level(); floatText(r.left, r.top - 24, 'LEVEL UP!', '#f9a825'); }
+  refreshOrder();
+  save(); render();
+}
+
+function renderOrder() {
+  if (!S.order) { orderEl.innerHTML = '<div class="none">No order right now</div>'; return; }
+  const ready = orderFilled(S.order, S.inv);
+  orderEl.innerHTML =
+    S.order.wants.map(w => {
+      const have = S.inv[w.item] || 0;
+      return `<span class="want${have >= w.qty ? '' : ' short'}" title="${itemInfo(w.item).name}">` +
+             `${itemInfo(w.item).icon}<b>${have}/${w.qty}</b></span>`;
+    }).join('') +
+    `<div class="reward">→ $${S.order.reward}</div>` +
+    (ready ? '<button class="btn" id="deliverBtn" style="margin-top:6px;padding:6px 14px;font-size:14px">Deliver</button>' : '');
+  if (ready) $('deliverBtn').onclick = deliverOrder;
 }
 
 const invEl = $('inv');
