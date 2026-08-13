@@ -415,3 +415,56 @@ test('an exhausted animal can be fed again and starts over', () => {
   assert.equal(animalState(a, c * 3).phase, 'working');
   assert.equal(a.made, 0);
 });
+
+// ==== Stage 3 ====
+
+const { CRAFTED, MACHINES, machineState, canCraft } =
+  load(['FARM'], ['CRAFTED', 'MACHINES', 'machineState', 'canCraft'], FARM_GAME);
+
+test('CRAFTED holds the six goods and itemInfo resolves them', () => {
+  assert.equal(Object.keys(CRAFTED).length, 6);
+  assert.equal(CRAFTED.cake.sell, 520);
+  assert.equal(itemInfo('cheese').sell, 170, 'CRAFTED must be registered in ITEM_TABLES');
+});
+
+test('every machine recipe names real items and makes a real crafted good', () => {
+  Object.keys(MACHINES).forEach(k => {
+    const M = MACHINES[k];
+    assert.ok(CRAFTED[M.makes], `${k} makes an unknown good`);
+    Object.keys(M.recipe).forEach(item =>
+      assert.ok(itemInfo(item), `${k} needs an unknown item: ${item}`));
+  });
+});
+
+test('every machine output is worth more than its inputs', () => {
+  Object.keys(MACHINES).forEach(k => {
+    const M = MACHINES[k];
+    const inputs = Object.keys(M.recipe)
+      .reduce((sum, item) => sum + itemInfo(item).sell * M.recipe[item], 0);
+    assert.ok(CRAFTED[M.makes].sell > inputs,
+      `${k} loses money: ${inputs} in, ${CRAFTED[M.makes].sell} out`);
+  });
+});
+
+test('an idle machine reports idle', () => {
+  assert.deepEqual(machineState({ type: 'press', startedAt: null }, 5000),
+    { phase: 'idle', progress: 0 });
+});
+
+test('a running machine reports progress, then done', () => {
+  const m = { type: 'press', startedAt: 0 };
+  const t = MACHINES.press.time;
+  assert.equal(machineState(m, 0).phase, 'working');
+  assert.equal(machineState(m, t / 2).progress, 0.5);
+  assert.equal(machineState(m, t).phase, 'done');
+  assert.equal(machineState(m, t * 9).phase, 'done', 'it waits to be collected');
+});
+
+test('canCraft checks every ingredient and quantity', () => {
+  assert.equal(canCraft('press', { milk: 2 }), true);
+  assert.equal(canCraft('press', { milk: 1 }), false);
+  assert.equal(canCraft('bakery', { rice: 2, egg: 1 }), true);
+  assert.equal(canCraft('bakery', { rice: 2 }), false, 'missing the egg entirely');
+  assert.equal(canCraft('bakery', { rice: 1, egg: 1 }), false, 'not enough rice');
+  assert.equal(canCraft('press', {}), false);
+});

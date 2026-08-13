@@ -445,6 +445,43 @@ function canFeed(a, now, inv) {
 function feedAnimal(a, now) {
   return { ...a, fedAt: now, made: 0 };
 }
+
+const CRAFTED = {
+  bread:   { icon:'🍞', name:'Bread',   sell:130 },
+  cheese:  { icon:'🧀', name:'Cheese',  sell:170 },
+  ketchup: { icon:'🥫', name:'Ketchup', sell:190 },
+  juice:   { icon:'🧃', name:'Juice',   sell:230 },
+  wine:    { icon:'🍷', name:'Wine',    sell:340 },
+  cake:    { icon:'🍰', name:'Cake',    sell:520 }
+};
+ITEM_TABLES.push(CRAFTED);
+
+const MACHINES = {
+  bakery:  { icon:'🍞', name:'Bakery',       cost:600,  recipe:{ rice:2, egg:1 },                    makes:'bread',   time:30000, level:4  },
+  press:   { icon:'🧀', name:'Cheese press', cost:900,  recipe:{ milk:2 },                           makes:'cheese',  time:40000, level:6  },
+  cannery: { icon:'🥫', name:'Cannery',      cost:1300, recipe:{ tomato:3 },                         makes:'ketchup', time:45000, level:7  },
+  juicer:  { icon:'🧃', name:'Juicer',       cost:1800, recipe:{ strawberry:3 },                     makes:'juice',   time:40000, level:8  },
+  winery:  { icon:'🍷', name:'Winery',       cost:2600, recipe:{ grapes:3 },                         makes:'wine',    time:70000, level:9  },
+  kitchen: { icon:'🍰', name:'Kitchen',      cost:4000, recipe:{ milk:1, egg:1, rice:1, strawberry:1 }, makes:'cake', time:60000, level:10 }
+};
+
+// A machine is { type, startedAt }. startedAt is null when idle.
+function machineState(m, now) {
+  if (m.startedAt == null) return { phase:'idle', progress:0 };
+  const T = MACHINES[m.type].time;
+  const elapsed = Math.max(0, now - m.startedAt);
+  if (elapsed >= T) return { phase:'done', progress:1 };
+  return { phase:'working', progress: elapsed / T };
+}
+
+function canCraft(type, inv) {
+  const r = MACHINES[type].recipe;
+  const items = Object.keys(r);
+  for (let i = 0; i < items.length; i++) {
+    if ((inv[items[i]] || 0) < r[items[i]]) return false;
+  }
+  return true;
+}
 /* ==== FARM:END ==== */
 
 const $ = id => document.getElementById(id);
