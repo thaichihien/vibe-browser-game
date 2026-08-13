@@ -206,7 +206,7 @@
   <div class="panel" id="centre">
     <h3>🌾 Farm</h3>
     <div id="farm"></div>
-    <h3 style="margin-top:14px">🐄 Pen</h3>
+    <h3 style="margin-top:14px">🐄 Pen (<span id="penCount">0/4</span>)</h3>
     <div id="pen"></div>
   </div>
 
@@ -784,7 +784,10 @@ function collectFrom(animalId) {
   render();
 }
 
+const penCountEl = $('penCount');
+
 function renderPen() {
+  penCountEl.textContent = S.animals.length + '/' + S.barn;
   const now = Date.now();
   S.animals.forEach(a => {
     const el = animalEls.get(a.id);
