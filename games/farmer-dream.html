@@ -552,6 +552,46 @@ function makeOrder(day, level, rnd) {
 
   return { wants, reward: Math.round(orderValue(wants) * ORDER_MULT), day };
 }
+
+// The starting 🛖 shack is free and is not an item; `house` and `farmhouse`
+// are the two purchasable shell upgrades.
+const SHELL_ORDER = ['shack', 'house', 'farmhouse'];
+
+const HOUSE_ITEMS = {
+  chair:    { icon:'🪑',  name:'Chair',     price:80,   band:'floor' },
+  plant:    { icon:'🪴',  name:'Pot plant', price:120,  band:'floor' },
+  teddy:    { icon:'🧸',  name:'Teddy',     price:150,  band:'floor' },
+  painting: { icon:'🖼️', name:'Painting',  price:200,  band:'wall'  },
+  window:   { icon:'🪟',  name:'Window',    price:250,  band:'wall'  },
+  lamp:     { icon:'💡',  name:'Lamp',      price:300,  band:'wall'  },
+  clock:    { icon:'🕰️', name:'Clock',     price:350,  band:'floor' },
+  mirror:   { icon:'🪞',  name:'Mirror',    price:400,  band:'wall'  },
+  door:     { icon:'🚪',  name:'Door',      price:450,  band:'wall'  },
+  tv:       { icon:'📺',  name:'TV',        price:600,  band:'floor' },
+  sofa:     { icon:'🛋️', name:'Sofa',      price:800,  band:'floor' },
+  bed:      { icon:'🛏️', name:'Bed',       price:900,  band:'floor' },
+  bath:     { icon:'🛁',  name:'Bath',      price:1000, band:'floor' },
+  house:    { icon:'🏠',  name:'House',     price:1200, band:'shell' },
+  bike:     { icon:'🚲',  name:'Bicycle',   price:1400, band:'yard'  },
+  tree:     { icon:'🌳',  name:'Tree',      price:1600, band:'yard'  },
+  scooter:  { icon:'🛵',  name:'Scooter',   price:2000, band:'yard'  },
+  fountain: { icon:'⛲',  name:'Fountain',  price:2500, band:'yard'  },
+  farmhouse:{ icon:'🏡',  name:'Farmhouse', price:3500, band:'shell' },
+  car:      { icon:'🚗',  name:'Car',       price:5000, band:'yard'  }
+};
+
+function houseTitle(n) {
+  if (n >= 15) return 'Dream Farmhouse';
+  if (n >= 10) return 'Warm Home';
+  if (n >= 5)  return 'Cozy Shack';
+  return 'Bare Shack';
+}
+
+function comfortMult(n) { return 1 + 0.01 * n; }
+
+function offlineCapFor(placedCount, hasTurtle) {
+  return OFFLINE_CAP_MS * comfortMult(placedCount) * (hasTurtle ? 2 : 1);
+}
 /* ==== FARM:END ==== */
 
 const $ = id => document.getElementById(id);

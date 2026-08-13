@@ -573,3 +573,57 @@ test('an order expires three days after it was posted', () => {
   assert.equal(orderExpired(o, 4), false);
   assert.equal(orderExpired(o, 2 + ORDER_DAYS), true);
 });
+
+const { HOUSE_ITEMS, SHELL_ORDER, houseTitle, comfortMult, offlineCapFor } =
+  load(['FARM'],
+       ['HOUSE_ITEMS', 'SHELL_ORDER', 'houseTitle', 'comfortMult', 'offlineCapFor'],
+       FARM_GAME);
+
+test('there are exactly twenty house items, and buying all of them is the win', () => {
+  assert.equal(Object.keys(HOUSE_ITEMS).length, 20);
+});
+
+test('the house items split into the four groups from the spec', () => {
+  const count = b => Object.keys(HOUSE_ITEMS).filter(k => HOUSE_ITEMS[k].band === b).length;
+  assert.equal(count('shell'), 2);
+  assert.equal(count('floor'), 8);
+  assert.equal(count('wall'), 5);
+  assert.equal(count('yard'), 5);
+});
+
+test('no house item is a farm building or a plane', () => {
+  const icons = Object.keys(HOUSE_ITEMS).map(k => HOUSE_ITEMS[k].icon);
+  ['🏢', '🏬', '🏭', '✈️', '🛺'].forEach(bad =>
+    assert.equal(icons.includes(bad), false, `${bad} cannot furnish a farmhouse`));
+});
+
+test('the yard tree and the fountain exist, because two pets depend on them', () => {
+  assert.equal(HOUSE_ITEMS.tree.band, 'yard');
+  assert.equal(HOUSE_ITEMS.fountain.band, 'yard');
+});
+
+test('the house title levels up every five items', () => {
+  assert.equal(houseTitle(0), 'Bare Shack');
+  assert.equal(houseTitle(4), 'Bare Shack');
+  assert.equal(houseTitle(5), 'Cozy Shack');
+  assert.equal(houseTitle(10), 'Warm Home');
+  assert.equal(houseTitle(15), 'Dream Farmhouse');
+  assert.equal(houseTitle(20), 'Dream Farmhouse');
+});
+
+test('each placed item makes an absence count one percent longer', () => {
+  assert.equal(comfortMult(0), 1);
+  assert.equal(Math.round(comfortMult(20) * 100) / 100, 1.2);
+});
+
+test('offlineCapFor stacks comfort with the turtle', () => {
+  assert.equal(offlineCapFor(0, false), OFFLINE_CAP_MS);
+  assert.equal(offlineCapFor(0, true), OFFLINE_CAP_MS * 2, 'the turtle doubles the window');
+  assert.equal(offlineCapFor(20, false), OFFLINE_CAP_MS * 1.2);
+  assert.equal(offlineCapFor(20, true), OFFLINE_CAP_MS * 2.4);
+});
+
+test('the two shells are ordered cheapest first', () => {
+  assert.deepEqual(SHELL_ORDER, ['shack', 'house', 'farmhouse']);
+  assert.ok(HOUSE_ITEMS.house.price < HOUSE_ITEMS.farmhouse.price);
+});
