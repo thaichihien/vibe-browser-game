@@ -228,6 +228,21 @@
     50%     { transform:rotate(var(--rotB,6deg)) translateY(-4px); }
   }
 
+  /* ---- sky and rain ---- */
+  body.dawn  { background:linear-gradient(180deg,#ffd7a8 0%,#ffe9c9 45%,var(--grass) 100%); }
+  body.day   { background:linear-gradient(180deg,var(--sky) 0%,#e8f5c8 45%,var(--grass) 100%); }
+  body.dusk  { background:linear-gradient(180deg,#f8b195 0%,#f3d6b0 45%,#6fa03a 100%); }
+  body.night { background:linear-gradient(180deg,#2b3a67 0%,#4a5b8c 45%,#3f6b2a 100%); }
+  body.night, body.dusk { color:var(--ink); }
+  body.rain #farm::after {
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(75deg,rgba(160,200,255,.35) 0 2px,transparent 2px 9px);
+    animation:pour .4s linear infinite;
+  }
+  #farm { position:relative; }
+  @keyframes pour { to { background-position:22px 22px; } }
+  #weather { font-size:15px; }
+
   /* ---- wind overlay: drifting leaves, in front of everything but modals ---- */
   #windLayer { position:fixed; inset:0; z-index:45; pointer-events:none; overflow:hidden; }
   .leaf { position:absolute; right:-40px; opacity:.85; will-change:transform; animation:gust linear forwards; }
@@ -247,6 +262,7 @@
   <span id="xpText">0/40</span>
   <span class="stat">📅 Day <span id="dayNum">1</span></span>
   <button id="waterBtn" draggable="true" title="Drag onto a thirsty plot">🪣 Water</button>
+  <span class="stat" id="weather">☀️</span>
   <span class="spacer"></span>
   <button id="soundBtn">🔊</button>
   <button id="helpBtn">❓ How to play</button>
@@ -872,6 +888,8 @@ function tick() {
   roamPets();
   foxRaid();
   wander();
+  applySky();
+  rainTick();
   render();
 }
 
@@ -1532,6 +1550,36 @@ function foxRaid() {
   floatText(r.left, r.top - 12, '🦊 stole one!', '#c62828');
   Sound.bad();
   save();
+}
+
+function applySky() {
+  const ph = dayPhase(S.dayStartedAt, Date.now()).phase;
+  const wet = isRainy(S.day);
+  document.body.className = ph + (wet ? ' rain' : '');
+  $('weather').textContent = wet ? '🌧️' : ph === 'night' ? '🌙' : ph === 'day' ? '☀️' : '🌤️';
+}
+
+// Rain waters every thirsty plot, so a wet day is a free day.
+function rainTick() {
+  if (!isRainy(S.day)) return;
+  const now = Date.now();
+  S.tiles.forEach((t, i) => {
+    if (t && cropStage(t, now).phase === 'thirsty') S.tiles[i] = waterTile(t, now);
+  });
+}
+
+function showWin() {
+  const total = Object.keys(HOUSE_ITEMS).length;
+  $('endOverlay').querySelector('h1').textContent = '🎉 Dream farm complete!';
+  $('endText').innerHTML =
+    `Your <b>${houseTitle(houseCount())}</b> is fully furnished.<br><br>` +
+    `🏠 House ${houseCount()}/${total} &nbsp;·&nbsp; 🐾 Pets ${S.pets.length}/${Object.keys(PETS).length}` +
+    `<br><br>` + Object.keys(S.house.placed).map(id => HOUSE_ITEMS[id].icon).join(' ') +
+    (S.pets.length < Object.keys(PETS).length
+      ? '<br><br>Keep playing to finish the 🐾 album.'
+      : '<br><br>And every pet found you. 🌟');
+  $('endOverlay').hidden = false;
+  Sound.level();
 }
 
 const orderEl = $('order');
