@@ -510,6 +510,48 @@ function regrid(tiles, fromW, fromH, toW, toH) {
   }
   return out;
 }
+
+const ORDER_MULT = 1.6;
+const ORDER_XP = 60;
+const ORDER_DAYS = 3;
+
+function orderValue(wants) {
+  return wants.reduce((sum, w) => sum + itemInfo(w.item).sell * w.qty, 0);
+}
+
+function orderFilled(order, inv) {
+  return order.wants.every(w => (inv[w.item] || 0) >= w.qty);
+}
+
+function orderExpired(order, day) {
+  return day - order.day >= ORDER_DAYS;
+}
+
+// `rnd` is injected so this stays pure and the tests can pin it.
+function makeOrder(day, level, rnd) {
+  const pool = Object.keys(CROPS).filter(id => UNLOCKS[id] <= level);
+  Object.keys(PRODUCTS).forEach(id => {
+    const src = Object.keys(ANIMALS).find(a => ANIMALS[a].makes === id);
+    if (src && ANIMALS[src].level <= level) pool.push(id);
+  });
+  Object.keys(CRAFTED).forEach(id => {
+    const src = Object.keys(MACHINES).find(m => MACHINES[m].makes === id);
+    if (src && MACHINES[src].level <= level) pool.push(id);
+  });
+
+  const lines = 1 + Math.floor(rnd() * Math.min(3, pool.length));
+  const wants = [];
+  const used = {};
+  for (let i = 0; i < lines; i++) {
+    let pick = pool[Math.floor(rnd() * pool.length) % pool.length];
+    if (used[pick]) continue;              // never ask for the same item twice
+    used[pick] = true;
+    wants.push({ item: pick, qty: 1 + Math.floor(rnd() * 4) });
+  }
+  if (!wants.length) wants.push({ item: pool[0], qty: 2 });
+
+  return { wants, reward: Math.round(orderValue(wants) * ORDER_MULT), day };
+}
 /* ==== FARM:END ==== */
 
 const $ = id => document.getElementById(id);

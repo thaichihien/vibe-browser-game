@@ -520,3 +520,56 @@ test('the non-land upgrades match the spec prices', () => {
   assert.equal(UPGRADES.sprinkler.repeatable, true);
   assert.equal(UPGRADES.silo.repeatable, false);
 });
+
+const { ORDER_MULT, ORDER_XP, ORDER_DAYS, orderValue, orderFilled, makeOrder, orderExpired } =
+  load(['FARM'],
+       ['ORDER_MULT', 'ORDER_XP', 'ORDER_DAYS', 'orderValue', 'orderFilled', 'makeOrder', 'orderExpired'],
+       FARM_GAME);
+
+test('orderValue sums market price times quantity', () => {
+  assert.equal(orderValue([{ item:'carrot', qty:3 }]), 75);
+  assert.equal(orderValue([{ item:'carrot', qty:3 }, { item:'milk', qty:2 }]), 75 + 120);
+});
+
+test('orderFilled needs every line covered', () => {
+  const wants = [{ item:'carrot', qty:3 }, { item:'milk', qty:2 }];
+  assert.equal(orderFilled({ wants }, { carrot:3, milk:2 }), true);
+  assert.equal(orderFilled({ wants }, { carrot:9, milk:9 }), true, 'surplus is fine');
+  assert.equal(orderFilled({ wants }, { carrot:3, milk:1 }), false);
+  assert.equal(orderFilled({ wants }, { carrot:3 }), false);
+  assert.equal(orderFilled({ wants }, {}), false);
+});
+
+test('an order pays better than selling the items outright', () => {
+  const o = makeOrder(1, 3, () => 0.5);
+  assert.ok(o.reward > orderValue(o.wants),
+    'the whole point is that filling an order beats a plain sale');
+  assert.equal(o.reward, Math.round(orderValue(o.wants) * ORDER_MULT));
+});
+
+test('makeOrder only asks for things the player has unlocked', () => {
+  for (let lv = 1; lv <= 10; lv++) {
+    for (let r = 0; r < 1; r += 0.13) {
+      const o = makeOrder(3, lv, () => r);
+      o.wants.forEach(w => {
+        const crop = CROPS[w.item];
+        if (crop) assert.ok(UNLOCKS[w.item] <= lv,
+          `level ${lv} order asked for locked crop ${w.item}`);
+        assert.ok(itemInfo(w.item), `unknown item ${w.item}`);
+        assert.ok(w.qty >= 1 && w.qty <= 5, `silly quantity ${w.qty}`);
+      });
+      assert.ok(o.wants.length >= 1 && o.wants.length <= 3);
+    }
+  }
+});
+
+test('makeOrder is deterministic for the same rnd', () => {
+  assert.deepEqual(makeOrder(4, 6, () => 0.3), makeOrder(4, 6, () => 0.3));
+});
+
+test('an order expires three days after it was posted', () => {
+  const o = makeOrder(2, 5, () => 0.5);
+  assert.equal(o.day, 2);
+  assert.equal(orderExpired(o, 4), false);
+  assert.equal(orderExpired(o, 2 + ORDER_DAYS), true);
+});
