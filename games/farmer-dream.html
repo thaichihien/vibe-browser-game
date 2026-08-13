@@ -118,6 +118,29 @@
     font-size:9px; white-space:nowrap; color:var(--wood-dark);
   }
 
+  /* ---- centre views + home ---- */
+  .vtab { flex:1; font:inherit; font-size:13px; cursor:pointer; padding:6px 4px;
+          color:var(--wood); background:var(--cream);
+          border:2px solid var(--wood); border-radius:8px 8px 0 0; }
+  .vtab.on { color:var(--wheat); background:var(--wood); }
+
+  #homeTitle { font-weight:bold; margin-bottom:8px; }
+  #room { position:relative; height:230px; border:3px solid var(--wood-dark);
+          border-radius:10px; overflow:hidden; transition:height .4s; }
+  #room.house { height:280px; }
+  #room.farmhouse { height:330px; }
+  .band { position:absolute; left:0; right:0; }
+  .band.wall  { top:0; height:45%; background:repeating-linear-gradient(90deg,#e9d5b0,#e9d5b0 22px,#e0c9a2 22px,#e0c9a2 44px); }
+  .band.floor { bottom:0; height:55%; background:repeating-linear-gradient(90deg,#b98b5e,#b98b5e 26px,#a97a4d 26px,#a97a4d 52px); }
+  .band.over  { outline:3px dashed var(--gold); outline-offset:-4px; }
+  #yard { position:relative; height:90px; margin-top:8px; border:3px solid var(--wood-dark);
+          border-radius:10px; overflow:hidden; background:linear-gradient(180deg,#c5e1a5,#9ccc65); }
+  .placed { position:absolute; font-size:30px; cursor:grab; user-select:none; }
+  #unplaced { margin-top:8px; min-height:34px; font-size:13px; }
+  #unplaced .pending { font-size:28px; cursor:grab; margin-right:6px; }
+  #room.night .band.wall { filter:brightness(.55); }
+  #room.night.lit .band.wall { filter:brightness(.55) drop-shadow(0 0 12px #ffe082); }
+
   /* ---- workshop ---- */
   #machines { display:flex; flex-wrap:wrap; gap:8px; min-height:40px; }
   .machine {
@@ -227,12 +250,33 @@
   </div>
 
   <div class="panel" id="centre">
-    <h3>🌾 Farm</h3>
-    <div id="farm"></div>
-    <h3 style="margin-top:14px">🐄 Pen (<span id="penCount">0/4</span>)</h3>
-    <div id="pen"></div>
-    <h3 style="margin-top:14px">⚙️ Workshop</h3>
-    <div id="machines"></div>
+    <div class="tabs">
+      <button class="vtab on" data-view="farm">🌾 Farm</button>
+      <button class="vtab" data-view="home">🏡 Home</button>
+      <button class="vtab" data-view="pets">🐾 Pets</button>
+    </div>
+
+    <div id="viewFarm">
+      <div id="farm"></div>
+      <h3 style="margin-top:14px">🐄 Pen (<span id="penCount">0/4</span>)</h3>
+      <div id="pen"></div>
+      <h3 style="margin-top:14px">⚙️ Workshop</h3>
+      <div id="machines"></div>
+    </div>
+
+    <div id="viewHome" hidden>
+      <div id="homeTitle"></div>
+      <div id="room">
+        <div class="band wall" id="wallBand"></div>
+        <div class="band floor" id="floorBand"></div>
+      </div>
+      <div id="yard"></div>
+      <h3 style="margin-top:12px">🛍️ Furniture</h3>
+      <div id="homeShop"></div>
+      <div id="unplaced"></div>
+    </div>
+
+    <div id="viewPets" hidden></div>
   </div>
 
   <div class="panel" id="right">
@@ -871,6 +915,7 @@ function render() {
   renderMachines();
   renderBuild();
   renderOrder();
+  if (S.view === 'home') renderHome();
 }
 
 const shopEl = $('seedShop');
@@ -1245,6 +1290,130 @@ function renderBuild() {
   });
 }
 
+function setView(v) {
+  S.view = v;
+  document.querySelectorAll('.vtab').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+  $('viewFarm').hidden = v !== 'farm';
+  $('viewHome').hidden = v !== 'home';
+  $('viewPets').hidden = v !== 'pets';
+  save(); render();
+}
+document.querySelectorAll('.vtab').forEach(b => { b.onclick = () => setView(b.dataset.view); });
+
+function houseCount() { return Object.keys(S.house.placed).length; }
+
+function buyHouseItem(id) {
+  const H = HOUSE_ITEMS[id];
+  if (S.house.placed[id] || S.money < H.price) return Sound.bad();
+  S.money -= H.price;
+
+  if (H.band === 'shell') {
+    // A shell upgrade grows the room. Furniture keeps its coordinates, which
+    // is the whole point — the shack becomes a house around your things.
+    S.house.shell = id === 'house' ? 'house' : 'farmhouse';
+    S.house.placed[id] = { x: 0, y: 0 };
+  } else {
+    S.house.placed[id] = null;              // null = bought but not yet placed
+  }
+  Sound.level();
+  save(); render();
+  if (houseCount() >= Object.keys(HOUSE_ITEMS).length) showWin();
+}
+
+function placeItem(id, x, y) {
+  S.house.placed[id] = { x, y };
+  Sound.plant();
+  save(); render();
+}
+
+function renderHome() {
+  const room = $('room'), wall = $('wallBand'), floor = $('floorBand'), yard = $('yard');
+  const n = houseCount();
+  $('homeTitle').textContent = `${houseTitle(n)}  ⭐ ${n}/${Object.keys(HOUSE_ITEMS).length}`;
+  room.className = S.house.shell + (S.house.placed.lamp ? ' lit' : '');
+
+  [wall, floor, yard].forEach(b => b.querySelectorAll('.placed').forEach(e => e.remove()));
+
+  Object.keys(S.house.placed).forEach(id => {
+    const pos = S.house.placed[id];
+    const H = HOUSE_ITEMS[id];
+    if (!pos || H.band === 'shell') return;
+    const host = H.band === 'wall' ? wall : H.band === 'yard' ? yard : floor;
+    const el = document.createElement('div');
+    el.className = 'placed';
+    el.textContent = H.icon;
+    el.title = H.name + ' — drag to move';
+    el.style.left = pos.x + 'px';
+    el.style.top = pos.y + 'px';
+    el.draggable = true;
+    el.ondragstart = e => {
+      e.dataTransfer.setData('type', 'furniture');
+      e.dataTransfer.setData('id', id);
+    };
+    host.appendChild(el);
+  });
+
+  // Bought but not yet placed
+  const pending = Object.keys(S.house.placed).filter(id => S.house.placed[id] === null);
+  $('unplaced').innerHTML = pending.length ? 'Drag into the room: ' : '';
+  pending.forEach(id => {
+    const el = document.createElement('span');
+    el.className = 'pending';
+    el.textContent = HOUSE_ITEMS[id].icon;
+    el.draggable = true;
+    el.title = HOUSE_ITEMS[id].name;
+    el.ondragstart = e => {
+      e.dataTransfer.setData('type', 'furniture');
+      e.dataTransfer.setData('id', id);
+    };
+    $('unplaced').appendChild(el);
+  });
+
+  renderHomeShop();
+}
+
+function renderHomeShop() {
+  const el = $('homeShop');
+  el.innerHTML = '';
+  Object.keys(HOUSE_ITEMS).forEach(id => {
+    const H = HOUSE_ITEMS[id];
+    const owned = id in S.house.placed;
+    const d = document.createElement('div');
+    d.className = 'shop-item' + (owned || S.money < H.price ? ' locked' : '');
+    d.innerHTML = `<span>${H.icon}</span><span>${H.name}</span>` +
+                  `<span class="price">${owned ? '✓' : '$' + H.price}</span>`;
+    if (!owned && S.money >= H.price) {
+      d.onclick = () => buyHouseItem(id);
+      d.style.cursor = 'pointer';
+    }
+    el.appendChild(d);
+  });
+}
+
+function bandDrop(el, band) {
+  el.ondragover = e => { e.preventDefault(); el.classList.add('over'); };
+  el.ondragleave = () => el.classList.remove('over');
+  el.ondrop = e => {
+    e.preventDefault();
+    el.classList.remove('over');
+    if (e.dataTransfer.getData('type') !== 'furniture') return;
+    const id = e.dataTransfer.getData('id');
+    if (HOUSE_ITEMS[id].band !== band) {
+      Sound.bad();
+      const r = el.getBoundingClientRect();
+      floatText(r.left + 10, r.top + 10, band === 'wall' ? 'goes on the floor' : 'goes on the wall', '#c62828');
+      return;
+    }
+    const r = el.getBoundingClientRect();
+    placeItem(id,
+      Math.max(0, Math.min(r.width - 34, e.clientX - r.left - 16)),
+      Math.max(0, Math.min(r.height - 34, e.clientY - r.top - 16)));
+  };
+}
+bandDrop($('wallBand'), 'wall');
+bandDrop($('floorBand'), 'floor');
+bandDrop($('yard'), 'yard');
+
 const orderEl = $('order');
 
 function refreshOrder() {
@@ -1391,6 +1560,7 @@ function reject(i) {
 function boot() {
   buildGrid();
   buildPen();
+  setView(S.view);
 
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === S.shopTab));
   $('seedShop').hidden = S.shopTab !== 'seeds';
