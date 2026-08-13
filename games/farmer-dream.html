@@ -482,6 +482,34 @@ function canCraft(type, inv) {
   }
   return true;
 }
+
+const LAND_STEPS = [
+  { w:5, h:3, cost:0 },
+  { w:6, h:4, cost:800 },
+  { w:7, h:5, cost:2200 }
+];
+
+const UPGRADES = {
+  sprinkler: { icon:'🚿', name:'Sprinkler row', cost:450,  repeatable:true,  desc:'Waters one row forever' },
+  bigCan:    { icon:'🪣', name:'Big can',       cost:600,  repeatable:false, desc:'Waters 3 plots per drag' },
+  scarecrow: { icon:'🧑‍🌾', name:'Scarecrow',   cost:700,  repeatable:false, desc:'Stops 🐦 stealing crops' },
+  barn:      { icon:'🏚️', name:'Barn extension',cost:1000, repeatable:false, desc:'Barn slots 4 → 8' },
+  silo:      { icon:'🏗️', name:'Silo',          cost:1600, repeatable:false, desc:'Auto-feeds your animals' }
+};
+
+function sprinklerCost(owned) { return UPGRADES.sprinkler.cost; }
+
+// Growing the farm changes its width, so a flat index means something
+// different afterwards. Copy by x,y or every planted crop teleports.
+function regrid(tiles, fromW, fromH, toW, toH) {
+  const out = new Array(toW * toH).fill(null);
+  for (let y = 0; y < fromH && y < toH; y++) {
+    for (let x = 0; x < fromW && x < toW; x++) {
+      out[y * toW + x] = tiles[y * fromW + x];
+    }
+  }
+  return out;
+}
 /* ==== FARM:END ==== */
 
 const $ = id => document.getElementById(id);

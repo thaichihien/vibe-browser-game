@@ -468,3 +468,55 @@ test('canCraft checks every ingredient and quantity', () => {
   assert.equal(canCraft('bakery', { rice: 1, egg: 1 }), false, 'not enough rice');
   assert.equal(canCraft('press', {}), false);
 });
+
+const { LAND_STEPS, UPGRADES, regrid, sprinklerCost } =
+  load(['FARM'], ['LAND_STEPS', 'UPGRADES', 'regrid', 'sprinklerCost'], FARM_GAME);
+
+test('land steps run 5x3, 6x4, 7x5 at the spec prices', () => {
+  assert.deepEqual(LAND_STEPS, [
+    { w:5, h:3, cost:0 }, { w:6, h:4, cost:800 }, { w:7, h:5, cost:2200 }
+  ]);
+});
+
+test('regrid keeps every crop at the same x,y when the farm grows', () => {
+  // 5x3 farm, one marker per row so a width change is visible.
+  const tiles = new Array(15).fill(null);
+  tiles[0]  = 'topleft';     // (0,0)
+  tiles[4]  = 'topright';    // (4,0)
+  tiles[5]  = 'row1start';   // (0,1)
+  tiles[14] = 'bottomright'; // (4,2)
+
+  const out = regrid(tiles, 5, 3, 6, 4);
+  assert.equal(out.length, 24);
+  assert.equal(out[0], 'topleft',      '(0,0) stays at index 0');
+  assert.equal(out[4], 'topright',     '(4,0) stays at index 4 on a 6-wide grid');
+  assert.equal(out[6], 'row1start',    '(0,1) moves from index 5 to index 6');
+  assert.equal(out[2 * 6 + 4], 'bottomright', '(4,2) moves to index 16');
+});
+
+test('regrid fills the new plots with null', () => {
+  const out = regrid(new Array(15).fill(null), 5, 3, 6, 4);
+  assert.equal(out.filter(t => t === null).length, 24);
+});
+
+test('regrid does not mutate the array it was given', () => {
+  const tiles = new Array(15).fill(null);
+  tiles[7] = 'keep';
+  regrid(tiles, 5, 3, 6, 4);
+  assert.equal(tiles.length, 15);
+  assert.equal(tiles[7], 'keep');
+});
+
+test('sprinklers cost a flat 450 each', () => {
+  assert.equal(sprinklerCost(0), 450);
+  assert.equal(sprinklerCost(3), 450);
+});
+
+test('the non-land upgrades match the spec prices', () => {
+  assert.equal(UPGRADES.bigCan.cost, 600);
+  assert.equal(UPGRADES.scarecrow.cost, 700);
+  assert.equal(UPGRADES.silo.cost, 1600);
+  assert.equal(UPGRADES.barn.cost, 1000);
+  assert.equal(UPGRADES.sprinkler.repeatable, true);
+  assert.equal(UPGRADES.silo.repeatable, false);
+});
