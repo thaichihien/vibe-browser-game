@@ -592,6 +592,33 @@ function comfortMult(n) { return 1 + 0.01 * n; }
 function offlineCapFor(placedCount, hasTurtle) {
   return OFFLINE_CAP_MS * comfortMult(placedCount) * (hasTurtle ? 2 : 1);
 }
+
+const PETS = {
+  dog:      { icon:'🐕',  name:'Dog',      hint:'Complete an order',        perk:'Chases 🐦 off the farm' },
+  cat:      { icon:'🐈',  name:'Cat',      hint:'Reach level 5',            perk:'Naps on your furniture' },
+  rabbit:   { icon:'🐇',  name:'Rabbit',   hint:'Harvest 50 🥕',            perk:'+5% growth on 🥕 and 🥬' },
+  squirrel: { icon:'🐿️', name:'Squirrel', hint:'Buy the 🌳 for your yard', perk:'Lives in the tree' },
+  bluebird: { icon:'🐦',  name:'Bluebird', hint:'Harvest a 🌻',             perk:'Perches on the scarecrow' },
+  turtle:   { icon:'🐢',  name:'Turtle',   hint:'Play on 5 different days', perk:'Doubles offline growth' },
+  swan:     { icon:'🦢',  name:'Swan',     hint:'Buy the ⛲ for your yard', perk:'Swims in the fountain' },
+  fox:      { icon:'🦊',  name:'Fox',      hint:'Visit at night',           perk:'Mischief — the 🐕 keeps it honest' }
+};
+
+// Pure over a context so the album, the tick and the tests all agree.
+const PET_RULES = {
+  dog:      c => c.stats.ordersDone >= 1,
+  cat:      c => levelFor(c.xp) >= 5,
+  rabbit:   c => (c.stats.harvested.carrot || 0) >= 50,
+  squirrel: c => !!c.house.placed.tree,
+  bluebird: c => (c.stats.harvested.sunflower || 0) >= 1,
+  turtle:   c => c.stats.daysPlayed.length >= 5,
+  swan:     c => !!c.house.placed.fountain,
+  fox:      c => !!c.stats.sawNight
+};
+
+function petsEarned(ctx) {
+  return Object.keys(PETS).filter(id => PET_RULES[id](ctx));
+}
 /* ==== FARM:END ==== */
 
 const $ = id => document.getElementById(id);

@@ -627,3 +627,67 @@ test('the two shells are ordered cheapest first', () => {
   assert.deepEqual(SHELL_ORDER, ['shack', 'house', 'farmhouse']);
   assert.ok(HOUSE_ITEMS.house.price < HOUSE_ITEMS.farmhouse.price);
 });
+
+const { PETS, petsEarned } = load(['FARM'], ['PETS', 'petsEarned'], FARM_GAME);
+
+const petCtx = (over = {}) => ({
+  xp: 0,
+  house: { placed: {} },
+  stats: { harvested: {}, ordersDone: 0, daysPlayed: [], sawNight: false },
+  ...over
+});
+
+test('there are eight pets and each has a hint the album can show', () => {
+  assert.equal(Object.keys(PETS).length, 8);
+  Object.keys(PETS).forEach(k => {
+    assert.ok(PETS[k].hint, `${k} has no hint`);
+    assert.ok(PETS[k].icon, `${k} has no icon`);
+  });
+});
+
+test('a brand new farm has earned no pets', () => {
+  assert.deepEqual(petsEarned(petCtx()), []);
+});
+
+test('the dog arrives with the first completed order', () => {
+  assert.deepEqual(petsEarned(petCtx({ stats: { ...petCtx().stats, ordersDone: 1 } })), ['dog']);
+});
+
+test('the cat arrives at level 5', () => {
+  assert.equal(petsEarned(petCtx({ xp: 289 })).includes('cat'), false);
+  assert.equal(petsEarned(petCtx({ xp: 290 })).includes('cat'), true);
+});
+
+test('the rabbit needs fifty carrots', () => {
+  assert.equal(petsEarned(petCtx({ stats: { ...petCtx().stats, harvested: { carrot: 49 } } })).includes('rabbit'), false);
+  assert.equal(petsEarned(petCtx({ stats: { ...petCtx().stats, harvested: { carrot: 50 } } })).includes('rabbit'), true);
+});
+
+test('the bluebird needs a single sunflower', () => {
+  assert.equal(petsEarned(petCtx({ stats: { ...petCtx().stats, harvested: { sunflower: 1 } } })).includes('bluebird'), true);
+});
+
+test('the squirrel and swan come from house items', () => {
+  assert.equal(petsEarned(petCtx({ house: { placed: { tree: { x:1, y:1 } } } })).includes('squirrel'), true);
+  assert.equal(petsEarned(petCtx({ house: { placed: { fountain: { x:1, y:1 } } } })).includes('swan'), true);
+});
+
+test('the turtle needs five distinct days played', () => {
+  const four = petCtx({ stats: { ...petCtx().stats, daysPlayed: [1, 2, 3, 4] } });
+  const five = petCtx({ stats: { ...petCtx().stats, daysPlayed: [1, 2, 3, 4, 5] } });
+  assert.equal(petsEarned(four).includes('turtle'), false);
+  assert.equal(petsEarned(five).includes('turtle'), true);
+});
+
+test('the fox needs a night visit', () => {
+  assert.equal(petsEarned(petCtx({ stats: { ...petCtx().stats, sawNight: true } })).includes('fox'), true);
+});
+
+test('petsEarned returns ids in album order, not discovery order', () => {
+  const all = petsEarned(petCtx({
+    xp: 2000,
+    house: { placed: { tree:{}, fountain:{} } },
+    stats: { harvested:{ carrot:50, sunflower:1 }, ordersDone:1, daysPlayed:[1,2,3,4,5], sawNight:true }
+  }));
+  assert.deepEqual(all, Object.keys(PETS));
+});
