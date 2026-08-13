@@ -118,6 +118,19 @@
     font-size:9px; white-space:nowrap; color:var(--wood-dark);
   }
 
+  /* ---- workshop ---- */
+  #machines { display:flex; flex-wrap:wrap; gap:8px; min-height:40px; }
+  .machine {
+    position:relative; width:96px; padding:8px 6px; text-align:center; font-size:26px;
+    background:var(--cream); border:2px solid var(--wood); border-radius:10px; cursor:pointer;
+  }
+  .machine .label { display:block; font-size:10px; }
+  .machine .bar { position:static; margin-top:4px; height:5px; background:rgba(0,0,0,.2);
+                  border-radius:3px; overflow:hidden; }
+  .machine .bar i { display:block; height:100%; background:var(--gold); }
+  .machine.done { animation:bob 1.2s ease-in-out infinite; border-color:var(--gold); }
+  .machine .none { font-size:11px; opacity:.6; }
+
   /* ---- inventory + sell ---- */
   #inv { display:flex; flex-wrap:wrap; gap:6px; min-height:56px; }
   .inv-item {
@@ -208,6 +221,8 @@
     <div id="farm"></div>
     <h3 style="margin-top:14px">🐄 Pen (<span id="penCount">0/4</span>)</h3>
     <div id="pen"></div>
+    <h3 style="margin-top:14px">⚙️ Workshop</h3>
+    <div id="machines"></div>
   </div>
 
   <div class="panel" id="right">
@@ -684,9 +699,14 @@ function fresh() {
     gridW: 5, gridH: 3,
     tiles: new Array(15).fill(null),
     inv: {},
-    animals: [],
-    barn: 4,
-    shopTab: 'seeds'
+    animals: [], barn: 4, shopTab: 'seeds',
+    view: 'farm',
+    machines: [],
+    upgrades: { land: 0, sprinklerRows: [], bigCan: false, scarecrow: false, silo: false, barn: false },
+    house: { shell: 'shack', placed: {} },
+    pets: [],
+    order: null,
+    stats: { harvested: {}, ordersDone: 0, daysPlayed: [], sawNight: false }
   };
 }
 
@@ -708,17 +728,41 @@ function load() {
   // bumping `v`, which would throw the player's existing farm away.
   if (!Array.isArray(data.animals)) data.animals = [];
   if (typeof data.barn !== 'number') data.barn = 4;
-  if (data.shopTab !== 'barn') data.shopTab = 'seeds';
+  if (data.shopTab !== 'barn' && data.shopTab !== 'build') data.shopTab = 'seeds';
+  // Stage 3 fields. Backfilled rather than version-bumped so a Stage 1 or
+  // Stage 2 farm keeps its money, crops, animals and XP.
+  if (data.view !== 'home' && data.view !== 'pets') data.view = 'farm';
+  if (!Array.isArray(data.machines)) data.machines = [];
+  if (!Array.isArray(data.pets)) data.pets = [];
+  if (!data.house || typeof data.house !== 'object') data.house = { shell:'shack', placed:{} };
+  if (!data.house.placed) data.house.placed = {};
+  if (!data.upgrades || typeof data.upgrades !== 'object') data.upgrades = {};
+  const u = data.upgrades;
+  if (typeof u.land !== 'number') u.land = 0;
+  if (!Array.isArray(u.sprinklerRows)) u.sprinklerRows = [];
+  ['bigCan', 'scarecrow', 'silo', 'barn'].forEach(k => { if (typeof u[k] !== 'boolean') u[k] = false; });
+  if (!data.stats || typeof data.stats !== 'object') data.stats = {};
+  if (!data.stats.harvested) data.stats.harvested = {};
+  if (typeof data.stats.ordersDone !== 'number') data.stats.ordersDone = 0;
+  if (!Array.isArray(data.stats.daysPlayed)) data.stats.daysPlayed = [];
+  if (typeof data.stats.sawNight !== 'boolean') data.stats.sawNight = false;
+  if (data.order === undefined) data.order = null;
+
   const elapsedMs = Date.now() - data.savedAt;
-  // advance() caps tile growth at OFFLINE_CAP_MS worth of elapsed time by
-  // shifting tile timestamps forward by the excess. S.dayStartedAt lives
-  // outside the { tiles } shape advance() operates on, so it needs the same
-  // shift here, or the day-rollover loop in tick() would burn through the
-  // full uncapped absence next tick — silently disagreeing with the capped
-  // "away X min" message welcomeBack() shows from this same elapsedMs.
-  const skip = Math.max(0, elapsedMs - OFFLINE_CAP_MS);
+  // advance() caps tile growth at capMs worth of elapsed time by shifting
+  // tile timestamps forward by the excess. S.dayStartedAt lives outside the
+  // { tiles } shape advance() operates on, so it needs the same shift here,
+  // or the day-rollover loop in tick() would burn through the full uncapped
+  // absence next tick — silently disagreeing with the capped "away X min"
+  // message welcomeBack() shows from this same elapsedMs.
+  // `pets` holds objects ({ type, name, x, y }), not id strings — see Task 11.
+  // Comfort counts every house item *bought*, including ones still waiting to
+  // be dragged into the room, so buying always pays off immediately.
+  const hasTurtle = data.pets.some(p => p.type === 'turtle');
+  const cap = offlineCapFor(Object.keys(data.house.placed).length, hasTurtle);
+  const skip = Math.max(0, elapsedMs - cap);
   data.dayStartedAt += skip;
-  S = advance(data, elapsedMs);
+  S = advance(data, elapsedMs, cap);
   return true;
 }
 
@@ -802,6 +846,7 @@ function render() {
   renderInv();
   renderBarn();
   renderPen();
+  renderMachines();
 }
 
 const shopEl = $('seedShop');
@@ -1027,6 +1072,63 @@ function wander() {
     const el = animalEls.get(a.id);
     if (el) el.style.transitionDuration = hopS.toFixed(2) + 's';
     a.nextHop = now + hopS * 1000 + 1000 + Math.random() * 2200;   // walk, then pause
+  });
+}
+
+const machinesEl = $('machines');
+
+function startMachine(i) {
+  const m = S.machines[i];
+  const M = MACHINES[m.type];
+  if (machineState(m, Date.now()).phase !== 'idle') return;
+  if (!canCraft(m.type, S.inv)) {
+    Sound.bad();
+    const need = Object.keys(M.recipe)
+      .map(it => `${M.recipe[it]}× ${itemInfo(it).icon}`).join(' + ');
+    const r = machinesEl.getBoundingClientRect();
+    floatText(r.left, r.top, 'needs ' + need, '#c62828');
+    return;
+  }
+  Object.keys(M.recipe).forEach(it => takeInv(it, M.recipe[it]));
+  m.startedAt = Date.now();
+  Sound.water();
+  save(); render();
+}
+
+function collectMachine(i) {
+  const m = S.machines[i];
+  if (machineState(m, Date.now()).phase !== 'done') return;
+  const M = MACHINES[m.type];
+  const before = levelFor(S.xp);
+  addInv(M.makes, 1);
+  S.xp += 15;
+  m.startedAt = null;
+  const r = machinesEl.getBoundingClientRect();
+  floatText(r.left + 10, r.top, CRAFTED[M.makes].icon);
+  Sound.harvest();
+  if (levelFor(S.xp) > before) { Sound.level(); floatText(r.left, r.top - 24, 'LEVEL UP!', '#f9a825'); }
+  save(); render();
+}
+
+function renderMachines() {
+  if (!S.machines.length) {
+    machinesEl.innerHTML = '<div class="none">Buy a machine in the 🔨 Build tab</div>';
+    return;
+  }
+  const now = Date.now();
+  machinesEl.innerHTML = '';
+  S.machines.forEach((m, i) => {
+    const M = MACHINES[m.type];
+    const st = machineState(m, now);
+    const el = document.createElement('div');
+    el.className = 'machine' + (st.phase === 'done' ? ' done' : '');
+    el.title = Object.keys(M.recipe).map(it => `${M.recipe[it]}× ${itemInfo(it).name}`).join(' + ')
+             + ' → ' + CRAFTED[M.makes].name;
+    el.innerHTML = (st.phase === 'done' ? CRAFTED[M.makes].icon : M.icon) +
+      `<span class="label">${st.phase === 'done' ? 'Collect' : M.name}</span>` +
+      (st.phase === 'working' ? `<div class="bar"><i style="width:${Math.round(st.progress * 100)}%"></i></div>` : '');
+    el.onclick = () => st.phase === 'done' ? collectMachine(i) : startMachine(i);
+    machinesEl.appendChild(el);
   });
 }
 
