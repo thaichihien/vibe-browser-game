@@ -1024,6 +1024,22 @@ function nextAnimalId() {
   return 'a' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
 }
 
+// New arrivals land near the pen's centre rather than a top-left-biased
+// scatter. Fanning each successive spawn out from the centre in a spiral
+// (instead of a fresh random point) guarantees a second or third animal
+// bought back-to-back never lands on the exact same pixel as the last —
+// random jitter alone can still collide by chance.
+function spawnPos(index) {
+  const w = penEl.clientWidth || 300;
+  const h = penEl.clientHeight || 260;
+  const angle = index * 137.5 * Math.PI / 180;
+  const radius = 14 + index * 10;
+  return {
+    x: Math.max(4, Math.min(w - 60, w / 2 + Math.cos(angle) * radius)),
+    y: Math.max(4, Math.min(h - 56, h / 2 + Math.sin(angle) * radius * 0.6))
+  };
+}
+
 function buyAnimal(type) {
   const check = canBuyAnimal(type, S);
   if (!check.ok) {
@@ -1035,7 +1051,8 @@ function buyAnimal(type) {
   }
   const A = ANIMALS[type];
   S.money -= A.cost;
-  S.animals.push(makeAnimal(type, nextAnimalId(), 10 + Math.random() * 70, 10 + Math.random() * 55));
+  const pos = spawnPos(S.animals.length);
+  S.animals.push(makeAnimal(type, nextAnimalId(), pos.x, pos.y));
   Sound.plant();
   save();
   buildPen();
