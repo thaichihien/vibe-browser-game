@@ -41,19 +41,19 @@
     background:var(--panel); border:3px solid var(--wood); border-radius:14px;
     padding:12px; box-shadow:0 4px 0 var(--wood-dark);
   }
+  #left  { width:220px; }
   #centre{ flex:1; min-width:340px; }
   #right { width:230px; }
 
-  /* ---- shop drawers: float over the game so drag-and-drop onto the farm
-     or the room still works while shopping, instead of a full-page modal
+  /* ---- home furniture drawer: floats over the game so drag-and-drop onto
+     the room/yard still works while shopping, instead of a full-page modal
      that would hide the drop target behind its own backdrop ---- */
   .drawer {
-    position:fixed; top:70px; left:14px; bottom:14px; width:250px; z-index:30;
+    position:fixed; top:70px; right:14px; bottom:14px; width:250px; z-index:30;
     overflow-y:auto; background:var(--panel); border:3px solid var(--wood);
     border-radius:14px; padding:12px; box-shadow:0 6px 18px rgba(0,0,0,.35);
   }
   .drawer[hidden] { display:none; }
-  .drawer.right { left:auto; right:14px; }
   .drawer-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
   .drawer-head h3 { margin:0; font-size:15px; }
   .drawer-close {
@@ -283,13 +283,23 @@
   <span id="xpText">0/40</span>
   <span class="stat">📅 Day <span id="dayNum">1</span></span>
   <button id="waterBtn" draggable="true" title="Drag onto a thirsty plot">🪣 Water</button>
-  <button id="shopBtn">🛒 Shop</button>
   <span class="spacer"></span>
   <button id="soundBtn">🔊</button>
   <button id="helpBtn">❓ How to play</button>
 </div>
 
 <div id="main">
+  <div class="panel" id="left">
+    <div class="tabs">
+      <button class="tab on" data-tab="seeds">🌱 Seeds</button>
+      <button class="tab" data-tab="barn">🐄 Barn</button>
+      <button class="tab" data-tab="build">🔨 Build</button>
+    </div>
+    <div id="seedShop"></div>
+    <div id="barnShop" hidden></div>
+    <div id="buildShop" hidden></div>
+  </div>
+
   <div class="panel" id="centre">
     <div class="tabs">
       <button class="vtab on" data-view="farm">🌾 Farm</button>
@@ -346,7 +356,7 @@
   <div class="card">
     <h1>How to play</h1>
     <ul>
-      <li>🛒 Open Shop in the top bar, then drag a seed onto an empty plot.</li>
+      <li>🌱 Drag a seed from the shop onto an empty plot.</li>
       <li>🪣 Drag the water bucket from the top bar onto a 💧 thirsty plot to start it growing. Water is free.</li>
       <li>🎃 Pumpkins need watering <b>twice</b> — they pause halfway.</li>
       <li>✨ Click a ripe plot to harvest it into your 🎒 inventory.</li>
@@ -367,22 +377,7 @@
   </div>
 </div>
 
-<div class="drawer" id="shopDrawer" hidden>
-  <div class="drawer-head">
-    <h3>🛒 Shop</h3>
-    <button class="drawer-close" id="closeShop">✕</button>
-  </div>
-  <div class="tabs">
-    <button class="tab on" data-tab="seeds">🌱 Seeds</button>
-    <button class="tab" data-tab="barn">🐄 Barn</button>
-    <button class="tab" data-tab="build">🔨 Build</button>
-  </div>
-  <div id="seedShop"></div>
-  <div id="barnShop" hidden></div>
-  <div id="buildShop" hidden></div>
-</div>
-
-<div class="drawer right" id="homeShopDrawer" hidden>
+<div class="drawer" id="homeShopDrawer" hidden>
   <div class="drawer-head">
     <h3>🛍️ Furniture</h3>
     <button class="drawer-close" id="closeHomeShop">✕</button>
@@ -1816,7 +1811,6 @@ document.querySelectorAll('.tab').forEach(btn => {
 
 $('soundBtn').onclick = () => { Sound.toggle(); syncSoundBtn(); };
 $('helpBtn').onclick  = () => { $('rulesModal').hidden = false; };
-$('shopBtn').onclick  = () => { $('shopDrawer').hidden = !$('shopDrawer').hidden; };
 $('homeShopBtn').onclick = () => { $('homeShopDrawer').hidden = !$('homeShopDrawer').hidden; };
 $('waterBtn').ondragstart = e => e.dataTransfer.setData('type', 'water');
 
@@ -1869,14 +1863,12 @@ createFlora();
 spawnLeafGust();
 $('closeRules').onclick = () => { $('rulesModal').hidden = true; };
 $('closeEnd').onclick   = () => { $('endOverlay').hidden = true; };
-$('closeShop').onclick  = () => { $('shopDrawer').hidden = true; };
 $('closeHomeShop').onclick = () => { $('homeShopDrawer').hidden = true; };
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     $('rulesModal').hidden = true;
     $('endOverlay').hidden = true;
-    $('shopDrawer').hidden = true;
     $('homeShopDrawer').hidden = true;
   }
 });
