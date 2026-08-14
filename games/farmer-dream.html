@@ -111,6 +111,23 @@
     background:linear-gradient(180deg,#aed581,#8bc34a);
     border:3px solid var(--wood-dark); border-radius:12px;
   }
+  /* Purely decorative farm dressing, drawn as pseudo-elements rather than
+     real children — buildPen() replaces #pen's innerHTML whenever the herd
+     changes, which would otherwise wipe out any decoration placed as an
+     actual DOM node. pointer-events:none keeps them from ever intercepting
+     a click or a drop meant for an animal underneath. */
+  #pen::before {
+    content:'🌾   🌾      🌾   🌾    🌾';
+    position:absolute; left:0; right:0; bottom:2px; text-align:center;
+    font-size:18px; letter-spacing:8px; opacity:.5;
+    pointer-events:none; user-select:none;
+  }
+  #pen::after {
+    content:'🧺 🪵';
+    position:absolute; top:6px; right:10px;
+    font-size:22px; opacity:.65;
+    pointer-events:none; user-select:none;
+  }
   #pen .empty-note {
     position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     font-size:13px; color:var(--wood-dark); opacity:.65;
