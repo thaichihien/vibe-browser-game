@@ -140,7 +140,8 @@
           border:2px solid var(--wood); border-radius:8px 8px 0 0; }
   .vtab.on { color:var(--wheat); background:var(--wood); }
 
-  #homeTitle { font-weight:bold; margin-bottom:8px; }
+  .home-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  #homeTitle { font-weight:bold; }
   #room { position:relative; height:230px; border:3px solid var(--wood-dark);
           border-radius:10px; overflow:hidden; transition:height .4s; }
   #room.house { height:280px; }
@@ -284,14 +285,15 @@
     </div>
 
     <div id="viewHome" hidden>
-      <div id="homeTitle"></div>
+      <div class="home-head">
+        <div id="homeTitle"></div>
+        <button class="btn" id="homeShopBtn" style="margin:0;padding:6px 14px;font-size:13px">🛍️ Shop</button>
+      </div>
       <div id="room">
         <div class="band wall" id="wallBand"></div>
         <div class="band floor" id="floorBand"></div>
       </div>
       <div id="yard"></div>
-      <h3 style="margin-top:12px">🛍️ Furniture</h3>
-      <div id="homeShop"></div>
       <div id="unplaced"></div>
     </div>
 
@@ -357,6 +359,14 @@
   <div id="seedShop"></div>
   <div id="barnShop" hidden></div>
   <div id="buildShop" hidden></div>
+</div>
+
+<div class="drawer right" id="homeShopDrawer" hidden>
+  <div class="drawer-head">
+    <h3>🛍️ Furniture</h3>
+    <button class="drawer-close" id="closeHomeShop">✕</button>
+  </div>
+  <div id="homeShop"></div>
 </div>
 
 <div class="overlay" id="endOverlay" hidden>
@@ -1334,6 +1344,7 @@ function setView(v) {
   $('viewFarm').hidden = v !== 'farm';
   $('viewHome').hidden = v !== 'home';
   $('viewPets').hidden = v !== 'pets';
+  if (v !== 'home') $('homeShopDrawer').hidden = true;
   save(); render();
 }
 document.querySelectorAll('.vtab').forEach(b => { b.onclick = () => setView(b.dataset.view); });
@@ -1767,6 +1778,7 @@ document.querySelectorAll('.tab').forEach(btn => {
 $('soundBtn').onclick = () => { Sound.toggle(); syncSoundBtn(); };
 $('helpBtn').onclick  = () => { $('rulesModal').hidden = false; };
 $('shopBtn').onclick  = () => { $('shopDrawer').hidden = !$('shopDrawer').hidden; };
+$('homeShopBtn').onclick = () => { $('homeShopDrawer').hidden = !$('homeShopDrawer').hidden; };
 $('waterBtn').ondragstart = e => e.dataTransfer.setData('type', 'water');
 
 // Ambient decoration: swaying grass/flowers behind the game, drifting leaves
@@ -1819,12 +1831,14 @@ spawnLeafGust();
 $('closeRules').onclick = () => { $('rulesModal').hidden = true; };
 $('closeEnd').onclick   = () => { $('endOverlay').hidden = true; };
 $('closeShop').onclick  = () => { $('shopDrawer').hidden = true; };
+$('closeHomeShop').onclick = () => { $('homeShopDrawer').hidden = true; };
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     $('rulesModal').hidden = true;
     $('endOverlay').hidden = true;
     $('shopDrawer').hidden = true;
+    $('homeShopDrawer').hidden = true;
   }
 });
 
