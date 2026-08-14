@@ -187,6 +187,10 @@
                     border:1px solid var(--wood); border-radius:6px; background:var(--panel); }
   .pet { position:absolute; font-size:26px; cursor:pointer; user-select:none;
          transition:left 1.1s ease-in-out, top 1.1s ease-in-out; z-index:5; }
+  /* House-flavoured pets roam the room/yard, which are also furniture drop
+     targets — pointer-events:none lets a drag pass straight through them
+     instead of a wandering cat blocking a drop at that exact spot. */
+  .pet.home { cursor:default; pointer-events:none; }
 
   /* ---- workshop ---- */
   #machines { display:flex; flex-wrap:wrap; gap:8px; min-height:40px; }
@@ -1526,28 +1530,46 @@ function renderPets() {
   });
 }
 
+// House-flavoured pets belong in the room/yard, not the farm pen — a cat
+// underfoot in a barnyard never made sense. Everything else stays on the farm.
+const HOME_PETS = { cat: 'room', squirrel: 'yard', swan: 'yard' };
+
+function petHost(type) {
+  const target = HOME_PETS[type];
+  if (target) return S.view === 'home' ? $(target) : null;
+  return S.view === 'farm' ? penEl : null;
+}
+
 function roamPets() {
-  if (S.view !== 'farm' || !S.pets.length) return;
-  const w = penEl.clientWidth - 34, h = penEl.clientHeight - 30, now = Date.now();
+  if (!S.pets.length) return;
+  const now = Date.now();
   S.pets.forEach(p => {
-    let el = penEl.querySelector(`[data-pet="${p.type}"]`);
+    const host = petHost(p.type);
+    let el = document.querySelector(`.pet[data-pet="${p.type}"]`);
+    if (!host) { if (el) el.remove(); return; }        // not the view it lives in
+    const home = !!HOME_PETS[p.type];
     if (!el) {
       el = document.createElement('div');
-      el.className = 'pet';
+      el.className = 'pet' + (home ? ' home' : '');
       el.dataset.pet = p.type;
-      el.onclick = () => {
+      if (!home) el.onclick = () => {
         const r = el.getBoundingClientRect();
         floatText(r.left + 6, r.top - 6, '❤️');
         Sound.harvest();
       };
-      penEl.appendChild(el);
+      host.appendChild(el);
     }
     el.textContent = PETS[p.type].icon;
     el.title = p.name;
+
+    const w = host.clientWidth - 30;
+    const h = host.clientHeight - 30;
+    // The cat stays on the floor band rather than wandering onto the wall.
+    const top = p.type === 'cat' ? host.clientHeight * 0.45 : 2;
     if (!p.nextHop || now >= p.nextHop) {
       p.nextHop = now + 2000 + Math.random() * 4000;
       p.x = Math.max(2, Math.min(w, p.x + (Math.random() - 0.5) * 100));
-      p.y = Math.max(2, Math.min(h, p.y + (Math.random() - 0.5) * 70));
+      p.y = Math.max(top, Math.min(h, p.y + (Math.random() - 0.5) * 70));
     }
     el.style.left = p.x + 'px';
     el.style.top = p.y + 'px';
