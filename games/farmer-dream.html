@@ -138,8 +138,6 @@
   .placed { position:absolute; font-size:30px; cursor:grab; user-select:none; }
   #unplaced { margin-top:8px; min-height:34px; font-size:13px; }
   #unplaced .pending { font-size:28px; cursor:grab; margin-right:6px; }
-  #room.night .band.wall { filter:brightness(.55); }
-  #room.night.lit .band.wall { filter:brightness(.55) drop-shadow(0 0 12px #ffe082); }
 
   /* ---- pets ---- */
   #viewPets { display:flex; flex-wrap:wrap; gap:10px; }
@@ -228,21 +226,6 @@
     50%     { transform:rotate(var(--rotB,6deg)) translateY(-4px); }
   }
 
-  /* ---- sky and rain ---- */
-  body.dawn  { background:linear-gradient(180deg,#ffd7a8 0%,#ffe9c9 45%,var(--grass) 100%); }
-  body.day   { background:linear-gradient(180deg,var(--sky) 0%,#e8f5c8 45%,var(--grass) 100%); }
-  body.dusk  { background:linear-gradient(180deg,#f8b195 0%,#f3d6b0 45%,#6fa03a 100%); }
-  body.night { background:linear-gradient(180deg,#2b3a67 0%,#4a5b8c 45%,#3f6b2a 100%); }
-  body.night, body.dusk { color:var(--ink); }
-  body.rain #farm::after {
-    content:''; position:absolute; inset:0; pointer-events:none;
-    background:repeating-linear-gradient(75deg,rgba(160,200,255,.35) 0 2px,transparent 2px 9px);
-    animation:pour .4s linear infinite;
-  }
-  #farm { position:relative; }
-  @keyframes pour { to { background-position:22px 22px; } }
-  #weather { font-size:15px; }
-
   /* ---- wind overlay: drifting leaves, in front of everything but modals ---- */
   #windLayer { position:fixed; inset:0; z-index:45; pointer-events:none; overflow:hidden; }
   .leaf { position:absolute; right:-40px; opacity:.85; will-change:transform; animation:gust linear forwards; }
@@ -262,7 +245,6 @@
   <span id="xpText">0/40</span>
   <span class="stat">📅 Day <span id="dayNum">1</span></span>
   <button id="waterBtn" draggable="true" title="Drag onto a thirsty plot">🪣 Water</button>
-  <span class="stat" id="weather">☀️</span>
   <span class="spacer"></span>
   <button id="soundBtn">🔊</button>
   <button id="helpBtn">❓ How to play</button>
@@ -351,7 +333,6 @@
       <li>🔨 The Build tab sells more land, sprinklers and machines.</li>
       <li>🏡 Buy furniture, then drag it into your room. Wall things go on the wall.</li>
       <li>🐾 Pets are earned, never bought — check the album for hints.</li>
-      <li>🌧️ Rainy days water the whole farm for free.</li>
     </ul>
     <button class="btn" id="closeRules">Got it</button>
   </div>
@@ -729,20 +710,13 @@ function petsEarned(ctx) {
 }
 
 const DAY_MS = 180000;                       // 3 real minutes per in-game day
-const PHASES = ['dawn', 'day', 'dusk', 'night'];
 
-function dayPhase(dayStartedAt, now) {
-  const q = DAY_MS / 4;
-  const into = Math.max(0, now - dayStartedAt) % DAY_MS;
-  const index = Math.min(PHASES.length - 1, Math.floor(into / q));
-  return { phase: PHASES[index], index, into: (into % q) / q };
-}
-
-// Derived from the day number rather than stored, so weather survives a
-// reload with no new save field and is reproducible in tests.
-function isRainy(day) {
-  const h = Math.sin(day * 12.9898) * 43758.5453;
-  return (h - Math.floor(h)) < 0.2;
+// Tied to the player's real clock, not the in-game day cycle, so the fox
+// stays a reason to check in during the evening without redrawing the sky
+// every tick.
+function isNightIRL(now) {
+  const h = new Date(now).getHours();
+  return h >= 17 || h < 6;
 }
 /* ==== FARM:END ==== */
 
@@ -889,13 +863,11 @@ function tick() {
     });
   }
   if (S.stats.daysPlayed.indexOf(S.day) < 0) S.stats.daysPlayed.push(S.day);
-  if (dayPhase(S.dayStartedAt, now).phase === 'night') S.stats.sawNight = true;
+  if (isNightIRL(now)) S.stats.sawNight = true;
   checkPets();
   roamPets();
   foxRaid();
   wander();
-  applySky();
-  rainTick();
   render();
 }
 
@@ -1375,7 +1347,7 @@ function renderHome() {
   const room = $('room'), wall = $('wallBand'), floor = $('floorBand'), yard = $('yard');
   const n = houseCount();
   $('homeTitle').textContent = `${houseTitle(n)}  ⭐ ${n}/${Object.keys(HOUSE_ITEMS).length}`;
-  room.className = S.house.shell + (S.house.placed.lamp ? ' lit' : '');
+  room.className = S.house.shell;
 
   [wall, floor, yard].forEach(b => b.querySelectorAll('.placed').forEach(e => e.remove()));
 
@@ -1539,7 +1511,7 @@ function roamPets() {
 let lastRaidDay = 0;
 function foxRaid() {
   if (!S.pets.some(p => p.type === 'fox')) return;
-  if (dayPhase(S.dayStartedAt, Date.now()).phase !== 'night') return;
+  if (!isNightIRL(Date.now())) return;
   if (S.day - lastRaidDay < 2 + Math.floor(Math.random() * 3)) return;
   lastRaidDay = S.day;
 
@@ -1556,22 +1528,6 @@ function foxRaid() {
   floatText(r.left, r.top - 12, '🦊 stole one!', '#c62828');
   Sound.bad();
   save();
-}
-
-function applySky() {
-  const ph = dayPhase(S.dayStartedAt, Date.now()).phase;
-  const wet = isRainy(S.day);
-  document.body.className = ph + (wet ? ' rain' : '');
-  $('weather').textContent = wet ? '🌧️' : ph === 'night' ? '🌙' : ph === 'day' ? '☀️' : '🌤️';
-}
-
-// Rain waters every thirsty plot, so a wet day is a free day.
-function rainTick() {
-  if (!isRainy(S.day)) return;
-  const now = Date.now();
-  S.tiles.forEach((t, i) => {
-    if (t && cropStage(t, now).phase === 'thirsty') S.tiles[i] = waterTile(t, now);
-  });
 }
 
 function showWin() {
