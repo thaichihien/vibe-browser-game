@@ -209,48 +209,70 @@ export const numbers = {
 
 const HULKS = ['🛸', '👾', '🌑', '🪨', '🔮'];
 
+const WAVE = [2, 4];          // giants launched together
+const WAVE_GAP = [0.3, 0.8];  // and the next wave follows this soon
+const MAX_LIVE = 6;           // safety valve: a wave is skipped above this
+
 export const giants = {
   id: 'giants', name: 'GIANT MISSILES', emoji: '🛸', tint: '#f472b6',
-  blurb: 'Huge, and the only thing firing. Up to four of them at once.',
+  blurb: 'Huge, and the only thing firing. They come in waves, two to four at a time.',
   duration: 16, weight: 3, suppressBase: true,
 
-  start(g, e) { e.timer = 0.4; e.cap = rndi(2, 4); },
+  start(g, e) { e.timer = 0.4; },
 
+  /* Waves launch on their own clock — they do not wait for the last lot to
+     leave the board, so the next set is already on its way in. */
   update(g, e, dt) {
-    const live = g.bullets.filter(b => b.giant).length;
-
     e.timer -= dt;
-    if (e.timer > 0 || live >= e.cap) return;
+    if (e.timer > 0) return;
+    e.timer = rnd(WAVE_GAP[0], WAVE_GAP[1]);
 
-    // below two, refill quickly so the board holds the 2-4 it promises;
-    // above that, pace them out
-    e.timer = live + 1 < 2 ? rnd(0.08, 0.18) : rnd(0.2, 0.45);
-    e.cap = rndi(2, 4);                         // how crowded it gets, re-rolled
+    const live = g.bullets.filter(b => b.giant).length;
+    if (live >= MAX_LIVE) return;      // board saturated; let it breathe
 
+    // a wave is whatever size it rolled — trimming it to the headroom would
+    // make every wave the same size once the board is busy
     const dir = rndi(0, 3);
-    const lane = rndi(g.lo + 1, g.hi - 1);      // keep the whole body on the grid
+    const want = rndi(WAVE[0], WAVE[1]);
     const s = g.speed * 0.93;
 
-    const spec = {
-      giant: true, round: true, r: 1.05,        // circle, sized to the sprite
-      emoji: pick(HULKS), color: '#f472b6',
-      // no trail: it is sized from the radius, and at this radius it would
-      // paint a dot big enough to hide the sprite
-      trailRate: 0, life: 24, spin: rnd(-1.1, 1.1)
-    };
-    if (dir === 0) { spec.x = lane; spec.y = g.lo - 2.2; spec.vy = s; }
-    if (dir === 1) { spec.x = lane; spec.y = g.hi + 2.2; spec.vy = -s; }
-    if (dir === 2) { spec.x = g.lo - 2.2; spec.y = lane; spec.vx = s; }
-    if (dir === 3) { spec.x = g.hi + 2.2; spec.y = lane; spec.vx = -s; }
+    for (const lane of pickLanes(g, want)) {
+      const spec = {
+        giant: true, round: true, r: 1.05,      // circle, sized to the sprite
+        emoji: pick(HULKS), color: '#f472b6',
+        // no trail: it is sized from the radius, and at this radius it would
+        // paint a dot big enough to hide the sprite
+        trailRate: 0, life: 24, spin: rnd(-1.1, 1.1)
+      };
+      if (dir === 0) { spec.x = lane; spec.y = g.lo - 2.2; spec.vy = s; }
+      if (dir === 1) { spec.x = lane; spec.y = g.hi + 2.2; spec.vy = -s; }
+      if (dir === 2) { spec.x = g.lo - 2.2; spec.y = lane; spec.vx = s; }
+      if (dir === 3) { spec.x = g.hi + 2.2; spec.y = lane; spec.vx = -s; }
 
-    // no footprint drawing: the sprite is the hitbox now, so the default
-    // emoji renderer (size = r × 2.4) is exactly what you have to dodge
-    spawnBullet(g, spec);
+      // no footprint drawing: the sprite is the hitbox now, so the default
+      // emoji renderer (size = r × 2.4) is exactly what you have to dodge
+      spawnBullet(g, spec);
+    }
 
-    Sound.charge();
-    shake(g.fx, 4);
+    Sound.charge();                    // once per wave, not once per missile
+    shake(g.fx, 5);
   }
 };
+
+/* Lanes for one wave: whole body on the grid, and two apart so the members of
+   a wave never overlap. Taken from an every-other-lane comb at a random
+   offset — picking greedily from a shuffle blocks itself, and a wave of four
+   would almost never fit. */
+function pickLanes(g, want) {
+  const comb = [];
+  for (let lane = g.lo + 1 + rndi(0, 1); lane <= g.hi - 1; lane += 2) comb.push(lane);
+
+  for (let i = comb.length - 1; i > 0; i--) {
+    const j = rndi(0, i);
+    [comb[i], comb[j]] = [comb[j], comb[i]];
+  }
+  return comb.slice(0, want);
+}
 
 /* ── 🔻 CLOSING ARENA — 9×9 down to 3×3, then back ─────────────────────── */
 
