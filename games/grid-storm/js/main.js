@@ -114,7 +114,7 @@ function titleScreen() {
         <span>or arrow keys — one cell per press</span>
       </div>
 
-      <p class="warnline">⏱️ At <b>60 seconds</b> the grid tears open to 15×15 — after that a new
+      <p class="warnline">⏱️ At <b>60 seconds</b> the grid tears open to 9×9 — after that a new
         <b>storm event</b> rolls in every few seconds, forever. Survive.</p>
 
       <button class="btn big" id="btn-play">▶ START</button>

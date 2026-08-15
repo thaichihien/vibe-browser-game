@@ -102,7 +102,7 @@ export const haste = {
 
 export const ice = {
   id: 'ice', name: 'BLACK ICE', emoji: '❄️', tint: '#7cf7ff',
-  blurb: 'Every step slides two extra cells. Aim before you move.',
+  blurb: 'Every step slides one extra cell. Aim before you move.',
   duration: 13, weight: 3,
 
   start(g, e) {

@@ -93,7 +93,7 @@ export const bombRain = {
   update(g, e, dt) {
     e.timer -= dt;
     if (e.timer > 0) return;
-    e.timer = rnd(0.35, 0.65);
+    e.timer = rnd(0.55, 0.9);
 
     const [cx, cy] = g.randCell();
     dropBomb(g, cx, cy);

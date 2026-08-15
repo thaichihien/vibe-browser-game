@@ -135,7 +135,7 @@ export function makeRenderer(canvas) {
       ctx.translate((Math.random() - 0.5) * s, (Math.random() - 0.5) * s);
     }
 
-    /* Zoom so the live grid always fills the board: 9×9 plays at the same cell
+    /* Zoom so the live grid always fills the board: 5×5 plays at the same cell
        size the original Grid Survival had, and the expansion is a real zoom-out
        rather than a small square in a big frame. One transform does it, so no
        draw code below ever sees the scale. */

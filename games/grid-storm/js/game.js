@@ -118,7 +118,7 @@ export function createGame(canvas, hooks = {}) {
   g.move = (dx, dy) => {
     if (!g.alive) return;
     const [mx, my] = rotate(dx, dy, g.flags.invert);
-    const steps = g.flags.ice ? 3 : 1;
+    const steps = g.flags.ice ? 2 : 1;   // one extra cell — the board is only 9 wide
 
     for (let i = 0; i < steps; i++) {
       const nx = g.player.gx + mx, ny = g.player.gy + my;

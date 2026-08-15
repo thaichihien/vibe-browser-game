@@ -11,7 +11,7 @@ import { rnd, rndi, clamp } from '../config.js';
 
 export const expand = {
   id: 'expand', name: 'GRID EXPANSION', emoji: '🔲', tint: '#7cf7ff',
-  blurb: 'The arena locks open at 15×15 — and every new edge shoots too.',
+  blurb: 'The arena locks open at 9×9 — and every new edge shoots too.',
   duration: 4, weight: 0, permanent: true,
 
   start(g) {
@@ -20,7 +20,7 @@ export const expand = {
     flash(g.fx, '#7cf7ff', 0.5);
     shake(g.fx, 12);
     confetti(g.fx, g.center, g.center, ['🔲', '✨', '🟦'], 24);
-    ring(g.fx, g.center, g.center, '#7cf7ff', 3, 11, 0.9, 6);
+    ring(g.fx, g.center, g.center, '#7cf7ff', 2, 7, 0.9, 6);
   }
 };
 
@@ -44,8 +44,8 @@ export const rings = {
 
 function spawnRing(g, span = 5) {
   const gap = rnd(0, Math.PI * 2);
-  const half = 0.42;              // half-width of the escape gap, radians
-  const r0 = 10.5;
+  const half = 0.5;               // half-width of the escape gap, radians
+  const r0 = (g.hi - g.lo + 1) / 2 + 2.5;   // just outside whatever grid is live
 
   Sound.warn();
 
@@ -288,12 +288,12 @@ export const crumble = {
 
   update(g, e, dt) {
     e.timer -= dt;
-    if (e.timer > 0 || e.rings >= 3) return;
+    if (e.timer > 0 || e.rings >= 2) return;
     e.timer = 4.2;
 
     const r = e.rings++;
     const lo = g.lo + r, hi = g.hi - r;
-    if (hi - lo < 3) return;
+    if (hi - lo < 3) return;      // never crumble down past a 4×4 core
 
     Sound.blast();
     shake(g.fx, 8);

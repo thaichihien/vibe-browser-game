@@ -1,9 +1,9 @@
 /* Tuning constants. Everything the game measures in "cells", never pixels —
    pixels only appear at draw time, so the grid can grow without touching logic. */
 
-export const BASE_SIZE = 9;    // the grid you start on (plain Grid Survival)
-export const BIG_SIZE  = 15;   // after the first event, permanently
-export const CELL      = 40;   // px per cell
+export const BASE_SIZE = 5;    // the grid you start on (plain Grid Survival)
+export const BIG_SIZE  = 9;    // after the first event, permanently
+export const CELL      = 54;   // px per cell
 export const PAD       = 1.5;  // cells of margin so off-grid bullets stay visible
 export const BOARD_PX  = (BIG_SIZE + PAD * 2) * CELL;
 
@@ -12,7 +12,7 @@ export const CENTER = (BIG_SIZE - 1) / 2;   // 7 — same centre at both sizes
 /* the opening act: plain missiles, one at a time, then more */
 export const BASE_SPAWN = {
   every:  [1.30, 0.55],   // seconds between volleys, t=0 -> t=RAMP
-  count:  [1, 4],         // missiles per volley
+  count:  [1, 3],         // missiles per volley (+1 once the grid expands)
   speed:  [2.4, 4.3],     // cells per second
   ramp:   150             // seconds to reach the right-hand values
 };
