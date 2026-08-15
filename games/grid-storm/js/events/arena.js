@@ -253,12 +253,12 @@ export const giants = {
 /* ── 🔻 CLOSING ARENA — one warning, then straight to 3×3 ──────────────── */
 
 const CLOSED = 3;
-const WARN = 0.5;      // all the notice you get
+const WARN = 1.0;      // all the notice you get
 const HOLD = 8;        // seconds trapped in the middle
 
 export const shrink = {
   id: 'shrink', name: 'CLOSING ARENA', emoji: '🔻', tint: '#ff2e5b',
-  blurb: 'Half a second of warning, then the grid slams shut to 3×3 — with the missiles still coming.',
+  blurb: 'One second of warning, then the grid slams shut to 3×3 — with the missiles still coming.',
   duration: WARN + HOLD + 3, weight: 3,
   solo: true, keepBase: true,   // no other event, but the normal fire continues
 
