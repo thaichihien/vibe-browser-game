@@ -499,15 +499,17 @@ export const crossfire = {
   }
 };
 
-/* ── 🍥 CORKSCREW — a chain winding in from a corner to the middle ──────── */
+/* ── 🍥 CORKSCREW — shots winding in from the corners to the middle ─────── */
 
 export const corkscrew = {
   id: 'corkscrew', name: 'CORKSCREW', emoji: '🍥', tint: '#38bdf8',
-  blurb: 'Shots wind in from one corner, lap by lap, all the way to the centre.',
-  duration: 18, weight: 3,
+  blurb: 'Shots wind in from the corners, lap by lap, all the way to the centre.',
+  duration: 18, weight: 3, suppressBase: true,
 
   start(g, e) {
-    e.path = spiralPath(g, rndi(0, 3), Math.random() < 0.5);
+    // both windings, built once — every shot picks one of them at random
+    const turns = rndi(0, 3);
+    e.paths = [spiralPath(g, turns, false), spiralPath(g, turns, true)];
     e.speed = g.speed * 1.6;
     e.timer = 0.3;
   },
@@ -515,9 +517,9 @@ export const corkscrew = {
   update(g, e, dt) {
     e.timer -= dt;
     if (e.timer > 0) return;
-    e.timer = rnd(1.0, 1.5);
+    e.timer = rnd(1.8, 2.5);
 
-    const path = e.path;
+    const path = e.paths[Math.random() < 0.5 ? 0 : 1];
     const b = spawnBullet(g, {
       x: path[0][0], y: path[0][1],
       emoji: '💫', r: 0.32, color: '#38bdf8',
