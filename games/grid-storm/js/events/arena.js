@@ -222,14 +222,12 @@ export const giants = {
     e.timer -= dt;
     if (e.timer > 0 || live >= e.cap) return;
 
-    // below two, refill quickly so the board holds the 2-4 it promises;
-    // above that, pace them out
-    e.timer = live + 1 < 2 ? rnd(0.08, 0.18) : rnd(0.2, 0.45);
+    e.timer = 0.2;
     e.cap = rndi(2, 4);                         // how crowded it gets, re-rolled
 
     const dir = rndi(0, 3);
     const lane = rndi(g.lo + 1, g.hi - 1);      // keep the whole body on the grid
-    const s = g.speed * 0.93;
+    const s = g.speed * 0.98;
 
     const spec = {
       giant: true, round: true, r: 1.05,        // circle, sized to the sprite
