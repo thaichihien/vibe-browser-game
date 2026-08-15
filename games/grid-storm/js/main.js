@@ -5,6 +5,7 @@ import { fitCanvas, BOARD_SIDE } from './render.js';
 import { Sound } from './audio.js';
 import { Music } from './music.js';
 import { EVENTS, FIRST_EVENT } from './events/index.js';
+import { FIRST_EVENT_AT } from './config.js';
 
 const $ = sel => document.querySelector(sel);
 
@@ -23,11 +24,15 @@ const BEST_KEY = 'gridStorm.best';
 let best = Number(localStorage.getItem(BEST_KEY) || 0);
 let paused = false;
 
+// declared up here because buildDevPanel() runs before its own section
+let devNextEl = null, devClockEl = null;
+
 /* testing hatches: ?t=55 starts the clock late, ?dev=1 makes the codex
    entries clickable so any event can be fired on demand */
 const params = new URLSearchParams(location.search);
 const startAt = Number(params.get('t') || 0);
 const devMode = params.get('dev') === '1';
+const startEvent = params.get('event');   // ?event=laser queues it from the off
 
 Sound.init();
 Music.init();
@@ -86,6 +91,11 @@ function hud(g) {
 
   hudT += 1;
   if (hudT % 6) return;
+
+  if (devClockEl) {
+    const until = g.firstDone ? g.nextEventAt - g.time : FIRST_EVENT_AT - g.time;
+    devClockEl.textContent = until > 0 ? until.toFixed(1) + 's' : 'now';
+  }
 
   const sig = g.events.map(e => e.def.id).join('|');
   if (sig !== lastSig) {
@@ -304,6 +314,76 @@ if (devMode) {
     if (!li) return;
     if (game.trigger(li.dataset.id)) rules.classList.remove('show');
   });
+  buildDevPanel();
+}
+
+/* ── debug panel (?dev=1) ─────────────────────────────────────────────────
+
+   QUEUE puts an event at the front of the scheduler: it starts when the next
+   storm is due, so you actually play into it. NOW starts it this instant.
+   LOCK keeps re-picking the queued one, so you can practise a single event.  */
+
+function buildDevPanel() {
+  const panel = document.createElement('aside');
+  panel.className = 'devpanel';
+  panel.innerHTML = `
+    <header>
+      <b>DEBUG</b>
+      <button id="dev-hide" title="hide (backtick)">–</button>
+    </header>
+    <div class="dev-state">
+      <div>next: <span id="dev-next">random</span></div>
+      <div>in: <span id="dev-clock">—</span></div>
+    </div>
+    <div class="dev-row">
+      <label><input type="checkbox" id="dev-lock"> lock repeat</label>
+      <button id="dev-soon">SKIP WAIT</button>
+    </div>
+    <ul class="dev-list">
+      ${CODEX.map(d => `
+        <li>
+          <button class="dev-pick" data-id="${d.id}" style="--tint:${d.tint}">
+            ${d.emoji} ${d.name}
+          </button>
+          <button class="dev-now" data-id="${d.id}" title="start right now">NOW</button>
+        </li>`).join('')}
+    </ul>`;
+
+  document.body.appendChild(panel);
+  devNextEl = $('#dev-next');
+  devClockEl = $('#dev-clock');
+
+  panel.addEventListener('click', ev => {
+    const pick = ev.target.closest('.dev-pick');
+    const now = ev.target.closest('.dev-now');
+
+    if (pick) {
+      const id = game.g.forcedNext === pick.dataset.id ? null : pick.dataset.id;
+      game.setNext(id);
+      markQueued(panel);
+    }
+    if (now) game.trigger(now.dataset.id);
+    if (ev.target.id === 'dev-soon') game.skipWait();
+    if (ev.target.id === 'dev-hide') panel.classList.toggle('collapsed');
+  });
+
+  $('#dev-lock').onchange = ev => game.setLock(ev.target.checked);
+
+  // a queued event survives a restart, so reflect anything set by ?event=
+  if (startEvent) { game.setNext(startEvent); markQueued(panel); }
+  if (params.get('lock') === '1') { game.setLock(true); $('#dev-lock').checked = true; }
+
+  // backtick, because every obvious letter is already a control
+  document.addEventListener('keydown', ev => {
+    if (ev.key === '`') panel.classList.toggle('collapsed');
+  });
+}
+
+function markQueued(panel) {
+  const id = game.g.forcedNext;
+  devNextEl.textContent = id ? (CODEX.find(d => d.id === id)?.name || id) : 'random';
+  panel.querySelectorAll('.dev-pick').forEach(b =>
+    b.classList.toggle('queued', b.dataset.id === id));
 }
 
 titleScreen();

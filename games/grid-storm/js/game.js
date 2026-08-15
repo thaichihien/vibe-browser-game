@@ -24,6 +24,7 @@ export function createGame(canvas, hooks = {}) {
     spawnT: 0, spawnEvery: BASE_SPAWN.every[0], spawnCount: BASE_SPAWN.count[0],
     frozenCount: null, expandedAt: 0, lastStep: 0,
     spawnBonus: 0, spawnBonusT: 0, zoomK: 1,
+    forcedNext: null, lockEvent: false,   // debug picker
     expand: null, deathReason: '', deathEmoji: '💀',
     flags: { gravity: false, fog: 0, wrap: false, ice: false, invert: 0 },
     player: { gx: 0, gy: 0, px: 0, py: 0, face: '🙂', shield: 0, iFrames: 0 }
@@ -220,6 +221,25 @@ export function createGame(canvas, hooks = {}) {
   /* jittered, so storms never land on a countable beat */
   const nextGap = () => rnd(EVENT_GAP[0], EVENT_GAP[1]);
 
+  const findDef = id =>
+    EVENTS.find(d => d.id === id) || (id === FIRST_EVENT.id ? FIRST_EVENT : null);
+
+  /* Debug: an event queued through `setNext` jumps the random pick. It stays
+     queued (rather than being dropped) while it cannot legally start, and with
+     `lockEvent` it is picked every time instead of just once. */
+  function forcedDef(g) {
+    if (!g.forcedNext) return null;
+
+    const def = findDef(g.forcedNext);
+    if (!def) { g.forcedNext = null; return null; }
+
+    if (g.events.some(e => e.def.id === def.id)) return null;   // already running
+    if (def.solo && g.events.length > 0) return null;           // wait for a clear board
+
+    if (!g.lockEvent) g.forcedNext = null;
+    return def;
+  }
+
   function scheduleEvents(dt) {
     if (!g.firstDone) {
       if (g.time >= FIRST_EVENT_AT) {
@@ -235,7 +255,8 @@ export function createGame(canvas, hooks = {}) {
     const solo = g.events.some(e => e.def.solo);
     if (solo || g.events.length >= MAX_CONCURRENT) { g.nextEventAt = g.time + 1.5; return; }
 
-    const def = pickEvent(g.events.map(e => e.def.id), g.recent, g.events.length === 0);
+    let def = forcedDef(g);
+    if (!def) def = pickEvent(g.events.map(e => e.def.id), g.recent, g.events.length === 0);
     if (!def) { g.nextEventAt = g.time + 2; return; }
 
     startEvent(def);
@@ -363,6 +384,8 @@ export function createGame(canvas, hooks = {}) {
       g.time = 0; g.deadT = 0; g.timeScale = 1; g.expand = null;
       g.frozenCount = null; g.expandedAt = 0; g.lastStep = 0;
       g.spawnBonus = 0; g.spawnBonusT = 0;
+      // forcedNext/lockEvent deliberately survive a restart, so a debug
+      // selection still applies to the next run
       g.zoomK = (BIG_SIZE + PAD * 2) / (BASE_SIZE + PAD * 2);
       g.flags = { gravity: false, fog: 0, wrap: false, ice: false, invert: 0 };
       setSize(BASE_SIZE);
@@ -379,6 +402,21 @@ export function createGame(canvas, hooks = {}) {
       g.running = true;
       last = performance.now();
       raf = requestAnimationFrame(frame);
+    },
+
+    /* queue an event as the next one the scheduler picks (debug) */
+    setNext(id) { g.forcedNext = id || null; return g.forcedNext; },
+    setLock(on) { g.lockEvent = !!on; return g.lockEvent; },
+    /* Bring the next storm forward. Before the expansion has fired, that
+       expansion is the next storm and it owns the clock — so open the grid
+       first, or this button would silently do nothing for the first 20s. */
+    skipWait(seconds = 0.6) {
+      if (!g.alive) return;
+      if (!g.firstDone) {
+        g.firstDone = true;
+        startEvent(FIRST_EVENT);
+      }
+      g.nextEventAt = g.time + seconds;
     },
 
     /* force one event on demand (dev mode / codex sandbox) */
