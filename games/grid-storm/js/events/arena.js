@@ -254,6 +254,7 @@ export const giants = {
 
 const CLOSED = 3;
 const WARN = 1.0;      // all the notice you get
+const SETTLE = 1.0;    // quiet beat after the slam, before the fire resumes
 const HOLD = 8;        // seconds trapped in the middle
 
 export const shrink = {
@@ -296,6 +297,8 @@ export const shrink = {
       e.doomed = null;
 
       g.setGrid(size);
+      g.spawnT = SETTLE;      // let the player find the middle before firing again
+
       Sound.blast();
       shake(g.fx, 16);
       flash(g.fx, '#ff2e5b', 0.35);
