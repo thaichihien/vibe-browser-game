@@ -116,8 +116,8 @@ export function makeRenderer(canvas) {
   /* ── the frame ────────────────────────────────────────────────────────── */
 
   R.frame = function (g) {
-    const w = canvas.width / (window.devicePixelRatio || 1);
-    const h = canvas.height / (window.devicePixelRatio || 1);
+    // always the same drawing space, whatever size the element is on screen
+    const w = BOARD_SIDE, h = BOARD_SIDE;
 
     ctx.save();
     ctx.clearRect(0, 0, w, h);
@@ -337,13 +337,20 @@ function star(ctx, outer, inner, points) {
   ctx.closePath();
 }
 
+/* Point the canvas at whatever square the layout can spare. The backing store
+   is sized for the real pixels so the board stays sharp at any size, while the
+   context is scaled so every draw call still works in BOARD_SIDE units. */
 export function fitCanvas(canvas, cssSize) {
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = cssSize * dpr;
-  canvas.height = cssSize * dpr;
+  const px = Math.round(cssSize * dpr);
+
+  canvas.width = px;
+  canvas.height = px;
   canvas.style.width = cssSize + 'px';
   canvas.style.height = cssSize + 'px';
-  canvas.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const k = px / BOARD_SIDE;
+  canvas.getContext('2d').setTransform(k, 0, 0, k, 0, 0);
 }
 
 export const BOARD_SIDE = (BIG_SIZE + PAD * 2) * CELL;

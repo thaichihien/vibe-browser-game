@@ -60,6 +60,22 @@ const game = createGame(canvas, {
   onDeath: gameOver
 });
 
+/* the board takes the largest square the middle of the page can hold, so the
+   page never scrolls and never leaves a band of dead space either */
+const boardWrap = document.querySelector('.board-wrap');
+
+function layout() {
+  const size = Math.max(240, Math.min(900,
+    Math.floor(Math.min(boardWrap.clientWidth, boardWrap.clientHeight))));
+
+  fitCanvas(canvas, size);
+  if (!game.g.running) game.R.frame(game.g);   // repaint while paused or on the menu
+}
+
+new ResizeObserver(layout).observe(boardWrap);
+window.addEventListener('resize', layout);
+layout();
+
 /* ── HUD ──────────────────────────────────────────────────────────────── */
 
 let hudT = 0, lastSig = '';
