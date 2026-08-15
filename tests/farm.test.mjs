@@ -1,0 +1,710 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import { FARM_GAME, load, readGame, extract } from './harness.mjs';
+
+test('harness can read farmer-dream, not just monster-battle', () => {
+  assert.match(readGame(FARM_GAME), /Farmer Dream|farm/i);
+});
+
+const { CROPS, cropStage, plantTile, waterTile, harvestTile } =
+  load(['FARM'], ['CROPS', 'cropStage', 'plantTile', 'waterTile', 'harvestTile'], FARM_GAME);
+
+const tile = (over = {}) => ({
+  crop: 'rice', waterings: 1, wateredAt: 1000, grownMs: 0, harvestsLeft: 1, ...over
+});
+
+test('CROPS has the ten crops with ascending tiers', () => {
+  const ids = Object.keys(CROPS);
+  assert.equal(ids.length, 10);
+  assert.deepEqual(ids.map(id => CROPS[id].tier), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  assert.equal(CROPS.rice.seed, 5);
+  assert.equal(CROPS.pumpkin.sell, 220);
+});
+
+test('a freshly watered crop is growing, not ripe', () => {
+  const s = cropStage(tile(), 1000);
+  assert.equal(s.phase, 'growing');
+  assert.equal(s.progress, 0);
+});
+
+test('rice is ripe exactly at its grow time and shows its own icon', () => {
+  const s = cropStage(tile(), 1000 + CROPS.rice.grow);
+  assert.equal(s.phase, 'ripe');
+  assert.equal(s.progress, 1);
+  assert.equal(s.icon, '🌾');
+});
+
+test('progress does not exceed 1 when left ripe for a long time', () => {
+  const s = cropStage(tile(), 1000 + CROPS.rice.grow * 10);
+  assert.equal(s.progress, 1);
+  assert.equal(s.phase, 'ripe');
+});
+
+test('an unwatered tile is thirsty and banks no growth', () => {
+  const s = cropStage(tile({ waterings: 0, wateredAt: null }), 999999);
+  assert.equal(s.phase, 'thirsty');
+  assert.equal(s.progress, 0);
+});
+
+test('pumpkin stalls thirsty at the halfway mark until watered a second time', () => {
+  const half = CROPS.pumpkin.grow / 2;
+  const p = tile({ crop: 'pumpkin', waterings: 1, wateredAt: 0, grownMs: 0 });
+
+  const mid = cropStage(p, half);
+  assert.equal(mid.phase, 'thirsty', 'first segment done, needs water again');
+  assert.equal(mid.progress, 0.5);
+
+  const later = cropStage(p, half * 5);
+  assert.equal(later.phase, 'thirsty', 'time alone must not finish it');
+  assert.equal(later.progress, 0.5);
+});
+
+test('pumpkin watered a second time grows on to ripe', () => {
+  const half = CROPS.pumpkin.grow / 2;
+  const p = { crop: 'pumpkin', waterings: 2, wateredAt: half, grownMs: half, harvestsLeft: 1 };
+  assert.equal(cropStage(p, half + half).phase, 'ripe');
+});
+
+test('sprout icon changes as the crop grows', () => {
+  assert.equal(cropStage(tile(), 1000).icon, '🌱');
+  assert.equal(cropStage(tile(), 1000 + CROPS.rice.grow * 0.75).icon, '🌿');
+});
+
+test('a newly planted tile is thirsty and holds no growth', () => {
+  const t = plantTile('rice', 500);
+  assert.equal(t.crop, 'rice');
+  assert.equal(t.waterings, 0);
+  assert.equal(t.wateredAt, null);
+  assert.equal(t.grownMs, 0);
+  assert.equal(t.harvestsLeft, 1);
+  assert.equal(cropStage(t, 999999).phase, 'thirsty');
+});
+
+test('strawberry is planted with three harvests', () => {
+  assert.equal(plantTile('strawberry', 0).harvestsLeft, 3);
+});
+
+test('watering a thirsty tile starts its clock', () => {
+  const t = waterTile(plantTile('rice', 0), 700);
+  assert.equal(t.waterings, 1);
+  assert.equal(t.wateredAt, 700);
+  assert.equal(cropStage(t, 700).phase, 'growing');
+});
+
+test('watering a growing tile is a no-op, so water cannot be wasted for speed', () => {
+  const t = waterTile(plantTile('rice', 0), 100);
+  const again = waterTile(t, 200);
+  assert.deepEqual(again, t);
+});
+
+test('watering pumpkin the second time banks the first segment', () => {
+  const half = CROPS.pumpkin.grow / 2;
+  let t = waterTile(plantTile('pumpkin', 0), 0);
+  t = waterTile(t, half);
+  assert.equal(t.waterings, 2);
+  assert.equal(t.grownMs, half);
+  assert.equal(cropStage(t, half + half).phase, 'ripe');
+});
+
+test('harvesting a single-harvest crop empties the tile and yields the crop', () => {
+  const t = waterTile(plantTile('rice', 0), 0);
+  const out = harvestTile(t, CROPS.rice.grow);
+  assert.equal(out.crop, 'rice');
+  assert.equal(out.tile, null);
+});
+
+test('harvesting an unripe tile yields nothing and leaves it alone', () => {
+  const t = waterTile(plantTile('rice', 0), 0);
+  const out = harvestTile(t, 1);
+  assert.equal(out.crop, null);
+  assert.deepEqual(out.tile, t);
+});
+
+test('a regrowing crop stays planted and ripens again after its regrow time', () => {
+  let t = waterTile(plantTile('strawberry', 0), 0);
+  const first = harvestTile(t, CROPS.strawberry.grow);
+  assert.equal(first.crop, 'strawberry');
+  assert.notEqual(first.tile, null);
+  assert.equal(first.tile.harvestsLeft, 2);
+
+  const now = CROPS.strawberry.grow;
+  assert.equal(cropStage(first.tile, now).phase, 'growing', 'not instantly ripe again');
+  assert.equal(cropStage(first.tile, now + CROPS.strawberry.regrow).phase, 'ripe');
+});
+
+test('a regrowing crop empties the tile on its final harvest', () => {
+  let t = waterTile(plantTile('grapes', 0), 0);
+  let now = CROPS.grapes.grow;
+  for (let i = 0; i < 3; i++) {
+    t = harvestTile(t, now).tile;
+    assert.notEqual(t, null, `harvest ${i + 1} should leave the plant`);
+    now += CROPS.grapes.regrow;
+  }
+  assert.equal(harvestTile(t, now).tile, null, 'fourth harvest clears the tile');
+});
+
+const { LEVELS, UNLOCKS, levelFor, xpBar } =
+  load(['FARM'], ['LEVELS', 'UNLOCKS', 'levelFor', 'xpBar'], FARM_GAME);
+
+test('LEVELS matches the spec thresholds', () => {
+  assert.deepEqual(LEVELS, [0, 40, 90, 170, 290, 460, 700, 1020, 1450, 2000]);
+});
+
+test('levelFor maps XP onto levels at the boundaries', () => {
+  assert.equal(levelFor(0), 1);
+  assert.equal(levelFor(39), 1);
+  assert.equal(levelFor(40), 2);
+  assert.equal(levelFor(289), 4);
+  assert.equal(levelFor(290), 5);
+  assert.equal(levelFor(2000), 10);
+  assert.equal(levelFor(999999), 10, 'level is capped at 10');
+});
+
+test('every crop has an unlock level and the starters are level 1', () => {
+  assert.deepEqual(Object.keys(UNLOCKS).sort(), Object.keys(CROPS).sort());
+  assert.equal(UNLOCKS.rice, 1);
+  assert.equal(UNLOCKS.carrot, 1);
+  assert.equal(UNLOCKS.pumpkin, 7);
+  assert.equal(UNLOCKS.grapes, 9);
+});
+
+test('xpBar reports progress into the current level', () => {
+  assert.deepEqual(xpBar(0), { level: 1, into: 0, need: 40 });
+  assert.deepEqual(xpBar(60), { level: 2, into: 20, need: 50 });
+  assert.deepEqual(xpBar(2000), { level: 10, into: 0, need: 0 });
+});
+
+const { OFFLINE_CAP_MS, advance } =
+  load(['FARM'], ['OFFLINE_CAP_MS', 'advance'], FARM_GAME);
+
+const HOUR = 3600000;
+
+test('the offline cap is four hours', () => {
+  assert.equal(OFFLINE_CAP_MS, 4 * HOUR);
+});
+
+test('a short absence is returned untouched', () => {
+  // Test object identity (===) inside the VM to preserve coverage of the fast path,
+  // since bridge() always deep-clones results when crossing the realm boundary.
+  const code = extract('FARM', FARM_GAME);
+  const ctx = { console, Math, JSON };
+  vm.createContext(ctx);
+  vm.runInContext(`${code}
+    const s = { tiles: [] };
+    globalThis.__same = advance(s, ${HOUR}) === s;`, ctx);
+  assert.equal(ctx.__same, true, 'advance(state, shortTime) must return the same object reference (fast path)');
+});
+
+test('a long absence shifts tiles so only the capped window counted', () => {
+  const t = waterTile(plantTile('pumpkin', 0), 0);
+  const away = 10 * HOUR;
+  const out = advance({ tiles: [t] }, away);
+  assert.equal(out.tiles[0].wateredAt, away - OFFLINE_CAP_MS,
+    'the excess is absorbed by moving the watering forward');
+});
+
+test('advance leaves empty and thirsty tiles alone', () => {
+  const thirsty = plantTile('rice', 0);
+  const out = advance({ tiles: [null, thirsty] }, 10 * HOUR);
+  assert.equal(out.tiles[0], null);
+  assert.deepEqual(out.tiles[1], thirsty, 'an unwatered tile has no clock to shift');
+});
+
+test('a bigger cap lets more of the absence count', () => {
+  const t = waterTile(plantTile('pumpkin', 0), 0);
+  const away = 10 * HOUR;
+  const out = advance({ tiles: [t] }, away, 8 * HOUR);
+  assert.equal(out.tiles[0].wateredAt, 2 * HOUR);
+});
+
+test('advance does not mutate the state it was given', () => {
+  const t = waterTile(plantTile('rice', 0), 0);
+  const s = { tiles: [t] };
+  advance(s, 10 * HOUR);
+  assert.equal(s.tiles[0].wateredAt, 0);
+});
+
+test('advance shifts fed animals by the same excess as tiles', () => {
+  const a = feedAnimal(makeAnimal('cow', 'a1', 0, 0), 0);
+  const away = 10 * HOUR;
+  const out = advance({ tiles: [], animals: [a] }, away);
+  assert.equal(out.animals[0].fedAt, away - OFFLINE_CAP_MS);
+});
+
+test('advance leaves never-fed animals alone', () => {
+  const a = makeAnimal('cow', 'a1', 0, 0);
+  const out = advance({ tiles: [], animals: [a] }, 10 * HOUR);
+  assert.equal(out.animals[0].fedAt, null);
+});
+
+test('advance still returns the same object under the cap', () => {
+  // Test object identity (===) inside the VM to preserve coverage of the fast path,
+  // since bridge() always deep-clones results when crossing the realm boundary.
+  const code = extract('FARM', FARM_GAME);
+  const ctx = { console, Math, JSON };
+  vm.createContext(ctx);
+  vm.runInContext(`${code}
+    const a = feedAnimal(makeAnimal('cow', 'a1', 0, 0), 0);
+    const s = { tiles: [], animals: [a] };
+    globalThis.__same = advance(s, ${HOUR}) === s;`, ctx);
+  assert.equal(ctx.__same, true);
+});
+
+test('advance tolerates a state with no animals array', () => {
+  assert.doesNotThrow(() => advance({ tiles: [] }, 10 * HOUR));
+});
+
+test('a fed animal still caps at three products across a long absence', () => {
+  const a = feedAnimal(makeAnimal('cow', 'a1', 0, 0), 0);
+  const away = 10 * HOUR;
+  const out = advance({ tiles: [], animals: [a] }, away);
+  assert.equal(animalState(out.animals[0], away).ready, FEED_YIELD);
+});
+
+test('advance does not mutate the animals it was given', () => {
+  const a = feedAnimal(makeAnimal('cow', 'a1', 0, 0), 0);
+  advance({ tiles: [], animals: [a] }, 10 * HOUR);
+  assert.equal(a.fedAt, 0);
+});
+
+const { PRODUCTS, itemInfo } = load(['FARM'], ['PRODUCTS', 'itemInfo'], FARM_GAME);
+
+test('PRODUCTS holds the seven animal goods with sell prices', () => {
+  assert.deepEqual(Object.keys(PRODUCTS).sort(),
+    ['butter', 'egg', 'feather', 'honey', 'milk', 'truffle', 'wool']);
+  assert.equal(PRODUCTS.milk.sell, 60);
+  assert.equal(PRODUCTS.egg.icon, '🥚');
+});
+
+test('itemInfo resolves crops and products through one lookup', () => {
+  assert.equal(itemInfo('rice').sell, 15);
+  assert.equal(itemInfo('milk').sell, 60);
+  assert.equal(itemInfo('rice').icon, '🌾');
+  assert.equal(itemInfo('milk').icon, '🥛');
+});
+
+test('itemInfo returns null for an unknown id rather than throwing', () => {
+  assert.equal(itemInfo('nonsense'), null);
+});
+
+test('every product name and icon is unique', () => {
+  const icons = Object.keys(PRODUCTS).map(k => PRODUCTS[k].icon);
+  assert.equal(new Set(icons).size, icons.length);
+});
+
+const { ANIMALS, FEED_YIELD, animalState } =
+  load(['FARM'], ['ANIMALS', 'FEED_YIELD', 'animalState'], FARM_GAME);
+
+const beast = (over = {}) => ({ id:'a1', type:'cow', name:'Bella', x:10, y:10, fedAt:0, made:0, ...over });
+
+test('ANIMALS holds the seven animals in ascending cost order', () => {
+  const costs = Object.keys(ANIMALS).map(k => ANIMALS[k].cost);
+  assert.deepEqual(costs, [...costs].sort((a, b) => a - b));
+  assert.equal(Object.keys(ANIMALS).length, 7);
+  assert.equal(ANIMALS.cow.cost, 500);
+  assert.equal(ANIMALS.duck.level, 10);
+});
+
+test('every animal eats a real crop and makes a real product', () => {
+  Object.keys(ANIMALS).forEach(k => {
+    assert.ok(CROPS[ANIMALS[k].eats], `${k} eats an unknown crop: ${ANIMALS[k].eats}`);
+    assert.ok(PRODUCTS[ANIMALS[k].makes], `${k} makes an unknown product`);
+  });
+});
+
+test('a feeding yields three products', () => {
+  assert.equal(FEED_YIELD, 3);
+});
+
+test('a never-fed animal is hungry', () => {
+  const s = animalState(beast({ fedAt: null }), 999999);
+  assert.equal(s.phase, 'hungry');
+  assert.equal(s.ready, 0);
+});
+
+test('a just-fed animal is working with nothing ready', () => {
+  const s = animalState(beast(), 0);
+  assert.equal(s.phase, 'working');
+  assert.equal(s.ready, 0);
+  assert.equal(s.progress, 0);
+});
+
+test('products become ready one cycle at a time', () => {
+  const c = ANIMALS.cow.cycle;
+  assert.equal(animalState(beast(), c - 1).ready, 0);
+  assert.equal(animalState(beast(), c).ready, 1);
+  assert.equal(animalState(beast(), c * 2).ready, 2);
+});
+
+test('an animal goes hungry after the third product and produces no more', () => {
+  const c = ANIMALS.cow.cycle;
+  const s = animalState(beast(), c * 3);
+  assert.equal(s.phase, 'hungry');
+  assert.equal(s.ready, FEED_YIELD);
+
+  const later = animalState(beast(), c * 50);
+  assert.equal(later.ready, FEED_YIELD, 'the cap is what stops it, so time away cannot overrun');
+});
+
+test('progress reports the fraction of the current cycle', () => {
+  const c = ANIMALS.cow.cycle;
+  assert.equal(animalState(beast(), c * 1.5).progress, 0.5);
+});
+
+const { makeAnimal, canBuyAnimal, canFeed, feedAnimal, DEFAULT_NAMES } =
+  load(['FARM'], ['makeAnimal', 'canBuyAnimal', 'canFeed', 'feedAnimal', 'DEFAULT_NAMES'], FARM_GAME);
+
+test('a bought animal starts hungry with a default name', () => {
+  const a = makeAnimal('cow', 'a1', 5, 6);
+  assert.equal(a.type, 'cow');
+  assert.equal(a.fedAt, null);
+  assert.equal(a.made, 0);
+  assert.equal(a.name, DEFAULT_NAMES.cow);
+  assert.equal(animalState(a, 999999).phase, 'hungry');
+});
+
+test('every animal type has a default name', () => {
+  Object.keys(ANIMALS).forEach(k => assert.ok(DEFAULT_NAMES[k], `${k} has no default name`));
+});
+
+test('canBuyAnimal refuses below the unlock level', () => {
+  const s = { xp: 0, money: 99999, animals: [], barn: 4 };
+  assert.deepEqual(canBuyAnimal('cow', s), { ok: false, why: 'level' });
+});
+
+test('canBuyAnimal refuses when the barn is full', () => {
+  const s = { xp: 2000, money: 99999, animals: [1, 2, 3, 4], barn: 4 };
+  assert.deepEqual(canBuyAnimal('chicken', s), { ok: false, why: 'slots' });
+});
+
+test('canBuyAnimal refuses when the money is short', () => {
+  const s = { xp: 2000, money: 10, animals: [], barn: 4 };
+  assert.deepEqual(canBuyAnimal('cow', s), { ok: false, why: 'money' });
+});
+
+test('canBuyAnimal accepts when level, slots and money all allow it', () => {
+  const s = { xp: 2000, money: 99999, animals: [], barn: 4 };
+  assert.deepEqual(canBuyAnimal('cow', s), { ok: true, why: null });
+});
+
+test('canFeed needs the animal hungry and the crop in the inventory', () => {
+  const hungry = makeAnimal('cow', 'a1', 0, 0);
+  assert.equal(canFeed(hungry, 0, { rice: 1 }), true);
+  assert.equal(canFeed(hungry, 0, { rice: 0 }), false, 'no rice');
+  assert.equal(canFeed(hungry, 0, {}), false, 'no rice at all');
+
+  const busy = feedAnimal(hungry, 0);
+  assert.equal(canFeed(busy, 1000, { rice: 5 }), false, 'already working');
+});
+
+test('feeding resets the clock and the product counter', () => {
+  let a = makeAnimal('cow', 'a1', 0, 0);
+  a = feedAnimal(a, 500);
+  assert.equal(a.fedAt, 500);
+  assert.equal(a.made, 0);
+  assert.equal(animalState(a, 500).phase, 'working');
+});
+
+test('an exhausted animal can be fed again and starts over', () => {
+  const c = ANIMALS.cow.cycle;
+  let a = feedAnimal(makeAnimal('cow', 'a1', 0, 0), 0);
+  a = { ...a, made: FEED_YIELD };
+  assert.equal(animalState(a, c * 3).phase, 'hungry');
+  a = feedAnimal(a, c * 3);
+  assert.equal(animalState(a, c * 3).phase, 'working');
+  assert.equal(a.made, 0);
+});
+
+// ==== Stage 3 ====
+
+const { CRAFTED, MACHINES, machineState, canCraft } =
+  load(['FARM'], ['CRAFTED', 'MACHINES', 'machineState', 'canCraft'], FARM_GAME);
+
+test('CRAFTED holds the six goods and itemInfo resolves them', () => {
+  assert.equal(Object.keys(CRAFTED).length, 6);
+  assert.equal(CRAFTED.cake.sell, 520);
+  assert.equal(itemInfo('cheese').sell, 170, 'CRAFTED must be registered in ITEM_TABLES');
+});
+
+test('every machine recipe names real items and makes a real crafted good', () => {
+  Object.keys(MACHINES).forEach(k => {
+    const M = MACHINES[k];
+    assert.ok(CRAFTED[M.makes], `${k} makes an unknown good`);
+    Object.keys(M.recipe).forEach(item =>
+      assert.ok(itemInfo(item), `${k} needs an unknown item: ${item}`));
+  });
+});
+
+test('every machine output is worth more than its inputs', () => {
+  Object.keys(MACHINES).forEach(k => {
+    const M = MACHINES[k];
+    const inputs = Object.keys(M.recipe)
+      .reduce((sum, item) => sum + itemInfo(item).sell * M.recipe[item], 0);
+    assert.ok(CRAFTED[M.makes].sell > inputs,
+      `${k} loses money: ${inputs} in, ${CRAFTED[M.makes].sell} out`);
+  });
+});
+
+test('an idle machine reports idle', () => {
+  assert.deepEqual(machineState({ type: 'press', startedAt: null }, 5000),
+    { phase: 'idle', progress: 0 });
+});
+
+test('a running machine reports progress, then done', () => {
+  const m = { type: 'press', startedAt: 0 };
+  const t = MACHINES.press.time;
+  assert.equal(machineState(m, 0).phase, 'working');
+  assert.equal(machineState(m, t / 2).progress, 0.5);
+  assert.equal(machineState(m, t).phase, 'done');
+  assert.equal(machineState(m, t * 9).phase, 'done', 'it waits to be collected');
+});
+
+test('canCraft checks every ingredient and quantity', () => {
+  assert.equal(canCraft('press', { milk: 2 }), true);
+  assert.equal(canCraft('press', { milk: 1 }), false);
+  assert.equal(canCraft('bakery', { rice: 2, egg: 1 }), true);
+  assert.equal(canCraft('bakery', { rice: 2 }), false, 'missing the egg entirely');
+  assert.equal(canCraft('bakery', { rice: 1, egg: 1 }), false, 'not enough rice');
+  assert.equal(canCraft('press', {}), false);
+});
+
+const { LAND_STEPS, UPGRADES, regrid, sprinklerCost } =
+  load(['FARM'], ['LAND_STEPS', 'UPGRADES', 'regrid', 'sprinklerCost'], FARM_GAME);
+
+test('land steps run 5x3, 6x4, 7x5 at the spec prices', () => {
+  assert.deepEqual(LAND_STEPS, [
+    { w:5, h:3, cost:0 }, { w:6, h:4, cost:800 }, { w:7, h:5, cost:2200 }
+  ]);
+});
+
+test('regrid keeps every crop at the same x,y when the farm grows', () => {
+  // 5x3 farm, one marker per row so a width change is visible.
+  const tiles = new Array(15).fill(null);
+  tiles[0]  = 'topleft';     // (0,0)
+  tiles[4]  = 'topright';    // (4,0)
+  tiles[5]  = 'row1start';   // (0,1)
+  tiles[14] = 'bottomright'; // (4,2)
+
+  const out = regrid(tiles, 5, 3, 6, 4);
+  assert.equal(out.length, 24);
+  assert.equal(out[0], 'topleft',      '(0,0) stays at index 0');
+  assert.equal(out[4], 'topright',     '(4,0) stays at index 4 on a 6-wide grid');
+  assert.equal(out[6], 'row1start',    '(0,1) moves from index 5 to index 6');
+  assert.equal(out[2 * 6 + 4], 'bottomright', '(4,2) moves to index 16');
+});
+
+test('regrid fills the new plots with null', () => {
+  const out = regrid(new Array(15).fill(null), 5, 3, 6, 4);
+  assert.equal(out.filter(t => t === null).length, 24);
+});
+
+test('regrid does not mutate the array it was given', () => {
+  const tiles = new Array(15).fill(null);
+  tiles[7] = 'keep';
+  regrid(tiles, 5, 3, 6, 4);
+  assert.equal(tiles.length, 15);
+  assert.equal(tiles[7], 'keep');
+});
+
+test('sprinklers cost a flat 450 each', () => {
+  assert.equal(sprinklerCost(0), 450);
+  assert.equal(sprinklerCost(3), 450);
+});
+
+test('the non-land upgrades match the spec prices', () => {
+  assert.equal(UPGRADES.bigCan.cost, 600);
+  assert.equal(UPGRADES.scarecrow.cost, 700);
+  assert.equal(UPGRADES.silo.cost, 1600);
+  assert.equal(UPGRADES.barn.cost, 1000);
+  assert.equal(UPGRADES.sprinkler.repeatable, true);
+  assert.equal(UPGRADES.silo.repeatable, false);
+});
+
+const { ORDER_MULT, ORDER_XP, ORDER_DAYS, orderValue, orderFilled, makeOrder, orderExpired } =
+  load(['FARM'],
+       ['ORDER_MULT', 'ORDER_XP', 'ORDER_DAYS', 'orderValue', 'orderFilled', 'makeOrder', 'orderExpired'],
+       FARM_GAME);
+
+test('orderValue sums market price times quantity', () => {
+  assert.equal(orderValue([{ item:'carrot', qty:3 }]), 75);
+  assert.equal(orderValue([{ item:'carrot', qty:3 }, { item:'milk', qty:2 }]), 75 + 120);
+});
+
+test('orderFilled needs every line covered', () => {
+  const wants = [{ item:'carrot', qty:3 }, { item:'milk', qty:2 }];
+  assert.equal(orderFilled({ wants }, { carrot:3, milk:2 }), true);
+  assert.equal(orderFilled({ wants }, { carrot:9, milk:9 }), true, 'surplus is fine');
+  assert.equal(orderFilled({ wants }, { carrot:3, milk:1 }), false);
+  assert.equal(orderFilled({ wants }, { carrot:3 }), false);
+  assert.equal(orderFilled({ wants }, {}), false);
+});
+
+test('an order pays better than selling the items outright', () => {
+  const o = makeOrder(1, 3, () => 0.5);
+  assert.ok(o.reward > orderValue(o.wants),
+    'the whole point is that filling an order beats a plain sale');
+  assert.equal(o.reward, Math.round(orderValue(o.wants) * ORDER_MULT));
+});
+
+test('makeOrder only asks for things the player has unlocked', () => {
+  for (let lv = 1; lv <= 10; lv++) {
+    for (let r = 0; r < 1; r += 0.13) {
+      const o = makeOrder(3, lv, () => r);
+      o.wants.forEach(w => {
+        const crop = CROPS[w.item];
+        if (crop) assert.ok(UNLOCKS[w.item] <= lv,
+          `level ${lv} order asked for locked crop ${w.item}`);
+        assert.ok(itemInfo(w.item), `unknown item ${w.item}`);
+        assert.ok(w.qty >= 1 && w.qty <= 5, `silly quantity ${w.qty}`);
+      });
+      assert.ok(o.wants.length >= 1 && o.wants.length <= 3);
+    }
+  }
+});
+
+test('makeOrder is deterministic for the same rnd', () => {
+  assert.deepEqual(makeOrder(4, 6, () => 0.3), makeOrder(4, 6, () => 0.3));
+});
+
+test('an order expires three days after it was posted', () => {
+  const o = makeOrder(2, 5, () => 0.5);
+  assert.equal(o.day, 2);
+  assert.equal(orderExpired(o, 4), false);
+  assert.equal(orderExpired(o, 2 + ORDER_DAYS), true);
+});
+
+const { HOUSE_ITEMS, SHELL_ORDER, houseTitle, comfortMult, offlineCapFor } =
+  load(['FARM'],
+       ['HOUSE_ITEMS', 'SHELL_ORDER', 'houseTitle', 'comfortMult', 'offlineCapFor'],
+       FARM_GAME);
+
+test('there are exactly twenty house items, and buying all of them is the win', () => {
+  assert.equal(Object.keys(HOUSE_ITEMS).length, 20);
+});
+
+test('the house items split into the four groups from the spec', () => {
+  const count = b => Object.keys(HOUSE_ITEMS).filter(k => HOUSE_ITEMS[k].band === b).length;
+  assert.equal(count('shell'), 2);
+  assert.equal(count('floor'), 8);
+  assert.equal(count('wall'), 5);
+  assert.equal(count('yard'), 5);
+});
+
+test('no house item is a farm building or a plane', () => {
+  const icons = Object.keys(HOUSE_ITEMS).map(k => HOUSE_ITEMS[k].icon);
+  ['🏢', '🏬', '🏭', '✈️', '🛺'].forEach(bad =>
+    assert.equal(icons.includes(bad), false, `${bad} cannot furnish a farmhouse`));
+});
+
+test('the yard tree and the fountain exist, because two pets depend on them', () => {
+  assert.equal(HOUSE_ITEMS.tree.band, 'yard');
+  assert.equal(HOUSE_ITEMS.fountain.band, 'yard');
+});
+
+test('the house title levels up every five items', () => {
+  assert.equal(houseTitle(0), 'Bare Shack');
+  assert.equal(houseTitle(4), 'Bare Shack');
+  assert.equal(houseTitle(5), 'Cozy Shack');
+  assert.equal(houseTitle(10), 'Warm Home');
+  assert.equal(houseTitle(15), 'Dream Farmhouse');
+  assert.equal(houseTitle(20), 'Dream Farmhouse');
+});
+
+test('each placed item makes an absence count one percent longer', () => {
+  assert.equal(comfortMult(0), 1);
+  assert.equal(Math.round(comfortMult(20) * 100) / 100, 1.2);
+});
+
+test('offlineCapFor stacks comfort with the turtle', () => {
+  assert.equal(offlineCapFor(0, false), OFFLINE_CAP_MS);
+  assert.equal(offlineCapFor(0, true), OFFLINE_CAP_MS * 2, 'the turtle doubles the window');
+  assert.equal(offlineCapFor(20, false), OFFLINE_CAP_MS * 1.2);
+  assert.equal(offlineCapFor(20, true), OFFLINE_CAP_MS * 2.4);
+});
+
+test('the two shells are ordered cheapest first', () => {
+  assert.deepEqual(SHELL_ORDER, ['shack', 'house', 'farmhouse']);
+  assert.ok(HOUSE_ITEMS.house.price < HOUSE_ITEMS.farmhouse.price);
+});
+
+const { PETS, petsEarned } = load(['FARM'], ['PETS', 'petsEarned'], FARM_GAME);
+
+const petCtx = (over = {}) => ({
+  xp: 0,
+  house: { placed: {} },
+  stats: { harvested: {}, ordersDone: 0, daysPlayed: [], sawNight: false },
+  ...over
+});
+
+test('there are eight pets and each has a hint the album can show', () => {
+  assert.equal(Object.keys(PETS).length, 8);
+  Object.keys(PETS).forEach(k => {
+    assert.ok(PETS[k].hint, `${k} has no hint`);
+    assert.ok(PETS[k].icon, `${k} has no icon`);
+  });
+});
+
+test('a brand new farm has earned no pets', () => {
+  assert.deepEqual(petsEarned(petCtx()), []);
+});
+
+test('the dog arrives with the first completed order', () => {
+  assert.deepEqual(petsEarned(petCtx({ stats: { ...petCtx().stats, ordersDone: 1 } })), ['dog']);
+});
+
+test('the cat arrives at level 5', () => {
+  assert.equal(petsEarned(petCtx({ xp: 289 })).includes('cat'), false);
+  assert.equal(petsEarned(petCtx({ xp: 290 })).includes('cat'), true);
+});
+
+test('the rabbit needs fifty carrots', () => {
+  assert.equal(petsEarned(petCtx({ stats: { ...petCtx().stats, harvested: { carrot: 49 } } })).includes('rabbit'), false);
+  assert.equal(petsEarned(petCtx({ stats: { ...petCtx().stats, harvested: { carrot: 50 } } })).includes('rabbit'), true);
+});
+
+test('the bluebird needs a single sunflower', () => {
+  assert.equal(petsEarned(petCtx({ stats: { ...petCtx().stats, harvested: { sunflower: 1 } } })).includes('bluebird'), true);
+});
+
+test('the squirrel and swan come from house items', () => {
+  assert.equal(petsEarned(petCtx({ house: { placed: { tree: { x:1, y:1 } } } })).includes('squirrel'), true);
+  assert.equal(petsEarned(petCtx({ house: { placed: { fountain: { x:1, y:1 } } } })).includes('swan'), true);
+});
+
+test('the turtle needs five distinct days played', () => {
+  const four = petCtx({ stats: { ...petCtx().stats, daysPlayed: [1, 2, 3, 4] } });
+  const five = petCtx({ stats: { ...petCtx().stats, daysPlayed: [1, 2, 3, 4, 5] } });
+  assert.equal(petsEarned(four).includes('turtle'), false);
+  assert.equal(petsEarned(five).includes('turtle'), true);
+});
+
+test('the fox needs a night visit', () => {
+  assert.equal(petsEarned(petCtx({ stats: { ...petCtx().stats, sawNight: true } })).includes('fox'), true);
+});
+
+test('petsEarned returns ids in album order, not discovery order', () => {
+  const all = petsEarned(petCtx({
+    xp: 2000,
+    house: { placed: { tree:{}, fountain:{} } },
+    stats: { harvested:{ carrot:50, sunflower:1 }, ordersDone:1, daysPlayed:[1,2,3,4,5], sawNight:true }
+  }));
+  assert.deepEqual(all, Object.keys(PETS));
+});
+
+const { DAY_MS, isNightIRL } = load(['FARM'], ['DAY_MS', 'isNightIRL'], FARM_GAME);
+
+test('a day is three real minutes', () => {
+  assert.equal(DAY_MS, 180000);
+});
+
+test('isNightIRL follows the real local clock, not the in-game day', () => {
+  const at = h => new Date(2024, 0, 1, h, 0, 0).getTime();
+  assert.equal(isNightIRL(at(16)), false, '4pm is day');
+  assert.equal(isNightIRL(at(17)), true, '5pm is night');
+  assert.equal(isNightIRL(at(23)), true, '11pm is night');
+  assert.equal(isNightIRL(at(0)), true, 'midnight is night');
+  assert.equal(isNightIRL(at(5)), true, '5am is still night');
+  assert.equal(isNightIRL(at(6)), false, '6am is day again');
+  assert.equal(isNightIRL(at(12)), false, 'noon is day');
+});

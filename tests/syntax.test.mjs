@@ -1,8 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { scriptBody } from './harness.mjs';
+import { scriptBody, FARM_GAME } from './harness.mjs';
 
-test('game script parses without syntax errors', () => {
+test('monster-battle script body parses', () => {
   assert.doesNotThrow(() => new vm.Script(scriptBody()));
+});
+
+test('farmer-dream script body parses', () => {
+  assert.doesNotThrow(() => new vm.Script(scriptBody(FARM_GAME)));
 });
