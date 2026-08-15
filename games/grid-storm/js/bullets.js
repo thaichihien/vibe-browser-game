@@ -16,6 +16,7 @@ export function spawnBullet(g, spec) {
   const b = Object.assign({
     x: 0, y: 0, vx: 0, vy: 0,
     r: 0.24,               // radius, in cells
+    round: false,          // true = circular hitbox instead of a box
     color: pick(PALETTE),
     emoji: null,
     shape: 'circle',       // circle | diamond | bar | star

@@ -5,7 +5,7 @@
 import { spawnBullet, addHazard } from '../bullets.js';
 import { burst, ring, flash, shake, floatText, confetti } from '../fx.js';
 import { Sound } from '../audio.js';
-import { rnd, rndi, clamp, BIG_SIZE } from '../config.js';
+import { rnd, rndi, pick, clamp, BIG_SIZE } from '../config.js';
 
 const key = (x, y) => x + ',' + y;
 
@@ -207,66 +207,42 @@ export const numbers = {
 
 /* ── 🛸 GIANT MISSILES — 3×3, and they replace the normal fire ──────────── */
 
+const HULKS = ['🛸', '👾', '🌑', '🪨', '🔮'];
+
 export const giants = {
   id: 'giants', name: 'GIANT MISSILES', emoji: '🛸', tint: '#f472b6',
-  blurb: 'Three cells wide, and the only thing firing. You cannot squeeze past.',
+  blurb: 'Huge, and the only thing firing. Up to three of them at once.',
   duration: 16, weight: 3, suppressBase: true,
 
-  start(g, e) { e.timer = 0.6; },
+  start(g, e) { e.timer = 0.6; e.cap = rndi(1, 3); },
 
   update(g, e, dt) {
     const live = g.bullets.filter(b => b.giant).length;
-    const cap = 1 + (e.t > 6 ? 1 : 0);          // one, then two
 
     e.timer -= dt;
-    if (e.timer > 0 || live >= cap) return;
-    e.timer = rnd(1.6, 2.6);
+    if (e.timer > 0 || live >= e.cap) return;
+    e.timer = rnd(1.0, 1.9);
+    e.cap = rndi(1, 3);                         // how crowded it gets, re-rolled
 
     const dir = rndi(0, 3);
     const lane = rndi(g.lo + 1, g.hi - 1);      // keep the whole body on the grid
-    const s = g.speed * 0.5;                    // slow: it is unavoidable, not fast
+    const s = g.speed * 0.68;
 
     const spec = {
-      giant: true, r: 1.35, emoji: '🛸', color: '#f472b6',
+      giant: true, round: true, r: 1.05,        // circle, sized to the sprite
+      emoji: pick(HULKS), color: '#f472b6',
       // no trail: it is sized from the radius, and at this radius it would
-      // paint a dot big enough to hide the saucer
-      trailRate: 0, life: 24, spin: 0
+      // paint a dot big enough to hide the sprite
+      trailRate: 0, life: 24, spin: rnd(-1.1, 1.1)
     };
     if (dir === 0) { spec.x = lane; spec.y = g.lo - 2.2; spec.vy = s; }
     if (dir === 1) { spec.x = lane; spec.y = g.hi + 2.2; spec.vy = -s; }
     if (dir === 2) { spec.x = g.lo - 2.2; spec.y = lane; spec.vx = s; }
     if (dir === 3) { spec.x = g.hi + 2.2; spec.y = lane; spec.vx = -s; }
 
-    const b = spawnBullet(g, spec);
-    b.rot = Math.atan2(spec.vy || 0, spec.vx || 0) + Math.PI / 2;
-
-    /* Collision is a box, so draw a box — and draw it on the missile's real
-       position, not snapped to cells, or the footprint lags the saucer. */
-    b.draw = (bb, gg, ctx, R) => {
-      const beat = 0.5 + 0.5 * Math.sin(bb.t * 5);
-      const cell = R.S(1) - R.S(0);
-      const half = (bb.r + 0.02) * cell;
-      const x = R.S(bb.x) - half, y = R.S(bb.y) - half, side = half * 2;
-
-      ctx.save();
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(x, y, side, side, 12);
-      else ctx.rect(x, y, side, side);
-
-      ctx.globalAlpha = 0.13 + 0.06 * beat;
-      ctx.fillStyle = '#f472b6';
-      ctx.fill();
-
-      ctx.globalAlpha = 0.4 + 0.3 * beat;
-      ctx.strokeStyle = '#f472b6';
-      ctx.lineWidth = 2;
-      ctx.shadowColor = '#f472b6';
-      ctx.shadowBlur = 12;
-      ctx.stroke();
-      ctx.restore();
-
-      R.emoji(bb.x, bb.y, '🛸', 2.5, 1, Math.sin(bb.t * 3) * 0.12);
-    };
+    // no footprint drawing: the sprite is the hitbox now, so the default
+    // emoji renderer (size = r × 2.4) is exactly what you have to dodge
+    spawnBullet(g, spec);
 
     Sound.charge();
     shake(g.fx, 4);

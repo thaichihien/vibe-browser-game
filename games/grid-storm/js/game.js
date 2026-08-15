@@ -283,8 +283,16 @@ export function createGame(canvas, hooks = {}) {
 
     for (const b of g.bullets) {
       if (!b.deadly) continue;
-      if (Math.abs(b.x - g.player.px) < PLAYER.half + b.r &&
-          Math.abs(b.y - g.player.py) < PLAYER.half + b.r) {
+
+      const dx = Math.abs(b.x - g.player.px), dy = Math.abs(b.y - g.player.py);
+
+      // `round` bullets are big enough that a box would claim corners the
+      // sprite never covers, so they get a proper circle-vs-box test
+      const hit = b.round
+        ? (Math.max(0, dx - PLAYER.half) ** 2 + Math.max(0, dy - PLAYER.half) ** 2) < b.r * b.r
+        : dx < PLAYER.half + b.r && dy < PLAYER.half + b.r;
+
+      if (hit) {
         g.kill('hit by incoming fire', b.emoji || '💥');
         return;
       }
