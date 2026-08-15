@@ -109,15 +109,15 @@ function findSpot(g, e) {
   return spots.length ? spots[rndi(0, spots.length - 1)] : null;
 }
 
-/* ── 🔢 NUMBER RUN — step 1 to 6, in order ─────────────────────────────── */
+/* ── 🔢 NUMBER RUN — step 1 to 5, in order ─────────────────────────────── */
 
-const DIGITS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣'];
+const DIGITS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'];
 const LIMIT = 12;          // seconds to finish the route
 const PENALTY = [5, 6];    // +5 missiles, for 6 seconds
 
 export const numbers = {
   id: 'numbers', name: 'NUMBER RUN', emoji: '🔢', tint: '#4ade80',
-  blurb: 'Touch 1 to 6 in order before the clock runs out. Out of order and you start again.',
+  blurb: 'Touch 1 to 5 in order before the clock runs out. Out of order and you start again.',
   duration: LIMIT + 1.2, weight: 3,
 
   start(g, e) {
