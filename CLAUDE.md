@@ -54,9 +54,12 @@ A single-file SPA styled as "ARCADE.SYS" (neon/cyberpunk). Its shape matters mor
 ### Games — `games/*.html`
 
 One file per game: inline `<style>`, markup, inline `<script>`, emoji for all art. No image,
-audio or font assets, and no network requests — **`games/magic-shooter.html` is the sole
-exception**, loading Three.js from a CDN (test its CDN-failure fallback when touching it).
-`games/jungle-king.backup.html` is a leftover backup, not linked from the hub.
+audio or font assets, and no network requests — with **two exceptions**:
+`games/magic-shooter.html` loads Three.js from a CDN (test its CDN-failure fallback when
+touching it), and `games/grid-storm/` ships ~17 MB of background music in `music/*.mp3`
+(its `js/music.js` treats a failed track as "skip to the next one", so the game still runs
+if the files are missing). `games/jungle-king.backup.html` is a leftover backup, not linked
+from the hub.
 
 Recurring house conventions across games: Web Audio synth for sound with a mute flag in
 `localStorage` under `<gameCamelCase>.muted` (`coCaNgua.muted`, `coThu.muted`,

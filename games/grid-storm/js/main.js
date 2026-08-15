@@ -3,6 +3,7 @@
 import { createGame } from './game.js';
 import { fitCanvas, BOARD_SIDE } from './render.js';
 import { Sound } from './audio.js';
+import { Music } from './music.js';
 import { EVENTS, FIRST_EVENT } from './events/index.js';
 
 const $ = sel => document.querySelector(sel);
@@ -14,6 +15,7 @@ const chips    = $('#chips');
 const banner   = $('#banner');
 const overlay  = $('#overlay');
 const btnMute  = $('#btn-mute');
+const btnMusic = $('#btn-music');
 const btnRules = $('#btn-rules');
 const rules    = $('#rules');
 
@@ -28,7 +30,27 @@ const startAt = Number(params.get('t') || 0);
 const devMode = params.get('dev') === '1';
 
 Sound.init();
+Music.init();
+Music.setMaster(Sound.muted);
+
 btnMute.textContent = Sound.muted ? '🔇' : '🔊';
+btnMusic.classList.toggle('dim', Music.off);
+
+/* one place that keeps the two buttons honest about the current state */
+function syncAudioUi() {
+  btnMute.textContent = Sound.muted ? '🔇' : '🔊';
+  btnMusic.classList.toggle('dim', Music.off || Sound.muted);
+}
+
+function toggleMute() {
+  Music.setMaster(Sound.toggle());
+  syncAudioUi();
+}
+
+function toggleMusic() {
+  Music.toggle();
+  syncAudioUi();
+}
 
 fitCanvas(canvas, BOARD_SIDE);
 
@@ -149,6 +171,8 @@ function gameOver(score, reason, emoji) {
 
 function play() {
   Sound.unlock();
+  Music.begin();          // the click that got us here is the gesture audio needs
+  Music.resume();
   clearTimeout(overT);
   overlay.className = 'overlay';
   rules.classList.remove('show');
@@ -164,6 +188,7 @@ function togglePause() {
 
   if (paused) {
     game.stop();
+    Music.pause();
     overlay.className = 'overlay show soft';
     overlay.innerHTML = `
       <div class="panel">
@@ -174,9 +199,16 @@ function togglePause() {
     $('#btn-resume').onclick = togglePause;
   } else {
     overlay.className = 'overlay';
+    Music.resume();
     game.resume();
   }
 }
+
+/* a tab in the background should not keep playing */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) Music.pause();
+  else if (!paused) Music.resume();
+});
 
 /* ── input ────────────────────────────────────────────────────────────── */
 
@@ -193,7 +225,8 @@ let repeatT = 0;
 document.addEventListener('keydown', ev => {
   const k = ev.key.toLowerCase();
 
-  if (k === 'm') { btnMute.textContent = Sound.toggle() ? '🔇' : '🔊'; return; }
+  if (k === 'm') { toggleMute(); return; }
+  if (k === 'n') { toggleMusic(); return; }
   if (k === 'p' || k === 'escape') { togglePause(); return; }
   if (k === 'r' && !game.g.alive) { play(); return; }
 
@@ -246,7 +279,8 @@ document.querySelectorAll('.dpad button').forEach(b => {
   b.addEventListener('mousedown', go);
 });
 
-btnMute.onclick = () => { btnMute.textContent = Sound.toggle() ? '🔇' : '🔊'; };
+btnMute.onclick = toggleMute;
+btnMusic.onclick = toggleMusic;
 btnRules.onclick = () => rules.classList.toggle('show');
 $('#rules-close').onclick = () => rules.classList.remove('show');
 $('#codex-list').innerHTML = codexHtml();
@@ -261,4 +295,7 @@ if (devMode) {
 
 titleScreen();
 
-window.game = game;   // handy for a headless verification pass
+// handy for a headless verification pass
+window.game = game;
+window.music = Music;
+window.sound = Sound;

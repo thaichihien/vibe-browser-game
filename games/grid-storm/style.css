@@ -55,6 +55,7 @@ body {
   cursor: pointer;
 }
 .tbtn:hover { color: var(--ink); border-color: #33507d; }
+.tbtn.dim { opacity: 0.38; }
 
 /* ── hud ───────────────────────────────────────────────────────────────── */
 
