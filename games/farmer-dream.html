@@ -301,7 +301,8 @@
   <span class="stat">📅 Day <span id="dayNum">1</span></span>
   <button id="waterBtn" draggable="true" title="Drag onto a thirsty plot">🪣 Water</button>
   <span class="spacer"></span>
-  <button id="soundBtn">🔊</button>
+  <button id="soundBtn" title="Sound effects">🔊</button>
+  <button id="musicBtn" title="Background music">🎵</button>
   <button id="helpBtn">❓ How to play</button>
 </div>
 
@@ -840,6 +841,131 @@ const Sound = (() => {
       if (!muted) { ensure(); this.plant(); }
       return muted;
     }
+  };
+})();
+
+/* Background music: the four tracks in a shuffled order, with a breath of
+   quiet between them. This is the only part of the game that loads an asset,
+   so it stays defensive — a missing or unplayable file just moves the
+   playlist along and the farm keeps running without it. */
+const Music = (() => {
+  const KEY = 'farmerDream.musicOff';
+  const DIR = 'music/farmer-dream/';
+  const TRACKS = [
+    'morning-in-the-meadow.mp3',
+    'morning-in-the-meadow-2.mp3',
+    'dusty-afternoon.mp3',
+    'dusty-afternoon-2.mp3'
+  ];
+
+  const VOLUME = 0.22;        // under the sound effects — this is background
+  const REST   = [2.0, 5.0];  // seconds of quiet between tracks
+  const FADE   = 2.0;         // seconds to fade a track in
+
+  let off = false;
+  try { off = localStorage.getItem(KEY) === '1'; } catch (e) {}
+
+  let els = [], order = [], pos = 0;
+  let current = null, started = false, hidden = false, resting = false;
+  let restTimer = 0, fadeTimer = 0;
+
+  // Shuffle, but never let a track follow itself across the wrap.
+  function reshuffle() {
+    const last = order[order.length - 1];
+    const next = els.slice();
+    for (let i = next.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = next[i]; next[i] = next[j]; next[j] = t;
+    }
+    if (next.length > 1 && next[0] === last) { const t = next[0]; next[0] = next[1]; next[1] = t; }
+    order = next;
+    pos = 0;
+  }
+
+  function audible() { return started && !off && !Sound.muted && !hidden; }
+
+  function refresh() {
+    if (audible()) {
+      if (resting) { if (!restTimer) scheduleNext(); }
+      else if (!current) playNext();
+      else if (current.paused) current.play().catch(() => finished(current));
+      return;
+    }
+    if (current) current.pause();
+    clearTimeout(restTimer);
+    restTimer = 0;
+  }
+
+  function finished(el) {
+    if (el !== current) return;
+    resting = true;
+    current = null;
+    if (audible()) scheduleNext();
+  }
+
+  function scheduleNext() {
+    clearTimeout(restTimer);
+    const rest = (REST[0] + Math.random() * (REST[1] - REST[0])) * 1000;
+    restTimer = setTimeout(() => {
+      restTimer = 0;
+      resting = false;
+      if (audible()) playNext();
+    }, rest);
+  }
+
+  function playNext() {
+    if (pos >= order.length) reshuffle();
+    const el = order[pos++];
+    current = el;
+    el.currentTime = 0;
+    el.volume = 0;
+    el.play().then(() => fadeIn(el)).catch(() => finished(el));
+  }
+
+  function fadeIn(el) {
+    clearInterval(fadeTimer);
+    const step = VOLUME / (FADE * 20);
+    fadeTimer = setInterval(() => {
+      if (el !== current) { clearInterval(fadeTimer); return; }
+      el.volume = Math.min(VOLUME, el.volume + step);
+      if (el.volume >= VOLUME) clearInterval(fadeTimer);
+    }, 50);
+  }
+
+  return {
+    init() {
+      els = TRACKS.map(name => {
+        const el = new Audio(DIR + name);
+        el.preload = 'none';          // 16 MB total — only fetch what we play
+        el.volume = 0;
+        el.addEventListener('ended', () => finished(el));
+        el.addEventListener('error', () => finished(el));   // bad file? next one
+        return el;
+      });
+      reshuffle();
+    },
+    // Called from the first real gesture — browsers refuse audio before one.
+    begin() {
+      if (started) return;
+      started = true;
+      refresh();
+    },
+    get off() { return off; },
+    // What is on the speakers right now, or null between tracks. Read-only —
+    // the UI does not show it, but it makes the playlist verifiable.
+    get playing() {
+      if (!current || current.paused) return null;
+      return decodeURIComponent(current.src.split('/').pop());
+    },
+    toggle() {
+      off = !off;
+      try { localStorage.setItem(KEY, off ? '1' : '0'); } catch (e) {}
+      refresh();
+      return off;
+    },
+    // The 🔊 button mutes everything, so re-check when it changes.
+    syncMaster() { refresh(); },
+    setHidden(v) { hidden = v; refresh(); }
   };
 })();
 
@@ -1809,6 +1935,7 @@ function reject(i) {
 }
 
 function boot() {
+  Music.begin();     // reached only from a click on Start/Continue — a real gesture
   buildGrid();
   buildPen();
   setView(S.view);
@@ -1851,6 +1978,12 @@ function boot() {
 
 function syncSoundBtn() { $('soundBtn').textContent = Sound.muted ? '🔇' : '🔊'; }
 
+function syncMusicBtn() {
+  const b = $('musicBtn');
+  b.textContent = Music.off ? '🎵' : '🎶';
+  b.style.opacity = Music.off ? '.45' : '1';
+}
+
 document.querySelectorAll('.tab').forEach(btn => {
   btn.onclick = () => {
     S.shopTab = btn.dataset.tab;
@@ -1863,7 +1996,8 @@ document.querySelectorAll('.tab').forEach(btn => {
   };
 });
 
-$('soundBtn').onclick = () => { Sound.toggle(); syncSoundBtn(); };
+$('soundBtn').onclick = () => { Sound.toggle(); syncSoundBtn(); Music.syncMaster(); };
+$('musicBtn').onclick = () => { Music.toggle(); syncMusicBtn(); };
 $('helpBtn').onclick  = () => { $('rulesModal').hidden = false; };
 $('homeShopBtn').onclick = () => { $('homeShopDrawer').hidden = !$('homeShopDrawer').hidden; };
 $('waterBtn').ondragstart = e => e.dataTransfer.setData('type', 'water');
@@ -1927,7 +2061,12 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// Hand the music back the CPU (and the speakers) while the tab is away.
+document.addEventListener('visibilitychange', () => Music.setHidden(document.hidden));
+
 syncSoundBtn();
+Music.init();
+syncMusicBtn();
 
 const hasSave = (() => {
   try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; }
