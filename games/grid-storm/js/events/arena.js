@@ -113,7 +113,7 @@ function findSpot(g, e) {
 
 const DIGITS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣'];
 const LIMIT = 12;          // seconds to finish the route
-const PENALTY = [5, 10];   // +5 missiles, for 10 seconds
+const PENALTY = [5, 6];    // +5 missiles, for 6 seconds
 
 export const numbers = {
   id: 'numbers', name: 'NUMBER RUN', emoji: '🔢', tint: '#4ade80',
