@@ -499,4 +499,73 @@ export const crossfire = {
   }
 };
 
-export const BARRAGE = [laser, bombRain, boomerang, flower, spiral, meteor, snake, turret, seekers, crossfire];
+/* ── 🍥 CORKSCREW — a chain winding in from a corner to the middle ──────── */
+
+export const corkscrew = {
+  id: 'corkscrew', name: 'CORKSCREW', emoji: '🍥', tint: '#38bdf8',
+  blurb: 'A line of shots winds in from one corner, lap by lap, all the way to the centre.',
+  duration: 18, weight: 3,
+
+  start(g, e) {
+    e.path = spiralPath(g, rndi(0, 3), Math.random() < 0.5);
+    e.speed = g.speed * 1.6;
+    e.timer = 0.3;
+  },
+
+  update(g, e, dt) {
+    e.timer -= dt;
+    if (e.timer > 0) return;
+    e.timer = rnd(0.2, 0.5);
+
+    const path = e.path;
+    const b = spawnBullet(g, {
+      x: path[0][0], y: path[0][1],
+      emoji: '💫', r: 0.32, color: '#38bdf8',
+      trailRate: 0.05, life: 40, spin: 5
+    });
+
+    b.pos = 0;
+    b.update = (bb, gg, d) => {
+      bb.pos += e.speed * d;
+
+      const i = Math.floor(bb.pos);
+      if (i >= path.length - 1) { bb.life = -1; return; }
+
+      const t = bb.pos - i;
+      const [ax, ay] = path[i], [bx, by] = path[i + 1];
+      bb.x = ax + (bx - ax) * t;
+      bb.y = ay + (by - ay) * t;
+    };
+
+    b.onExpire = (bb, gg) => {
+      burst(gg.fx, bb.x, bb.y, '#38bdf8', 8, 3, '✨');
+    };
+
+    Sound.fire();
+  }
+};
+
+/* Every cell of the grid in spiral order, outermost lap first, ending dead
+   centre. Built clockwise from the top-left, then rotated a quarter turn at a
+   time to move the start corner, and mirrored to wind the other way. */
+function spiralPath(g, turns, ccw) {
+  let top = g.lo, bottom = g.hi, left = g.lo, right = g.hi;
+  let path = [];
+
+  while (left <= right && top <= bottom) {
+    for (let x = left; x <= right; x++) path.push([x, top]);
+    top++;
+    for (let y = top; y <= bottom; y++) path.push([right, y]);
+    right--;
+    if (top <= bottom) { for (let x = right; x >= left; x--) path.push([x, bottom]); bottom--; }
+    if (left <= right) { for (let y = bottom; y >= top; y--) path.push([left, y]); left++; }
+  }
+
+  const c = g.center;
+  for (let i = 0; i < turns; i++) path = path.map(([x, y]) => [c - (y - c), c + (x - c)]);
+  if (ccw) path = path.map(([x, y]) => [2 * c - x, y]);
+
+  return path;
+}
+
+export const BARRAGE = [laser, bombRain, boomerang, flower, spiral, meteor, snake, turret, seekers, crossfire, corkscrew];
