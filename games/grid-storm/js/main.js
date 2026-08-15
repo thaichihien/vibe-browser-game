@@ -135,7 +135,7 @@ function titleScreen() {
   overlay.innerHTML = `
     <div class="panel">
       <h1 class="title">GRID <span>STORM</span></h1>
-      <p class="tag">One cube. Nine by nine. It does not stay that way.</p>
+      <p class="tag">One cube. Five by five. It does not stay that way.</p>
 
       <div class="keys">
         <div class="keycap">W</div><div class="keycap">A</div>
