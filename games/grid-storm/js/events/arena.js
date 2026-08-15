@@ -109,27 +109,27 @@ function findSpot(g, e) {
   return spots.length ? spots[rndi(0, spots.length - 1)] : null;
 }
 
-/* ── 🔢 NUMBER RUN — step 1 to 5, in order ─────────────────────────────── */
+/* ── 🔢 NUMBER RUN — step 1 to 6, in order ─────────────────────────────── */
 
-const DIGITS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'];
+const DIGITS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣'];
 const LIMIT = 12;          // seconds to finish the route
 const PENALTY = [5, 10];   // +5 missiles, for 10 seconds
 
 export const numbers = {
   id: 'numbers', name: 'NUMBER RUN', emoji: '🔢', tint: '#4ade80',
-  blurb: 'Touch 1 to 5 in order before the clock runs out. Out of order and you start again.',
+  blurb: 'Touch 1 to 6 in order before the clock runs out. Out of order and you start again.',
   duration: LIMIT + 1.2, weight: 3,
 
   start(g, e) {
     e.step = 0;
     e.done = false;
 
-    // five distinct cells, none of them under your feet
+    // one distinct cell per digit, none of them under your feet
     const [pcx, pcy] = g.playerCell();
     const taken = new Set([key(pcx, pcy)]);
     e.cells = [];
 
-    while (e.cells.length < 5) {
+    while (e.cells.length < DIGITS.length) {
       const [cx, cy] = g.randCell();
       if (taken.has(key(cx, cy))) continue;
       taken.add(key(cx, cy));
@@ -151,7 +151,7 @@ export const numbers = {
             Sound.pickup();
             burst(gg.fx, cx, cy, '#4ade80', 12, 4, '✨');
 
-            if (e.step >= 5) {
+            if (e.step >= DIGITS.length) {
               e.done = true;
               Sound.bloom();
               confetti(gg.fx, cx, cy, ['🎉', '✨', '🟩'], 18);
@@ -250,18 +250,21 @@ export const giants = {
   }
 };
 
-/* ── 🔻 CLOSING ARENA — 9×9 down to 3×3, then back ─────────────────────── */
+/* ── 🔻 CLOSING ARENA — one warning, then straight to 3×3 ──────────────── */
 
-const STAGES = [7, 5, 3];
+const CLOSED = 3;
+const WARN = 0.5;      // all the notice you get
+const HOLD = 8;        // seconds trapped in the middle
 
 export const shrink = {
   id: 'shrink', name: 'CLOSING ARENA', emoji: '🔻', tint: '#ff2e5b',
-  blurb: 'The whole grid contracts to 3×3. Be standing in the middle when it does.',
-  duration: 19, weight: 3, solo: true,
+  blurb: 'Half a second of warning, then the grid slams shut to 3×3 — with the missiles still coming.',
+  duration: WARN + HOLD + 3, weight: 3,
+  solo: true, keepBase: true,   // no other event, but the normal fire continues
 
   start(g, e) {
     e.stage = 0;
-    e.timer = 1.4;
+    e.timer = 0.25;
     e.doomed = null;
 
     e.hz = addHazard(g, {
@@ -287,24 +290,25 @@ export const shrink = {
     e.timer -= dt;
     if (e.timer > 0) return;
 
-    // warning first, then the walls actually move in
+    // the warning has run out — the walls slam all the way in at once
     if (e.doomed !== null) {
       const size = e.doomed;
       e.doomed = null;
 
       g.setGrid(size);
       Sound.blast();
-      shake(g.fx, 12);
-      flash(g.fx, '#ff2e5b', 0.25);
-      ring(g.fx, g.center, g.center, '#ff2e5b', size / 2 + 1.5, size / 2, 0.5, 6);
+      shake(g.fx, 16);
+      flash(g.fx, '#ff2e5b', 0.35);
+      ring(g.fx, g.center, g.center, '#ff2e5b', BIG_SIZE / 2, size / 2, 0.5, 7);
 
-      e.timer = e.stage >= STAGES.length ? 4.5 : 2.0;
+      e.timer = HOLD;
       return;
     }
 
-    if (e.stage < STAGES.length) {
-      e.doomed = STAGES[e.stage++];
-      e.timer = 1.7;
+    if (e.stage === 0) {
+      e.stage = 1;
+      e.doomed = CLOSED;
+      e.timer = WARN;
       Sound.charge();
       return;
     }

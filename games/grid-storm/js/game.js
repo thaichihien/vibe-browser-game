@@ -343,8 +343,10 @@ export function createGame(canvas, hooks = {}) {
         if (g.spawnBonusT <= 0) g.spawnBonus = 0;
       }
 
-      // solo set-pieces and the giant-missile event own the spawner
-      const held = g.events.some(e => e.def.solo || e.def.suppressBase);
+      // solo set-pieces and the giant-missile event own the spawner, unless a
+      // solo event asks for the normal fire to keep coming (`keepBase`)
+      const held = g.events.some(e =>
+        (e.def.solo && !e.def.keepBase) || e.def.suppressBase);
       g.spawnT -= dt;
       if (!held && g.time > 1 && g.spawnT <= 0) { g.spawnT = g.spawnEvery; spawnVolley(); }
     } else {
