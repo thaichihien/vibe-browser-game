@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Grid Storm</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <a class="link" href="../../index.html">← ARCADE.SYS</a>
+  <div class="topbar-actions">
+    <button class="tbtn" id="btn-rules">HOW TO PLAY</button>
+    <button class="tbtn" id="btn-mute" title="Mute (M)">🔊</button>
+  </div>
+</header>
+
+<main class="stage">
+
+  <div class="hud">
+    <div class="stat big"><span>TIME</span><b id="hud-time">0.0</b></div>
+    <div class="stat"><span>BEST</span><b id="hud-best">0</b></div>
+    <div class="stat"><span>GRID</span><b id="hud-grid">9×9</b></div>
+    <div class="stat next"><span>NEXT STORM</span><b id="hud-next">60s</b></div>
+  </div>
+
+  <div id="chips" class="chips"></div>
+
+  <div class="board-wrap">
+    <canvas id="board" width="720" height="720" aria-label="grid storm board"></canvas>
+    <div id="banner" class="banner"></div>
+    <div id="overlay" class="overlay"></div>
+  </div>
+
+  <div class="dpad" aria-hidden="true">
+    <button data-dir="0,-1">▲</button>
+    <div>
+      <button data-dir="-1,0">◀</button>
+      <button data-dir="0,1">▼</button>
+      <button data-dir="1,0">▶</button>
+    </div>
+  </div>
+
+  <p class="footnote">
+    <b>WASD</b> / arrows to step · <b>P</b> pause · <b>M</b> mute · <b>R</b> restart after a run
+  </p>
+</main>
+
+<div id="rules" class="rules">
+  <div class="rules-panel">
+    <button class="rules-close" id="rules-close">✕</button>
+    <h2>📖 GRID STORM</h2>
+    <p class="rules-lead">
+      You are the cube. One key press = one cell. Touch anything hostile, or step off the
+      grid, and the run ends. The score is simply how long you last.
+    </p>
+    <ol class="rules-steps">
+      <li><b>0–60s</b> — plain missiles from the edges of a 9×9 grid. One, then two, then more.</li>
+      <li><b>60s</b> — the grid tears open to 15×15 <i>permanently</i>, and the new edges fire too.</li>
+      <li><b>After that</b> — a random storm event every few seconds, forever, stacking up to two at a time.</li>
+    </ol>
+    <h3>Every event</h3>
+    <ul class="codex" id="codex-list"></ul>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
