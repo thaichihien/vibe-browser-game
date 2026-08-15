@@ -166,8 +166,7 @@ export function createGame(canvas, hooks = {}) {
 
     if (extra > g.lastStep) {
       g.lastStep = extra;
-      floatText(g.fx, g.center, g.center - 1.4, '+1 MISSILE', '#ff9800', 1.6, 0.55);
-      Sound.charge();
+      Sound.charge();          // heard, not spelled out
       shake(g.fx, 5);
     }
   }
@@ -204,12 +203,15 @@ export function createGame(canvas, hooks = {}) {
     if (hooks.onEvent) hooks.onEvent(def);   // the banner names it; no canvas echo
   }
 
+  /* jittered, so storms never land on a countable beat */
+  const nextGap = () => rnd(EVENT_GAP[0], EVENT_GAP[1]);
+
   function scheduleEvents(dt) {
     if (!g.firstDone) {
       if (g.time >= FIRST_EVENT_AT) {
         g.firstDone = true;
         startEvent(FIRST_EVENT);
-        g.nextEventAt = g.time + EVENT_GAP;
+        g.nextEventAt = g.time + nextGap();
       }
       return;
     }
@@ -226,7 +228,7 @@ export function createGame(canvas, hooks = {}) {
 
     // solo set-pieces own the board, so the clock restarts when they finish
     g.nextEventAt = g.time +
-      (def.solo ? def.duration + 2.5 : def.relief ? 3 : EVENT_GAP);
+      (def.solo ? def.duration + rnd(2, 5) : def.relief ? 3 : nextGap());
   }
 
   function updateEvents(dt) {

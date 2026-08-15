@@ -27,7 +27,7 @@ export const COUNT_STEP = {
 };
 
 export const FIRST_EVENT_AT = 20;   // grid expansion fires here, always
-export const EVENT_GAP      = 20;   // and a new event every 20s after that
+export const EVENT_GAP      = [18, 25];  // then a new event every 18-25s, jittered
 export const MAX_CONCURRENT = 2;
 
 export const PLAYER = {
