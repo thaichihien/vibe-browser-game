@@ -2,7 +2,7 @@
    event scheduler. Everything an event can touch hangs off `g`. */
 
 import {
-  BASE_SIZE, BIG_SIZE, CENTER, BASE_SPAWN, COUNT_STEP, FIRST_EVENT_AT, EVENT_GAP,
+  BASE_SIZE, BIG_SIZE, CENTER, PAD, BASE_SPAWN, COUNT_STEP, FIRST_EVENT_AT, EVENT_GAP,
   MAX_CONCURRENT, PLAYER, PALETTE, pick, rnd, rndi, clamp, lerp
 } from './config.js';
 import { makeRenderer } from './render.js';
@@ -23,6 +23,7 @@ export function createGame(canvas, hooks = {}) {
     timeScale: 1, speed: BASE_SPAWN.speed[0],
     spawnT: 0, spawnEvery: BASE_SPAWN.every[0], spawnCount: BASE_SPAWN.count[0],
     frozenCount: null, expandedAt: 0, lastStep: 0,
+    spawnBonus: 0, spawnBonusT: 0, zoomK: 1,
     expand: null, deathReason: '', deathEmoji: '💀',
     flags: { gravity: false, fog: 0, wrap: false, ice: false, invert: 0 },
     player: { gx: 0, gy: 0, px: 0, py: 0, face: '🙂', shield: 0, iFrames: 0 }
@@ -33,6 +34,13 @@ export function createGame(canvas, hooks = {}) {
   g.playerCell = () => [Math.round(g.player.px), Math.round(g.player.py)];
   g.randCell = () => [rndi(g.lo, g.hi), rndi(g.lo, g.hi)];
   g.inside = (x, y) => x >= g.lo && x <= g.hi && y >= g.lo && y <= g.hi;
+
+  /* Resize the live area mid-run (the shrinking arena). Anyone left outside
+     the new bounds is outside the grid, with everything that implies. */
+  g.setGrid = (n, reason = 'crushed by the shrinking arena', emoji = '🧱') => {
+    setSize(n);
+    if (!g.inside(g.player.gx, g.player.gy)) g.kill(reason, emoji, true);
+  };
 
   g.expandGrid = () => {
     if (g.size === BIG_SIZE) return;
@@ -77,6 +85,12 @@ export function createGame(canvas, hooks = {}) {
     g.player.face = '💀';
 
     if (hooks.onDeath) hooks.onDeath(Math.floor(g.time), reason, emoji);
+  };
+
+  /* a timed penalty: N extra missiles per volley for a while */
+  g.addMissiles = (n, seconds) => {
+    g.spawnBonus = n;
+    g.spawnBonusT = seconds;
   };
 
   /* a forced move (gravity, black hole) — ignores scramble and ice */
@@ -162,7 +176,7 @@ export function createGame(canvas, hooks = {}) {
     const extra = since < COUNT_STEP.first ? 0
       : Math.min(COUNT_STEP.max, 1 + Math.floor((since - COUNT_STEP.first) / COUNT_STEP.every));
 
-    g.spawnCount = g.frozenCount + extra;
+    g.spawnCount = g.frozenCount + extra + g.spawnBonus;
 
     if (extra > g.lastStep) {
       g.lastStep = extra;
@@ -295,9 +309,15 @@ export function createGame(canvas, hooks = {}) {
       scheduleEvents(dt);
       updateEvents(dt);
 
-      const soloOn = g.events.some(e => e.def.solo);
+      if (g.spawnBonusT > 0) {
+        g.spawnBonusT -= dt;
+        if (g.spawnBonusT <= 0) g.spawnBonus = 0;
+      }
+
+      // solo set-pieces and the giant-missile event own the spawner
+      const held = g.events.some(e => e.def.solo || e.def.suppressBase);
       g.spawnT -= dt;
-      if (!soloOn && g.time > 1 && g.spawnT <= 0) { g.spawnT = g.spawnEvery; spawnVolley(); }
+      if (!held && g.time > 1 && g.spawnT <= 0) { g.spawnT = g.spawnEvery; spawnVolley(); }
     } else {
       g.deadT += dt;
       dt *= 0.35;                         // slow-motion death
@@ -307,6 +327,10 @@ export function createGame(canvas, hooks = {}) {
       g.expand.t += dt;
       if (g.expand.t > 1.2) g.expand = null;
     }
+
+    // the camera follows the live grid, so expanding and shrinking both glide
+    const targetZ = (BIG_SIZE + PAD * 2) / (g.size + PAD * 2);
+    g.zoomK += (targetZ - g.zoomK) * Math.min(1, dt * 3.2);
 
     updateBullets(g, dt);
     updateHazards(g, dt);
@@ -338,6 +362,8 @@ export function createGame(canvas, hooks = {}) {
       g.events = []; g.recent = []; g.firstDone = false; g.nextEventAt = 0;
       g.time = 0; g.deadT = 0; g.timeScale = 1; g.expand = null;
       g.frozenCount = null; g.expandedAt = 0; g.lastStep = 0;
+      g.spawnBonus = 0; g.spawnBonusT = 0;
+      g.zoomK = (BIG_SIZE + PAD * 2) / (BASE_SIZE + PAD * 2);
       g.flags = { gravity: false, fog: 0, wrap: false, ice: false, invert: 0 };
       setSize(BASE_SIZE);
 

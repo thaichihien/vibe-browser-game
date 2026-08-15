@@ -2,10 +2,10 @@
    They set a flag on `g.flags` in start() and must clear it in end() — the
    engine never guesses. */
 
-import { spawnBullet, addHazard } from '../bullets.js';
+import { addHazard } from '../bullets.js';
 import { floatText, confetti } from '../fx.js';
 import { Sound } from '../audio.js';
-import { rnd, pick, clamp } from '../config.js';
+import { pick, clamp } from '../config.js';
 
 /* ── 🧲 GRAVITY ────────────────────────────────────────────────────────── */
 
@@ -138,46 +138,6 @@ export const invert = {
   end(g) { g.flags.invert = 0; }
 };
 
-/* ── 👻 MIRROR GHOST ───────────────────────────────────────────────────── */
-
-export const ghost = {
-  id: 'ghost', name: 'MIRROR GHOST', emoji: '👻', tint: '#9fb3c8',
-  blurb: 'Your reflection copies you across the board — and shoots back.',
-  duration: 14, weight: 2,
-
-  start(g, e) {
-    e.timer = 1.4;
-    e.hz = addHazard(g, {
-      life: this.duration + 0.4, under: false, ignoreTime: true,
-      draw: (h, gg, ctx, R) => {
-        const [x, y] = mirror(gg);
-        R.emoji(x, y, '👻', 0.85, 0.85, Math.sin(h.t * 3) * 0.2);
-      }
-    });
-  },
-
-  update(g, e, dt) {
-    e.timer -= dt;
-    if (e.timer > 0) return;
-    e.timer = rnd(1.3, 2.0);
-
-    const [x, y] = mirror(g);
-    const dx = g.player.px - x, dy = g.player.py - y;
-    const d = Math.hypot(dx, dy) || 1;
-    const s = g.speed * 1.15;
-
-    spawnBullet(g, {
-      x, y, vx: (dx / d) * s, vy: (dy / d) * s,
-      emoji: '💀', r: 0.24, color: '#9fb3c8', trailRate: 0.04
-    });
-    Sound.fire();
-  },
-
-  end(g, e) { if (e.hz) e.hz.dead = true; }
-};
-
-const mirror = g => [2 * g.center - g.player.px, 2 * g.center - g.player.py];
-
 /* ── 💠 SHIELD DROP — the one kind thing in the storm ──────────────────── */
 
 export const shieldDrop = {
@@ -208,4 +168,4 @@ export const shieldDrop = {
   end(g, e) { if (e.hz) e.hz.dead = true; }
 };
 
-export const MODIFIER = [gravity, fog, warp, haste, ice, invert, ghost, shieldDrop];
+export const MODIFIER = [gravity, fog, warp, haste, ice, invert, shieldDrop];

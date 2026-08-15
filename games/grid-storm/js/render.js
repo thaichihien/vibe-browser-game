@@ -5,7 +5,7 @@
    hazard/bullet draw callback — so events describe themselves in cell space
    and never touch pixels. */
 
-import { CELL, PAD, BIG_SIZE, COLORS, clamp, lerp } from './config.js';
+import { CELL, PAD, BIG_SIZE, COLORS, clamp } from './config.js';
 
 export function makeRenderer(canvas) {
   const ctx = canvas.getContext('2d');
@@ -163,16 +163,10 @@ export function makeRenderer(canvas) {
     }
   };
 
-  /* how much to magnify so `size + 2·PAD` cells fill the fixed board */
+  /* The engine glides `zoomK` toward whatever the live grid needs, so growing
+     and shrinking the arena are both animated by the same one number. */
   function zoomFor(g) {
-    const full = BIG_SIZE + PAD * 2;
-    const kOf = size => full / (size + PAD * 2);
-    const target = kOf(g.size);
-
-    if (!g.expand) return target;
-    const old = g.expand.oldHi - g.expand.oldLo + 1;
-    const t = clamp(g.expand.t / 0.9, 0, 1);
-    return lerp(kOf(old), target, t * t * (3 - 2 * t));
+    return g.zoomK || (BIG_SIZE + PAD * 2) / (g.size + PAD * 2);
   }
 
   function drawGrid(g) {

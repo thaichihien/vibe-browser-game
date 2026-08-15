@@ -5,9 +5,10 @@
 import { BARRAGE } from './barrage.js';
 import { SETPIECE, expand } from './setpiece.js';
 import { MODIFIER } from './modifier.js';
+import { ARENA } from './arena.js';
 
 export const FIRST_EVENT = expand;
-export const EVENTS = [...BARRAGE, ...SETPIECE, ...MODIFIER];
+export const EVENTS = [...BARRAGE, ...SETPIECE, ...ARENA, ...MODIFIER];
 
 /* Weighted pick that avoids what is already running and what just ran. */
 export function pickEvent(activeIds, recentIds, allowSolo) {

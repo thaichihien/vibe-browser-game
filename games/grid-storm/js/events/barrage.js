@@ -184,7 +184,7 @@ export const boomerang = {
 
 export const flower = {
   id: 'flower', name: 'FLOWER MINES', emoji: '🌸', tint: '#ff4dd2',
-  blurb: 'It parks on a cell, blooms, and sprays eight petals outward.',
+  blurb: 'It parks on a cell, blooms, and fires a petal up, down, left and right.',
   duration: 14, weight: 3,
 
   start(g, e) { e.timer = 0.4; },
@@ -228,8 +228,9 @@ export const flower = {
       burst(gg.fx, bb.x, bb.y, '#ff4dd2', 16, 5, '🌺');
       ring(gg.fx, bb.x, bb.y, '#ff4dd2', 0.2, 1.8, 0.4, 4);
 
-      for (let i = 0; i < 8; i++) {
-        const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+      // four petals, straight along the grid lines
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2;
         const s = gg.speed * 0.95;
         spawnBullet(gg, {
           x: bb.x, y: bb.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
@@ -249,20 +250,25 @@ export const spiral = {
 
   start(g, e) {
     e.angle = rnd(0, 6.28);
-    e.timer = 0.4;
+    e.timer = 1.8;        // it winds up in plain sight before it throws anything
     e.arms = rndi(3, 4);
     e.spinDir = Math.random() < 0.5 ? 1 : -1;
     e.hz = addHazard(g, {
       life: this.duration + 0.5, under: false, ignoreTime: true,
-      draw: (h, gg, ctx, R) => R.emoji(gg.center, gg.center, '🌀', 1.0, 0.9, e.angle)
+      draw: (h, gg, ctx, R) => {
+        // grows while it spins up, so the wind-up reads as a warning
+        const wind = Math.min(1, h.t / 1.8);
+        R.emoji(gg.center, gg.center, '🌀', 0.4 + 0.6 * wind, 0.5 + 0.4 * wind, e.angle);
+        if (wind < 1) R.arc(gg.center, gg.center, 0.8 + wind * 0.7, 0, Math.PI * 2 * wind, '#00e5ff', 3, 0.7);
+      }
     });
   },
 
   update(g, e, dt) {
-    e.angle += dt * 1.5 * e.spinDir;
+    e.angle += dt * (0.6 + 0.9 * Math.min(1, e.t / 3)) * e.spinDir;
     e.timer -= dt;
     if (e.timer > 0) return;
-    e.timer = 0.14;
+    e.timer = e.t < 4 ? 0.22 : 0.14;   // eases into its full rate
 
     for (let i = 0; i < e.arms; i++) {
       const a = e.angle + (i / e.arms) * Math.PI * 2;
@@ -361,56 +367,6 @@ export const snake = {
   },
 
   end(g, e) { if (e.body) e.body.life = -1; }
-};
-
-/* ── 💥 SHOCKWAVE ───────────────────────────────────────────────────────── */
-
-export const pulse = {
-  id: 'pulse', name: 'SHOCKWAVE', emoji: '💥', tint: '#ffeb3b',
-  blurb: 'Rings of shrapnel blow outward — mind the gap in each one.',
-  duration: 14, weight: 2,
-
-  start(g, e) { e.timer = 0.5; },
-
-  update(g, e, dt) {
-    e.timer -= dt;
-    if (e.timer > 0) return;
-    e.timer = rnd(3.2, 4.2);
-
-    const [cx, cy] = g.randCell();
-    const gap = rnd(0, Math.PI * 2);
-
-    addHazard(g, {
-      life: 0.9, under: true,
-      draw: (h, gg, ctx, R) => {
-        R.emoji(cx, cy, '💥', 0.5 + h.t * 0.7, 0.4 + 0.6 * Math.abs(Math.sin(h.t * 12)));
-      },
-      onEnd: (h, gg) => {
-        Sound.blast();
-        shake(gg.fx, 6);
-        for (let w = 0; w < 3; w++) {
-          const shots = 18;
-          for (let i = 0; i < shots; i++) {
-            const a = (i / shots) * Math.PI * 2;
-            const da = Math.abs(((a - gap + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-            if (da < 0.55) continue;   // the escape gap
-            const s = gg.speed * (0.75 + w * 0.06);
-            spawnBullet(gg, {
-              x: cx, y: cy, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
-              r: 0.18, color: '#ffeb3b', shape: 'star', spin: 5,
-              life: 12, trailRate: 0.08,
-              // waves are staggered by holding still, and are harmless until they fly
-              delay: w * 0.45, deadly: w === 0,
-              update: (bb, ggg, d) => {
-                if (bb.delay > 0) { bb.delay -= d; if (bb.delay <= 0) bb.deadly = true; return; }
-                bb.x += bb.vx * d; bb.y += bb.vy * d;
-              }
-            });
-          }
-        }
-      }
-    });
-  }
 };
 
 /* ── 🔫 SENTRIES ────────────────────────────────────────────────────────── */
@@ -543,4 +499,4 @@ export const crossfire = {
   }
 };
 
-export const BARRAGE = [laser, bombRain, boomerang, flower, spiral, meteor, snake, pulse, turret, seekers, crossfire];
+export const BARRAGE = [laser, bombRain, boomerang, flower, spiral, meteor, snake, turret, seekers, crossfire];
