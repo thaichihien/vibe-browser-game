@@ -211,10 +211,10 @@ const HULKS = ['🛸', '👾', '🌑', '🪨', '🔮'];
 
 export const giants = {
   id: 'giants', name: 'GIANT MISSILES', emoji: '🛸', tint: '#f472b6',
-  blurb: 'Huge, and the only thing firing. Up to three of them at once.',
+  blurb: 'Huge, and the only thing firing. Up to four of them at once.',
   duration: 16, weight: 3, suppressBase: true,
 
-  start(g, e) { e.timer = 0.5; e.cap = rndi(2, 3); },
+  start(g, e) { e.timer = 0.4; e.cap = rndi(2, 4); },
 
   update(g, e, dt) {
     const live = g.bullets.filter(b => b.giant).length;
@@ -222,14 +222,14 @@ export const giants = {
     e.timer -= dt;
     if (e.timer > 0 || live >= e.cap) return;
 
-    // below two, refill quickly so the board holds the 2-3 it promises;
+    // below two, refill quickly so the board holds the 2-4 it promises;
     // above that, pace them out
-    e.timer = live + 1 < 2 ? rnd(0.2, 0.4) : rnd(0.6, 1.2);
-    e.cap = rndi(2, 3);                         // how crowded it gets, re-rolled
+    e.timer = live + 1 < 2 ? rnd(0.08, 0.18) : rnd(0.2, 0.45);
+    e.cap = rndi(2, 4);                         // how crowded it gets, re-rolled
 
     const dir = rndi(0, 3);
     const lane = rndi(g.lo + 1, g.hi - 1);      // keep the whole body on the grid
-    const s = g.speed * 0.7;
+    const s = g.speed * 0.93;
 
     const spec = {
       giant: true, round: true, r: 1.05,        // circle, sized to the sprite
