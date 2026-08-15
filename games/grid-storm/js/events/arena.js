@@ -254,7 +254,7 @@ export const giants = {
 
 const CLOSED = 3;
 const WARN = 1.0;      // all the notice you get
-const SETTLE = 1.0;    // quiet beat after the slam, before the fire resumes
+const SETTLE = 1.5;    // quiet beat after the slam, before the fire resumes
 const HOLD = 8;        // seconds trapped in the middle
 
 export const shrink = {
