@@ -503,7 +503,7 @@ export const crossfire = {
 
 export const corkscrew = {
   id: 'corkscrew', name: 'CORKSCREW', emoji: '🍥', tint: '#38bdf8',
-  blurb: 'A line of shots winds in from one corner, lap by lap, all the way to the centre.',
+  blurb: 'Shots wind in from one corner, lap by lap, all the way to the centre.',
   duration: 18, weight: 3,
 
   start(g, e) {
@@ -515,7 +515,7 @@ export const corkscrew = {
   update(g, e, dt) {
     e.timer -= dt;
     if (e.timer > 0) return;
-    e.timer = rnd(0.2, 0.5);
+    e.timer = rnd(1.0, 1.5);
 
     const path = e.path;
     const b = spawnBullet(g, {
