@@ -17,9 +17,8 @@ export const BASE_SPAWN = {
   ramp:   150             // seconds to reach the right-hand values
 };
 
-export const FIRST_EVENT_AT = 60;   // grid expansion fires here, always
-export const EVENT_GAP      = [15, 8.5];  // gap between events, early -> late
-export const GAP_RAMP       = 240;  // seconds until gaps are at their shortest
+export const FIRST_EVENT_AT = 20;   // grid expansion fires here, always
+export const EVENT_GAP      = 20;   // and a new event every 20s after that
 export const MAX_CONCURRENT = 2;
 
 export const PLAYER = {

@@ -19,7 +19,7 @@ Một bộ sưu tập mini game viết bằng HTML/CSS/JavaScript thuần và vi
 - `survive-through-night.html` - Sinh tồn qua đêm và giữ lửa luôn cháy.
 - `magic-shooter.html` - Bắn súng 3D góc nhìn thứ nhất với 20 loại đạn phép thuật.
 - `last-quarter/` - Bạn là nhân vật trong 3 máy arcade khác nhau: nghe theo người chơi vừa đủ để máy không bị dẹp.
-- `grid-storm/` - Bản mở rộng của Grid Survival: sau 60 giây lưới nở ra 9×9 và 25 sự kiện bão đạn lần lượt đổ xuống.
+- `grid-storm/` - Bản mở rộng của Grid Survival: sau 20 giây lưới nở ra 9×9 và 25 sự kiện bão đạn lần lượt đổ xuống.
 
 ## Chạy local
 
