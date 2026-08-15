@@ -179,6 +179,14 @@ export function createGame(canvas, hooks = {}) {
 
     g.spawnCount = g.frozenCount + extra + g.spawnBonus;
 
+    /* A shrunken arena cannot take a full volley — the same missiles arrive in
+       a fraction of the space. Scale the fire to the lanes actually available
+       (only once the grid has been expanded, so the 5×5 opening is untouched). */
+    if (g.size < BIG_SIZE) {
+      g.spawnCount = Math.max(1, Math.min(g.spawnCount, Math.ceil(g.size / 2)));
+      g.spawnEvery *= 1.6;
+    }
+
     if (extra > g.lastStep) {
       g.lastStep = extra;
       Sound.charge();          // heard, not spelled out
