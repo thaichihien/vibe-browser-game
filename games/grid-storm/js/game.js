@@ -2,7 +2,7 @@
    event scheduler. Everything an event can touch hangs off `g`. */
 
 import {
-  BASE_SIZE, BIG_SIZE, CENTER, BASE_SPAWN, FIRST_EVENT_AT, EVENT_GAP,
+  BASE_SIZE, BIG_SIZE, CENTER, BASE_SPAWN, COUNT_STEP, FIRST_EVENT_AT, EVENT_GAP,
   MAX_CONCURRENT, PLAYER, PALETTE, pick, rnd, rndi, clamp, lerp
 } from './config.js';
 import { makeRenderer } from './render.js';
@@ -22,6 +22,7 @@ export function createGame(canvas, hooks = {}) {
     events: [], recent: [], firstDone: false, nextEventAt: 0,
     timeScale: 1, speed: BASE_SPAWN.speed[0],
     spawnT: 0, spawnEvery: BASE_SPAWN.every[0], spawnCount: BASE_SPAWN.count[0],
+    frozenCount: null, expandedAt: 0, lastStep: 0,
     expand: null, deathReason: '', deathEmoji: '💀',
     flags: { gravity: false, fog: 0, wrap: false, ice: false, invert: 0 },
     player: { gx: 0, gy: 0, px: 0, py: 0, face: '🙂', shield: 0, iFrames: 0 }
@@ -37,8 +38,11 @@ export function createGame(canvas, hooks = {}) {
     if (g.size === BIG_SIZE) return;
     g.expand = { t: 0, oldLo: g.lo, oldHi: g.hi };
     setSize(BIG_SIZE);
-    g.spawnCount += 1;          // the new edges shoot too
-    g.spawnEvery *= 0.85;
+
+    // the new edges shoot too, and that volley size is then frozen — from here
+    // on it only steps up on the schedule in COUNT_STEP
+    g.expandedAt = g.time;
+    g.frozenCount = g.spawnCount + 1;
   };
 
   g.kill = (reason, emoji = '💀', unblockable = false) => {
@@ -143,11 +147,29 @@ export function createGame(canvas, hooks = {}) {
 
   function rampBase() {
     const p = clamp(g.time / BASE_SPAWN.ramp, 0, 1);
+
     g.speed = lerp(BASE_SPAWN.speed[0], BASE_SPAWN.speed[1], p);
-    g.spawnCount = Math.round(lerp(BASE_SPAWN.count[0], BASE_SPAWN.count[1], p)) +
-      (g.size === BIG_SIZE ? 1 : 0);
     g.spawnEvery = lerp(BASE_SPAWN.every[0], BASE_SPAWN.every[1], p) *
       (g.size === BIG_SIZE ? 0.85 : 1);
+
+    if (g.frozenCount === null) {
+      // still on the small grid: one missile, then two, then more
+      g.spawnCount = Math.round(lerp(BASE_SPAWN.count[0], BASE_SPAWN.count[1], p));
+      return;
+    }
+
+    const since = g.time - g.expandedAt;
+    const extra = since < COUNT_STEP.first ? 0
+      : Math.min(COUNT_STEP.max, 1 + Math.floor((since - COUNT_STEP.first) / COUNT_STEP.every));
+
+    g.spawnCount = g.frozenCount + extra;
+
+    if (extra > g.lastStep) {
+      g.lastStep = extra;
+      floatText(g.fx, g.center, g.center - 1.4, '+1 MISSILE', '#ff9800', 1.6, 0.55);
+      Sound.charge();
+      shake(g.fx, 5);
+    }
   }
 
   function spawnVolley() {
@@ -179,8 +201,7 @@ export function createGame(canvas, hooks = {}) {
     if (g.recent.length > 4) g.recent.shift();
 
     if (!def.relief) { Sound.event(); shake(g.fx, 7); }
-    if (hooks.onEvent) hooks.onEvent(def);
-    floatText(g.fx, g.center, g.lo - 0.6, def.name, def.tint, 1.8, 0.62);
+    if (hooks.onEvent) hooks.onEvent(def);   // the banner names it; no canvas echo
   }
 
   function scheduleEvents(dt) {
@@ -314,6 +335,7 @@ export function createGame(canvas, hooks = {}) {
       g.bullets = []; g.hazards = []; g.fx = makeFx();
       g.events = []; g.recent = []; g.firstDone = false; g.nextEventAt = 0;
       g.time = 0; g.deadT = 0; g.timeScale = 1; g.expand = null;
+      g.frozenCount = null; g.expandedAt = 0; g.lastStep = 0;
       g.flags = { gravity: false, fog: 0, wrap: false, ice: false, invert: 0 };
       setSize(BASE_SIZE);
 

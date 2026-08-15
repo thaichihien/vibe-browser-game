@@ -12,9 +12,18 @@ export const CENTER = (BIG_SIZE - 1) / 2;   // 7 — same centre at both sizes
 /* the opening act: plain missiles, one at a time, then more */
 export const BASE_SPAWN = {
   every:  [1.30, 0.55],   // seconds between volleys, t=0 -> t=RAMP
-  count:  [1, 3],         // missiles per volley (+1 once the grid expands)
+  count:  [1, 3],         // missiles per volley, before the grid expands
   speed:  [2.4, 4.3],     // cells per second
   ramp:   150             // seconds to reach the right-hand values
+};
+
+/* Once the grid expands the volley size stops sliding and steps instead:
+   frozen at whatever the expansion set it to, then one more missile after
+   `first` seconds, and one more every `every` seconds after that. */
+export const COUNT_STEP = {
+  first: 60,
+  every: 100,
+  max:   6                // never more than +6 over the frozen count
 };
 
 export const FIRST_EVENT_AT = 20;   // grid expansion fires here, always

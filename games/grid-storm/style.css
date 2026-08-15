@@ -79,11 +79,6 @@ body {
 .stat span { display: block; font-size: 10px; letter-spacing: 0.16em; color: var(--dim); }
 .stat b { font-size: 20px; font-variant-numeric: tabular-nums; }
 .stat.big b { color: var(--neon); font-size: 26px; }
-.stat.next b { color: var(--cool); }
-.stat.next.soon { border-color: var(--hot); animation: pulse 0.5s infinite alternate; }
-.stat.next.soon b { color: var(--hot); }
-
-@keyframes pulse { to { box-shadow: 0 0 18px rgba(255, 46, 91, 0.55); } }
 
 .chips {
   display: flex;

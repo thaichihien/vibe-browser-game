@@ -4,15 +4,12 @@ import { createGame } from './game.js';
 import { fitCanvas, BOARD_SIDE } from './render.js';
 import { Sound } from './audio.js';
 import { EVENTS, FIRST_EVENT } from './events/index.js';
-import { FIRST_EVENT_AT } from './config.js';
 
 const $ = sel => document.querySelector(sel);
 
 const canvas   = $('#board');
 const hudTime  = $('#hud-time');
 const hudBest  = $('#hud-best');
-const hudGrid  = $('#hud-grid');
-const hudNext  = $('#hud-next');
 const chips    = $('#chips');
 const banner   = $('#banner');
 const overlay  = $('#overlay');
@@ -51,12 +48,6 @@ function hud(g) {
 
   hudT += 1;
   if (hudT % 6) return;
-
-  hudGrid.textContent = `${g.size}×${g.size}`;
-
-  const until = g.firstDone ? g.nextEventAt - g.time : FIRST_EVENT_AT - g.time;
-  hudNext.textContent = until > 0 ? Math.ceil(until) + 's' : '—';
-  hudNext.parentElement.classList.toggle('soon', until > 0 && until <= 3);
 
   const sig = g.events.map(e => e.def.id).join('|');
   if (sig !== lastSig) {
