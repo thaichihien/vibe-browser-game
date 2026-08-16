@@ -39,6 +39,15 @@ export function burst(fx, x, y, color, count = 14, power = 5, emoji = null) {
   }
 }
 
+/* one particle, spelled out — the cosmetic effects want their own sizes,
+   lifetimes and velocities rather than another named emitter each */
+export function emit(fx, o) {
+  fx.items.push({
+    kind: 'spark', x: 0, y: 0, vx: 0, vy: 0, grav: 0,
+    size: 0.09, color: '#fff', emoji: null, t: 0, life: 0.5, ...o
+  });
+}
+
 export function ring(fx, x, y, color, r0 = 0.2, r1 = 3, life = 0.5, width = 3) {
   fx.items.push({ kind: 'ring', x, y, color, r0, r1, width, t: 0, life });
 }

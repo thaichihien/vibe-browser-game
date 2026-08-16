@@ -6,18 +6,22 @@ import { Sound } from './audio.js';
 import { Music } from './music.js';
 import { EVENTS, FIRST_EVENT } from './events/index.js';
 import { FIRST_EVENT_AT } from './config.js';
+import { Shop, runReward } from './cosmetics.js';
+import { createShopUI } from './shop.js';
 
 const $ = sel => document.querySelector(sel);
 
 const canvas   = $('#board');
 const hudTime  = $('#hud-time');
 const hudBest  = $('#hud-best');
+const hudCred  = $('#hud-credits');
 const chips    = $('#chips');
 const banner   = $('#banner');
 const overlay  = $('#overlay');
 const btnMute  = $('#btn-mute');
 const btnMusic = $('#btn-music');
 const btnRules = $('#btn-rules');
+const btnShop  = $('#btn-shop-top');
 const rules    = $('#rules');
 
 const BEST_KEY = 'gridStorm.best';
@@ -37,6 +41,21 @@ const startEvent = params.get('event');   // ?event=laser queues it from the off
 Sound.init();
 Music.init();
 Music.setMaster(Sound.muted);
+Shop.init();
+
+const shop = createShopUI(showWallet);
+
+function showWallet() {
+  hudCred.textContent = Shop.credits.toLocaleString();
+}
+showWallet();
+
+/* browsing mid-run would otherwise leave the board live behind the panel */
+function openShop() {
+  if (shop.isOpen()) { shop.close(); return; }
+  if (game.g.alive && game.g.running && game.g.time > 0) togglePause();
+  shop.open();
+}
 
 btnMute.textContent = Sound.muted ? '🔇' : '🔊';
 btnMusic.classList.toggle('dim', Music.off);
@@ -159,20 +178,31 @@ function titleScreen() {
       <p class="touch-hint">Use the ▲ ◀ ▼ ▶ pad below to move, ⏸ to pause.</p>
 
       <button class="btn big" id="btn-play">▶ START</button>
+      <button class="btn ghost" id="btn-shop-title">🛒 SHOP — CUBES &amp; EFFECTS</button>
       <button class="btn ghost" id="btn-codex">📖 EVENT CODEX (${CODEX.length})</button>
     </div>`;
 
   $('#btn-play').onclick = play;
+  $('#btn-shop-title').onclick = () => shop.open();
   $('#btn-codex').onclick = () => rules.classList.add('show');
 }
 
 let overT = 0;
 
 function gameOver(score, reason, emoji) {
-  if (score > best) {
+  const isBest = score > best;
+  if (isBest) {
     best = score;
     localStorage.setItem(BEST_KEY, String(best));
   }
+
+  // the run pays out once, here, before the panel that reports it — and the
+  // panel must quote the numbers that were paid, not whatever `g` holds by the
+  // time the delayed overlay renders
+  const storms = game.g.stormsSeen;
+  const pay = runReward(score, storms, isBest);
+  Shop.earn(pay.total);
+  showWallet();
 
   // held back so the death explosion plays — but a restart in that window must
   // cancel it, or the panel drops on top of a live run
@@ -188,11 +218,20 @@ function gameOver(score, reason, emoji) {
           <div><span>SURVIVED</span><b>${score}s</b></div>
           <div><span>BEST</span><b>${best}s</b></div>
         </div>
+        <div class="payout">
+          <div class="pay-total">+ ${pay.total.toLocaleString()} ⚡</div>
+          <div class="pay-parts">
+            ${score}s = ${pay.time} ⚡ · ${storms} storm${storms === 1 ? '' : 's'} = ${pay.storm} ⚡
+            ${pay.bonus ? ` · <b>NEW BEST +${pay.bonus} ⚡</b>` : ''}
+          </div>
+        </div>
         <button class="btn big" id="btn-again">↻ RUN IT BACK</button>
+        <button class="btn ghost" id="btn-shop">🛒 SPEND ${Shop.credits.toLocaleString()} ⚡</button>
         <button class="btn ghost" id="btn-home">← ARCADE.SYS</button>
       </div>`;
 
     $('#btn-again').onclick = play;
+    $('#btn-shop').onclick = () => shop.open();
     $('#btn-home').onclick = () => { window.location.href = '../../index.html'; };
   }, 900);
 }
@@ -253,8 +292,16 @@ let repeatT = 0;
 document.addEventListener('keydown', ev => {
   const k = ev.key.toLowerCase();
 
+  // a panel on top of the game owns Escape before the pause toggle does
+  if (k === 'escape' && shop.isOpen()) { shop.close(); return; }
+  if (k === 'escape' && rules.classList.contains('show')) {
+    rules.classList.remove('show');
+    return;
+  }
+
   if (k === 'm') { toggleMute(); return; }
   if (k === 'n') { toggleMusic(); return; }
+  if (k === 'b') { openShop(); return; }
   if (k === 'p' || k === 'escape') { togglePause(); return; }
   if (k === 'r' && !game.g.alive) { play(); return; }
 
@@ -338,6 +385,7 @@ $('#btn-pause').addEventListener('click', ev => { ev.preventDefault(); togglePau
 
 btnMute.onclick = toggleMute;
 btnMusic.onclick = toggleMusic;
+btnShop.onclick = openShop;
 btnRules.onclick = () => rules.classList.toggle('show');
 $('#rules-close').onclick = () => rules.classList.remove('show');
 $('#codex-list').innerHTML = codexHtml();

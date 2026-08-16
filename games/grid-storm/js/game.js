@@ -2,13 +2,14 @@
    event scheduler. Everything an event can touch hangs off `g`. */
 
 import {
-  BASE_SIZE, BIG_SIZE, CENTER, PAD, BASE_SPAWN, COUNT_STEP, FIRST_EVENT_AT, EVENT_GAP,
+  BASE_SIZE, BIG_SIZE, CENTER, PAD, BASE_SPAWN, COUNT_STEPS, FIRST_EVENT_AT, EVENT_GAP,
   MAX_CONCURRENT, PLAYER, PALETTE, pick, rnd, rndi, clamp, lerp
 } from './config.js';
 import { makeRenderer } from './render.js';
 import { makeFx, updateFx, burst, ring, floatText, flash, shake } from './fx.js';
 import { updateBullets, updateHazards, edgeShot } from './bullets.js';
 import { Sound } from './audio.js';
+import { Shop } from './cosmetics.js';
 import { EVENTS, FIRST_EVENT, pickEvent } from './events/index.js';
 
 export function createGame(canvas, hooks = {}) {
@@ -22,8 +23,9 @@ export function createGame(canvas, hooks = {}) {
     events: [], recent: [], firstDone: false, nextEventAt: 0,
     timeScale: 1, speed: BASE_SPAWN.speed[0],
     spawnT: 0, spawnEvery: BASE_SPAWN.every[0], spawnCount: BASE_SPAWN.count[0],
-    frozenCount: null, expandedAt: 0, lastStep: 0,
+    frozenCount: null, lastStep: 0,
     spawnBonus: 0, spawnBonusT: 0, zoomK: 1,
+    stormsSeen: 0, cos: {},               // storms survived (payout) + effect scratch
     forcedNext: null, lockEvent: false,   // debug picker
     expand: null, deathReason: '', deathEmoji: '💀',
     flags: { gravity: false, fog: 0, wrap: false, ice: false, invert: 0 },
@@ -49,8 +51,7 @@ export function createGame(canvas, hooks = {}) {
     setSize(BIG_SIZE);
 
     // the new edges shoot too, and that volley size is then frozen — from here
-    // on it only steps up on the schedule in COUNT_STEP
-    g.expandedAt = g.time;
+    // on it only steps up on the marks in COUNT_STEPS
     g.frozenCount = g.spawnCount + 1;
   };
 
@@ -156,6 +157,9 @@ export function createGame(canvas, hooks = {}) {
 
     Sound.step();
     if (g.flags.ice) burst(g.fx, g.player.px, g.player.py, '#7cf7ff', 4, 2, '❄️');
+
+    const ef = Shop.effect();
+    if (ef.step) ef.step(g.fx, g.player.px, g.player.py, g.cos, g.time);
   };
 
   /* ── base missiles: the plain Grid Survival volley, ramping up ────────── */
@@ -173,9 +177,9 @@ export function createGame(canvas, hooks = {}) {
       return;
     }
 
-    const since = g.time - g.expandedAt;
-    const extra = since < COUNT_STEP.first ? 0
-      : Math.min(COUNT_STEP.max, 1 + Math.floor((since - COUNT_STEP.first) / COUNT_STEP.every));
+    // one more missile at each mark on the clock — 100s, 200s, 400s, 600s
+    let extra = 0;
+    for (const mark of COUNT_STEPS) if (g.time >= mark) extra++;
 
     g.spawnCount = g.frozenCount + extra + g.spawnBonus;
 
@@ -221,6 +225,7 @@ export function createGame(canvas, hooks = {}) {
 
     g.recent.push(def.id);
     if (g.recent.length > 4) g.recent.shift();
+    g.stormsSeen++;                          // the run's credit bounty is per storm
 
     if (!def.relief) { Sound.event(); shake(g.fx, 7); }
     if (hooks.onEvent) hooks.onEvent(def);   // the banner names it; no canvas echo
@@ -380,6 +385,13 @@ export function createGame(canvas, hooks = {}) {
     g.player.px += (g.player.gx - g.player.px) * k;
     g.player.py += (g.player.gy - g.player.py) * k;
 
+    // the equipped trail effect: cosmetic only, and it rides the same particle
+    // buffer as everything else, so it dies with the run
+    if (g.alive) {
+      const ef = Shop.effect();
+      if (ef.tick) ef.tick(g.fx, g.player.px, g.player.py, g.cos, dt, g.time);
+    }
+
     collide();
     updateFace();
 
@@ -400,8 +412,9 @@ export function createGame(canvas, hooks = {}) {
       g.bullets = []; g.hazards = []; g.fx = makeFx();
       g.events = []; g.recent = []; g.firstDone = false; g.nextEventAt = 0;
       g.time = 0; g.deadT = 0; g.timeScale = 1; g.expand = null;
-      g.frozenCount = null; g.expandedAt = 0; g.lastStep = 0;
+      g.frozenCount = null; g.lastStep = 0;
       g.spawnBonus = 0; g.spawnBonusT = 0;
+      g.stormsSeen = 0; g.cos = {};
       // forcedNext/lockEvent deliberately survive a restart, so a debug
       // selection still applies to the next run
       g.zoomK = (BIG_SIZE + PAD * 2) / (BASE_SIZE + PAD * 2);

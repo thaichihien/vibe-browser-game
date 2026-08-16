@@ -12,7 +12,8 @@
 <header class="topbar">
   <a class="link" href="../../index.html">← ARCADE.SYS</a>
   <div class="topbar-actions">
-    <button class="tbtn" id="btn-rules">HOW TO PLAY</button>
+    <button class="tbtn" id="btn-shop-top" title="Shop (B)">🛒<span class="lbl"> SHOP</span></button>
+    <button class="tbtn" id="btn-rules">📖<span class="lbl"> HOW TO PLAY</span></button>
     <button class="tbtn" id="btn-music" title="Music (N)">🎵</button>
     <button class="tbtn" id="btn-mute" title="Mute everything (M)">🔊</button>
   </div>
@@ -23,6 +24,7 @@
   <div class="hud">
     <div class="stat big"><span>TIME</span><b id="hud-time">0.0</b></div>
     <div class="stat"><span>BEST</span><b id="hud-best">0</b></div>
+    <div class="stat cred"><span>⚡ CREDITS</span><b id="hud-credits">0</b></div>
   </div>
 
   <div id="chips" class="chips"></div>
@@ -59,6 +61,11 @@
     <p class="rules-lead">
       You are the cube. One key press = one cell. Touch anything hostile, or step off the
       grid, and the run ends. The score is simply how long you last.
+    </p>
+    <p class="rules-lead">
+      Every run pays out ⚡ credits — one per second, plus a bounty per storm you
+      lived through. Spend them in the <b>🛒 SHOP</b> on cubes and trail effects.
+      They are cosmetic: nothing you buy changes how the storm behaves.
     </p>
     <h3>Every event</h3>
     <ul class="codex" id="codex-list"></ul>

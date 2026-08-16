@@ -355,6 +355,51 @@ canvas {
   .touch-hint { display: block; }
 }
 
+/* ── tablets: a console layout ─────────────────────────────────────────────
+
+   Room enough to stop pretending it is a phone. The board keeps the middle of
+   the screen and the controls flank it like a handheld: the four keys open out
+   into the usual console diamond down the right edge, pause alone on the left
+   where a moving thumb cannot reach it.
+
+   `display: contents` dissolves the .controls box so its two clusters become
+   flex items of .play itself — that is what lets them sit on opposite sides of
+   the board instead of in a bar beneath it. (.board-wrap has to be told to
+   stretch: a row that aligns its items anywhere but `stretch` would let the
+   wrap size to its own canvas while the canvas sizes to the wrap.)
+
+   The height floor keeps a landscape phone out of here — it gets the column
+   layout further down, and a three-row diamond would eat its whole screen.   */
+
+@media (hover: none) and (pointer: coarse) and (min-width: 561px) and (min-height: 621px),
+       (min-width: 561px) and (max-width: 820px) and (min-height: 621px) {
+  :root { --key: 62px; }
+
+  .play { flex-direction: row; gap: 12px; align-items: stretch; }
+  .controls { display: contents; }
+  .board-wrap { align-self: stretch; }
+
+  .key.pause {
+    order: -1;                                        /* left edge of the row */
+    align-self: center;
+    margin-left: max(4px, env(safe-area-inset-left));
+  }
+
+  .dpad {
+    align-self: center;
+    margin-right: max(4px, env(safe-area-inset-right));
+    grid-template-rows: repeat(3, var(--key));
+    gap: 10px;
+  }
+  .dpad .up    { grid-area: 1 / 2; }
+  .dpad .left  { grid-area: 2 / 1; }
+  .dpad .right { grid-area: 2 / 3; }
+  .dpad .down  { grid-area: 3 / 2; }
+
+  /* round, like the face buttons they are standing in for */
+  .key { border-radius: 50%; font-size: 24px; }
+}
+
 /* ── phones ───────────────────────────────────────────────────────────── */
 
 @media (max-width: 560px) {
@@ -448,6 +493,206 @@ canvas {
   border-radius: 8px;
   padding: 8px 12px;
 }
+/* ── shop ──────────────────────────────────────────────────────────────── */
+
+.shop {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 5, 11, 0.86);
+  z-index: 25;
+  padding: 16px;
+}
+.shop.show { display: flex; }
+
+.shop-panel {
+  position: relative;
+  width: min(860px, 100%);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px 18px 12px;
+}
+
+.shop-head {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding-right: 34px;
+}
+.shop-head h2 { margin: 0; font-size: 17px; letter-spacing: 0.14em; }
+
+.wallet {
+  margin-left: auto;
+  background: #0c1424;
+  border: 1px solid #33507d;
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 13px;
+  color: var(--dim);
+}
+.wallet b { color: #ffe14d; font-variant-numeric: tabular-nums; }
+
+.shop-tabs { flex: none; display: flex; gap: 8px; margin: 12px 0 10px; }
+.stab {
+  background: #0c1424;
+  border: 1px solid var(--line);
+  color: var(--dim);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+}
+.stab i { font-style: normal; opacity: 0.6; font-size: 11px; margin-left: 4px; }
+.stab.on { color: var(--ink); border-color: var(--neon); background: rgba(63, 240, 122, 0.12); }
+
+/* detail beside the grid on a desktop, above it on a phone */
+.shop-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 14px;
+}
+
+.shop-detail {
+  flex: none;
+  width: 196px;
+  text-align: center;
+  align-self: flex-start;
+}
+.shop-detail canvas {
+  width: 180px; height: 180px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  box-shadow: none;
+  margin-bottom: 10px;
+}
+.det-name { font-size: 14px; letter-spacing: 0.12em; color: var(--tier); }
+.det-tier {
+  display: inline-block;
+  margin: 6px 0 8px;
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  color: var(--tier);
+  border: 1px solid var(--tier);
+  border-radius: 999px;
+  padding: 2px 9px;
+  opacity: 0.85;
+}
+.det-blurb { color: var(--dim); font-size: 12px; line-height: 1.55; margin: 0 0 12px; }
+
+.btn.small { padding: 9px; font-size: 12.5px; letter-spacing: 0.12em; }
+.btn[disabled] { opacity: 0.5; cursor: default; border-color: var(--line); background: #0c1424; }
+.btn[disabled]:hover { box-shadow: none; background: #0c1424; }
+
+.shop-grid {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+  align-content: start;
+  padding-right: 4px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--tier);
+  background: #0b1322;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+}
+.tile:hover { background: #12203a; }
+.tile.sel { border-color: var(--cool); box-shadow: 0 0 0 1px var(--cool); }
+.tile.on  { background: rgba(63, 240, 122, 0.1); }
+/* locked, but still legible — you have to want the thing to buy it, so an
+   unowned cube keeps its colour and only loses a little contrast */
+.tile.locked { border-style: dashed; }
+.tile.locked .tile-art { opacity: 0.82; }
+.tile.locked:hover .tile-art { opacity: 1; }
+
+.tile-art { height: 54px; display: grid; place-items: center; }
+.tile-art.em { font-size: 34px; }
+.tile-art canvas { border: none; border-radius: 0; box-shadow: none; }
+
+.tile-name {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+  text-align: center;
+  line-height: 1.25;
+  min-height: 2.3em;             /* two-word names must not shift the row */
+}
+.tile-foot { font-size: 9.5px; color: #ffe14d; letter-spacing: 0.06em; }
+.tile.owned .tile-foot { color: #4a5a76; }
+.tile.on .tile-foot { color: var(--neon); }
+
+.shop-foot {
+  flex: none;
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #55647f;
+  text-align: center;
+}
+.shop-foot b { color: var(--dim); }
+
+/* ── the run payout ───────────────────────────────────────────────────── */
+
+.payout {
+  background: #0b1322;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin: 10px 0 4px;
+}
+.pay-total { font-size: 19px; color: #ffe14d; letter-spacing: 0.06em; }
+.pay-parts { font-size: 11px; color: var(--dim); line-height: 1.5; margin-top: 2px; }
+.pay-parts b { color: var(--neon); }
+
+/* ── phones: stack the shop, shorten the top bar ──────────────────────── */
+
+@media (max-width: 700px) {
+  .shop-panel { padding: 14px 12px 10px; max-height: 92vh; }
+  .shop-body { flex-direction: column; }
+  .shop-detail {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 4px 12px;
+    text-align: left;
+    align-items: center;
+  }
+  .shop-detail canvas { grid-row: span 4; width: 120px; height: 120px; margin: 0; }
+  .det-tier { justify-self: start; margin: 0; }
+  .det-blurb { margin: 0; }
+  .btn.small { margin: 4px 0 0; }
+  .shop-grid { max-height: 42vh; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); }
+  .tile-art { height: 44px; }
+  .tile-art.em { font-size: 28px; }
+  .shop-foot { display: none; }
+}
+
+@media (max-width: 560px) {
+  .tbtn .lbl { display: none; }
+  .stat.cred b { font-size: 15px; }
+}
+
 /* ── debug panel (?dev=1) ──────────────────────────────────────────────── */
 
 .devpanel {

@@ -18,13 +18,11 @@ export const BASE_SPAWN = {
 };
 
 /* Once the grid expands the volley size stops sliding and steps instead:
-   frozen at whatever the expansion set it to, then one more missile after
-   `first` seconds, and one more every `every` seconds after that. */
-export const COUNT_STEP = {
-  first: 60,
-  every: 100,
-  max:   6                // never more than +6 over the frozen count
-};
+   frozen at whatever the expansion set it to, then one more missile at each of
+   these marks — measured from the start of the run, not from the expansion.
+   Four steps and that is the ceiling; past 600s the storm escalates through
+   events alone. */
+export const COUNT_STEPS = [100, 200, 400, 600];
 
 export const FIRST_EVENT_AT = 20;   // grid expansion fires here, always
 export const EVENT_GAP      = [18, 25];  // then a new event every 18-25s, jittered

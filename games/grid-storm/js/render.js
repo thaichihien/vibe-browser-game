@@ -6,6 +6,7 @@
    and never touch pixels. */
 
 import { CELL, PAD, BIG_SIZE, COLORS, clamp } from './config.js';
+import { Shop, drawCube } from './cosmetics.js';
 
 export function makeRenderer(canvas) {
   const ctx = canvas.getContext('2d');
@@ -235,31 +236,16 @@ export function makeRenderer(canvas) {
   function drawPlayer(g) {
     const p = g.player;
     const x = S(p.px), y = S(p.py);
-    const size = CELL * 0.74;
     const blink = p.iFrames > 0 && Math.floor(p.iFrames * 14) % 2 === 0;
 
-    ctx.save();
-    ctx.globalAlpha = blink ? 0.35 : 1;
-    ctx.translate(x, y);
-
-    if (!g.alive) ctx.rotate(Math.min(1.1, g.deadT * 2.2));
-
-    const grad = ctx.createLinearGradient(-size / 2, -size / 2, size / 2, size / 2);
-    grad.addColorStop(0, g.flags.ice ? '#8be9ff' : '#7dff9f');
-    grad.addColorStop(1, g.flags.ice ? '#2a9df4' : '#17a34a');
-
-    ctx.fillStyle = grad;
-    ctx.shadowColor = g.flags.ice ? '#7cf7ff' : COLORS.player;
-    ctx.shadowBlur = 18 + Math.sin(g.time * 6) * 6;
-    round(ctx, -size / 2, -size / 2, size, size, 10);
-    ctx.fill();
-
-    ctx.shadowBlur = 0;
-    ctx.font = `${size * 0.62}px "Segoe UI Emoji","Apple Color Emoji",sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(p.face, 0, size * 0.04);
-    ctx.restore();
+    // the equipped skin owns the whole look of the cube — see cosmetics.js
+    drawCube(ctx, x, y, CELL * 0.74, Shop.skin(), {
+      t: g.time,
+      face: p.face,
+      alpha: blink ? 0.35 : 1,
+      rot: g.alive ? 0 : Math.min(1.1, g.deadT * 2.2),
+      frost: !!g.flags.ice
+    });
 
     if (p.shield > 0) {
       ctx.save();
