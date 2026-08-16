@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>Grid Storm</title>
 <link rel="stylesheet" href="style.css" />
 </head>
@@ -26,20 +27,23 @@
 
   <div id="chips" class="chips"></div>
 
-  <div class="board-wrap">
-    <div class="board">
-      <canvas id="board" width="648" height="648" aria-label="grid storm board"></canvas>
-      <div id="banner" class="banner"></div>
-      <div id="overlay" class="overlay"></div>
+  <div class="play">
+    <div class="board-wrap">
+      <div class="board">
+        <canvas id="board" width="648" height="648" aria-label="grid storm board"></canvas>
+        <div id="banner" class="banner"></div>
+        <div id="overlay" class="overlay"></div>
+      </div>
     </div>
-  </div>
 
-  <div class="dpad" aria-hidden="true">
-    <button data-dir="0,-1">▲</button>
-    <div>
-      <button data-dir="-1,0">◀</button>
-      <button data-dir="0,1">▼</button>
-      <button data-dir="1,0">▶</button>
+    <div class="controls">
+      <div class="dpad">
+        <button class="key up"    data-dir="0,-1" aria-label="up">▲</button>
+        <button class="key left"  data-dir="-1,0" aria-label="left">◀</button>
+        <button class="key down"  data-dir="0,1"  aria-label="down">▼</button>
+        <button class="key right" data-dir="1,0"  aria-label="right">▶</button>
+      </div>
+      <button class="key pause" id="btn-pause" aria-label="pause">⏸</button>
     </div>
   </div>
 

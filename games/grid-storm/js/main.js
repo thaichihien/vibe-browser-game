@@ -70,8 +70,12 @@ const game = createGame(canvas, {
 const boardWrap = document.querySelector('.board-wrap');
 
 function layout() {
-  const size = Math.max(240, Math.min(900,
-    Math.floor(Math.min(boardWrap.clientWidth, boardWrap.clientHeight))));
+  // the window bound is insurance: the wrap sizes itself from its content, so a
+  // stray `align-items` somewhere could otherwise let the two feed each other
+  const size = Math.max(200, Math.min(900,
+    Math.floor(Math.min(
+      boardWrap.clientWidth, boardWrap.clientHeight,
+      window.innerWidth, window.innerHeight))));
 
   fitCanvas(canvas, size);
   if (!game.g.running) game.R.frame(game.g);   // repaint while paused or on the menu
@@ -152,6 +156,7 @@ function titleScreen() {
         <div class="keycap">S</div><div class="keycap">D</div>
         <span>or arrow keys — one cell per press</span>
       </div>
+      <p class="touch-hint">Use the ▲ ◀ ▼ ▶ pad below to move, ⏸ to pause.</p>
 
       <button class="btn big" id="btn-play">▶ START</button>
       <button class="btn ghost" id="btn-codex">📖 EVENT CODEX (${CODEX.length})</button>
@@ -216,7 +221,7 @@ function togglePause() {
     overlay.innerHTML = `
       <div class="panel">
         <h1 class="title small">PAUSED</h1>
-        <p class="tag">Press <b>P</b> or <b>Esc</b> to drop back in.</p>
+        <p class="tag">Press <b>P</b> or <b>Esc</b>, or tap resume.</p>
         <button class="btn big" id="btn-resume">▶ RESUME</button>
       </div>`;
     $('#btn-resume').onclick = togglePause;
@@ -267,17 +272,25 @@ document.addEventListener('keydown', ev => {
 document.addEventListener('keyup', ev => held.delete(ev.key.toLowerCase()));
 window.addEventListener('blur', () => held.clear());
 
+/* whichever input is currently asking for a direction */
+let padDir = null;
+
+function currentDir() {
+  if (padDir) return padDir;
+  for (const k of held) if (DIRS[k]) return DIRS[k];
+  return null;
+}
+
 /* hold-to-repeat, on its own clock so it is frame-rate independent */
 setInterval(() => {
-  if (paused || !game.g.alive || !held.size) return;
+  if (paused || !game.g.alive) return;
+  const dir = currentDir();
+  if (!dir) return;
+
   const now = performance.now();
   if (now < repeatT) return;
   repeatT = now + 105;
-
-  for (const k of held) {
-    const dir = DIRS[k];
-    if (dir) { game.move(dir[0], dir[1]); break; }
-  }
+  game.move(dir[0], dir[1]);
 }, 16);
 
 /* touch: swipe anywhere on the board, plus a d-pad for thumbs */
@@ -295,12 +308,33 @@ canvas.addEventListener('touchend', ev => {
   else game.move(0, Math.sign(dy));
 }, { passive: true });
 
-document.querySelectorAll('.dpad button').forEach(b => {
-  const [dx, dy] = b.dataset.dir.split(',').map(Number);
-  const go = ev => { ev.preventDefault(); game.move(dx, dy); };
-  b.addEventListener('touchstart', go, { passive: false });
-  b.addEventListener('mousedown', go);
+/* d-pad: press to step, hold to keep stepping, on the same clock as the keys */
+document.querySelectorAll('.dpad .key').forEach(btn => {
+  const [dx, dy] = btn.dataset.dir.split(',').map(Number);
+
+  const press = ev => {
+    ev.preventDefault();
+    btn.classList.add('down-state');
+    padDir = [dx, dy];
+    if (!paused) game.move(dx, dy);
+    repeatT = performance.now() + 190;
+    if (btn.setPointerCapture && ev.pointerId !== undefined) btn.setPointerCapture(ev.pointerId);
+  };
+
+  const release = () => {
+    btn.classList.remove('down-state');
+    // only clear if this button is the one still held
+    if (padDir && padDir[0] === dx && padDir[1] === dy) padDir = null;
+  };
+
+  btn.addEventListener('pointerdown', press);
+  btn.addEventListener('pointerup', release);
+  btn.addEventListener('pointercancel', release);
+  btn.addEventListener('pointerleave', release);
+  btn.addEventListener('contextmenu', ev => ev.preventDefault());
 });
+
+$('#btn-pause').addEventListener('click', ev => { ev.preventDefault(); togglePause(); });
 
 btnMute.onclick = toggleMute;
 btnMusic.onclick = toggleMusic;
