@@ -74,6 +74,9 @@ export const Sound = {
   warn()    { this.tone(880, 0.10, 'triangle', 0.05); },
   charge()  { this.tone(180, 0.55, 'sawtooth', 0.045, 900); },
   blast()   { this.noise(0.35, 0.12); this.tone(90, 0.3, 'square', 0.05, 40); },
+  /* a short metal hit — lighter than blast(), because the press lands 20 times */
+  press()   { this.tone(160, 0.13, 'square', 0.05, 62); this.noise(0.12, 0.06, 900, 220); },
+  hoof()    { this.tone(150, 0.09, 'triangle', 0.045, 72); this.noise(0.07, 0.045, 700, 180); },
   bloom()   { this.tone(660, 0.18, 'triangle', 0.05, 1200); },
   pickup()  { this.tone(760, 0.09, 'triangle', 0.07); setTimeout(() => this.tone(1140, 0.14, 'triangle', 0.06), 80); },
   event()   { this.tone(140, 0.5, 'sawtooth', 0.05, 520); this.noise(0.5, 0.05, 900, 300); },

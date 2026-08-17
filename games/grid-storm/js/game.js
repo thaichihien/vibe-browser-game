@@ -2,8 +2,9 @@
    event scheduler. Everything an event can touch hangs off `g`. */
 
 import {
-  BASE_SIZE, BIG_SIZE, CENTER, PAD, BASE_SPAWN, COUNT_STEPS, FIRST_EVENT_AT, EVENT_GAP,
-  MAX_CONCURRENT, PLAYER, PALETTE, pick, rnd, rndi, clamp, lerp
+  BASE_SIZE, BIG_SIZE, CENTER, PAD, BASE_SPAWN, COUNT_STEPS, SPAWN_GRACE,
+  FIRST_EVENT_AT, EVENT_GAP, MAX_CONCURRENT, PLAYER, PALETTE,
+  pick, rnd, rndi, clamp, lerp
 } from './config.js';
 import { makeRenderer } from './render.js';
 import { makeFx, updateFx, burst, ring, floatText, flash, shake } from './fx.js';
@@ -21,7 +22,7 @@ export function createGame(canvas, hooks = {}) {
     size: BASE_SIZE, lo: 0, hi: 0, center: CENTER,
     bullets: [], hazards: [], fx: makeFx(),
     events: [], recent: [], firstDone: false, nextEventAt: 0,
-    timeScale: 1, speed: BASE_SPAWN.speed[0],
+    timeScale: 1, speed: BASE_SPAWN.speed,
     spawnT: 0, spawnEvery: BASE_SPAWN.every[0], spawnCount: BASE_SPAWN.count[0],
     frozenCount: null, lastStep: 0,
     spawnBonus: 0, spawnBonusT: 0, zoomK: 1,
@@ -167,7 +168,7 @@ export function createGame(canvas, hooks = {}) {
   function rampBase() {
     const p = clamp(g.time / BASE_SPAWN.ramp, 0, 1);
 
-    g.speed = lerp(BASE_SPAWN.speed[0], BASE_SPAWN.speed[1], p);
+    g.speed = BASE_SPAWN.speed;     // never ramps — only the volley size does
     g.spawnEvery = lerp(BASE_SPAWN.every[0], BASE_SPAWN.every[1], p) *
       (g.size === BIG_SIZE ? 0.85 : 1);
 
@@ -321,7 +322,9 @@ export function createGame(canvas, hooks = {}) {
       if (d < near) near = d;
     }
 
-    g.player.face = near < 1.15 ? '😱'
+    // untouchable beats every other mood — nothing on the board is scary
+    g.player.face = g.player.iFrames > 0.6 ? '🤩'
+      : near < 1.15 ? '😱'
       : g.flags.ice ? '🥶'
       : g.flags.fog ? '👀'
       : g.player.shield > 0 ? '😎'
@@ -360,8 +363,17 @@ export function createGame(canvas, hooks = {}) {
       // solo event asks for the normal fire to keep coming (`keepBase`)
       const held = g.events.some(e =>
         (e.def.solo && !e.def.keepBase) || e.def.suppressBase);
-      g.spawnT -= dt;
-      if (!held && g.time > 1 && g.spawnT <= 0) { g.spawnT = g.spawnEvery; spawnVolley(); }
+
+      if (held) {
+        /* Hold the fuse instead of letting it burn down behind the set-piece.
+           Letting it run meant the volley landed on the very frame the event
+           ended, on top of whatever it had left on the board. This also buys a
+           beat of clear grid after every one of them. */
+        g.spawnT = Math.max(g.spawnT, SPAWN_GRACE);
+      } else {
+        g.spawnT -= dt;
+        if (g.time > 1 && g.spawnT <= 0) { g.spawnT = g.spawnEvery; spawnVolley(); }
+      }
     } else {
       g.deadT += dt;
       dt *= 0.35;                         // slow-motion death

@@ -236,7 +236,10 @@ export function makeRenderer(canvas) {
   function drawPlayer(g) {
     const p = g.player;
     const x = S(p.px), y = S(p.py);
-    const blink = p.iFrames > 0 && Math.floor(p.iFrames * 14) % 2 === 0;
+    /* Invincibility is drawn as an aura, and only strobes in its last second —
+       so STAR POWER reads as five seconds of glow that starts flickering when
+       it is about to run out, instead of five seconds of flashing cube. */
+    const blink = p.iFrames > 0 && p.iFrames < 1.2 && Math.floor(p.iFrames * 14) % 2 === 0;
 
     // the equipped skin owns the whole look of the cube — see cosmetics.js
     drawCube(ctx, x, y, CELL * 0.74, Shop.skin(), {
@@ -246,6 +249,25 @@ export function makeRenderer(canvas) {
       rot: g.alive ? 0 : Math.min(1.1, g.deadT * 2.2),
       frost: !!g.flags.ice
     });
+
+    if (p.iFrames > 0) {
+      ctx.save();
+      ctx.strokeStyle = '#ffd166';
+      ctx.lineWidth = 4;
+      ctx.shadowColor = '#ffd166';
+      ctx.shadowBlur = 22;
+      ctx.globalAlpha = 0.4 + 0.35 * Math.sin(g.time * 11);
+      ctx.beginPath();
+      ctx.arc(x, y, CELL * 0.72, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      // sparks orbiting the cube, so the state still reads on a busy board
+      for (let i = 0; i < 3; i++) {
+        const a = g.time * 3.4 + (i / 3) * Math.PI * 2;
+        R.emoji(p.px + Math.cos(a) * 0.78, p.py + Math.sin(a) * 0.78, '✨', 0.42, 0.9);
+      }
+    }
 
     if (p.shield > 0) {
       ctx.save();

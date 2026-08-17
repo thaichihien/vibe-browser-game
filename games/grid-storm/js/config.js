@@ -9,11 +9,15 @@ export const BOARD_PX  = (BIG_SIZE + PAD * 2) * CELL;
 
 export const CENTER = (BIG_SIZE - 1) / 2;   // 7 — same centre at both sizes
 
-/* the opening act: plain missiles, one at a time, then more */
+/* the opening act: plain missiles, one at a time, then more.
+   `speed` is a constant on purpose — a run gets harder by throwing *more*
+   missiles (COUNT_STEPS) and by the storm events, never by making the same
+   missile faster. Events still scale off it (`g.speed * 1.6` and friends), so
+   they all keep their relative pace whatever this is set to. */
 export const BASE_SPAWN = {
   every:  [1.30, 0.55],   // seconds between volleys, t=0 -> t=RAMP
   count:  [1, 3],         // missiles per volley, before the grid expands
-  speed:  [2.4, 4.3],     // cells per second
+  speed:  2.4,            // cells per second, start to finish
   ramp:   150             // seconds to reach the right-hand values
 };
 
@@ -23,6 +27,10 @@ export const BASE_SPAWN = {
    Four steps and that is the ceiling; past 600s the storm escalates through
    events alone. */
 export const COUNT_STEPS = [100, 200, 400, 600];
+
+/* Breathing room after any event that owned the spawner: the first plain volley
+   waits this long once the board is handed back. */
+export const SPAWN_GRACE = 1.4;
 
 export const FIRST_EVENT_AT = 20;   // grid expansion fires here, always
 export const EVENT_GAP      = [18, 25];  // then a new event every 18-25s, jittered

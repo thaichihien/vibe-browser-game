@@ -168,4 +168,41 @@ export const shieldDrop = {
   end(g, e) { if (e.hz) e.hz.dead = true; }
 };
 
-export const MODIFIER = [gravity, fog, warp, haste, ice, invert, shieldDrop];
+/* ── ⭐ STAR POWER — the other kind thing in the storm ─────────────────── */
+
+export const starDrop = {
+  id: 'star', name: 'STAR POWER', emoji: '⭐', tint: '#ffd166',
+  blurb: 'Grab it and nothing touches you for five seconds. The grid edge still will.',
+  duration: 9, weight: 2, relief: true,
+
+  seconds: 5,
+
+  start(g, e) {
+    [e.cx, e.cy] = g.randCell();
+    const seconds = this.seconds;
+
+    e.hz = addHazard(g, {
+      life: this.duration, under: false, ignoreTime: true,
+      update: (h, gg) => {
+        const [cx, cy] = gg.playerCell();
+        if (cx !== e.cx || cy !== e.cy) return;
+        h.dead = true;
+
+        // iFrames is the engine's one word for untouchable, so this is simply a
+        // very long one — bullets, lasers and blasts all already respect it
+        gg.player.iFrames = Math.max(gg.player.iFrames, seconds);
+        Sound.pickup();
+        confetti(gg.fx, e.cx, e.cy, ['⭐', '✨', '🌟'], 16);
+        floatText(gg.fx, e.cx, e.cy - 0.6, 'INVINCIBLE', '#ffd166', 1.3, 0.55);
+      },
+      draw: (h, gg, ctx, R) => {
+        const bob = Math.sin(h.t * 4.5) * 0.14;
+        R.cellStroke(e.cx, e.cy, '#ffd166', 0.5 + 0.4 * Math.sin(h.t * 7), 2);
+        R.emoji(e.cx, e.cy + bob, '⭐', 0.82, 1, Math.sin(h.t * 3) * 0.4);
+      }
+    });
+  },
+  end(g, e) { if (e.hz) e.hz.dead = true; }
+};
+
+export const MODIFIER = [gravity, fog, warp, haste, ice, invert, shieldDrop, starDrop];
