@@ -548,10 +548,10 @@ export const corkscrew = {
     e.timer -= dt;
     if (e.timer > 0) return;
 
-    /* Nothing new in the last 1.5s. Whatever is already winding keeps winding —
+    /* Nothing new in the last 2s. Whatever is already winding keeps winding —
        those you have been reading since they launched. It is a *fresh* shot
        arriving as the plain missiles come back that made the handover unfair. */
-    if (e.t > e.duration - 1.5) return;
+    if (e.t > e.duration - 2) return;
 
     e.timer = rnd(1.8, 2.5);
 

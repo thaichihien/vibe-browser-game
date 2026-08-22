@@ -29,7 +29,7 @@ export function createGame(canvas, hooks = {}) {
     stormsSeen: 0, cos: {},               // storms survived (payout) + effect scratch
     forcedNext: null, lockEvent: false,   // debug picker
     expand: null, deathReason: '', deathEmoji: '💀',
-    flags: { gravity: false, fog: 0, wrap: false, ice: false, invert: 0 },
+    flags: { gravity: false, fog: 0, ice: false, invert: 0 },
     player: { gx: 0, gy: 0, px: 0, py: 0, face: '🙂', shield: 0, iFrames: 0 }
   };
 
@@ -102,7 +102,6 @@ export function createGame(canvas, hooks = {}) {
     const nx = g.player.gx + dx, ny = g.player.gy + dy;
 
     if (!g.inside(nx, ny)) {
-      if (g.flags.wrap) { warpTo(wrapC(nx), wrapC(ny)); return; }
       g.player.gx = nx; g.player.gy = ny;
       g.kill(reason, emoji, true);
       return;
@@ -115,17 +114,6 @@ export function createGame(canvas, hooks = {}) {
     g.size = n;
     g.lo = (BIG_SIZE - n) / 2;
     g.hi = g.lo + n - 1;
-  }
-
-  const wrapC = v => {
-    const span = g.hi - g.lo + 1;
-    return v < g.lo ? v + span : v > g.hi ? v - span : v;
-  };
-
-  function warpTo(x, y) {
-    g.player.gx = x; g.player.gy = y;
-    g.player.px = x; g.player.py = y;   // no sliding across the whole board
-    burst(g.fx, x, y, '#b388ff', 10, 4, '🌀');
   }
 
   /* ── input ────────────────────────────────────────────────────────────── */
@@ -145,7 +133,6 @@ export function createGame(canvas, hooks = {}) {
       const nx = g.player.gx + mx, ny = g.player.gy + my;
 
       if (!g.inside(nx, ny)) {
-        if (g.flags.wrap) { warpTo(wrapC(nx), wrapC(ny)); continue; }
         if (i === 0) {
           g.player.gx = nx; g.player.gy = ny;
           g.kill('walked off the grid', '💀', true);
@@ -430,7 +417,7 @@ export function createGame(canvas, hooks = {}) {
       // forcedNext/lockEvent deliberately survive a restart, so a debug
       // selection still applies to the next run
       g.zoomK = (BIG_SIZE + PAD * 2) / (BASE_SIZE + PAD * 2);
-      g.flags = { gravity: false, fog: 0, wrap: false, ice: false, invert: 0 };
+      g.flags = { gravity: false, fog: 0, ice: false, invert: 0 };
       setSize(BASE_SIZE);
 
       g.player.gx = g.player.px = CENTER;

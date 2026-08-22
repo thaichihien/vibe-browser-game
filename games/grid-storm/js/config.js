@@ -26,7 +26,7 @@ export const BASE_SPAWN = {
    these marks — measured from the start of the run, not from the expansion.
    Four steps and that is the ceiling; past 600s the storm escalates through
    events alone. */
-export const COUNT_STEPS = [100, 200, 400, 600];
+export const COUNT_STEPS = [200, 500, 800, 1000];
 
 /* Breathing room after any event that owned the spawner: the first plain volley
    waits this long once the board is handed back. */

@@ -58,31 +58,6 @@ export const fog = {
   end(g) { g.flags.fog = 0; }
 };
 
-/* ── 🌀 WRAP PORTALS ───────────────────────────────────────────────────── */
-
-export const warp = {
-  id: 'warp', name: 'WRAP PORTALS', emoji: '🌀', tint: '#b388ff',
-  blurb: 'Edges connect. You cannot fall off — but neither can the bullets.',
-  duration: 15, weight: 2,
-
-  start(g, e) {
-    g.flags.wrap = true;
-    e.hz = addHazard(g, {
-      life: this.duration + 0.4, under: true, ignoreTime: true,
-      draw: (h, gg, ctx, R) => {
-        for (let i = gg.lo; i <= gg.hi; i += 2) {
-          const a = 0.35 + 0.25 * Math.sin(h.t * 3 + i);
-          R.emoji(i, gg.lo - 0.9, '🌀', 0.45, a, h.t * 2);
-          R.emoji(i, gg.hi + 0.9, '🌀', 0.45, a, -h.t * 2);
-          R.emoji(gg.lo - 0.9, i, '🌀', 0.45, a, h.t * 2);
-          R.emoji(gg.hi + 0.9, i, '🌀', 0.45, a, -h.t * 2);
-        }
-      }
-    });
-  },
-  end(g, e) { g.flags.wrap = false; if (e.hz) e.hz.dead = true; }
-};
-
 /* ── ⏩ OVERCLOCK ──────────────────────────────────────────────────────── */
 
 export const haste = {
@@ -205,4 +180,4 @@ export const starDrop = {
   end(g, e) { if (e.hz) e.hz.dead = true; }
 };
 
-export const MODIFIER = [gravity, fog, warp, haste, ice, invert, shieldDrop, starDrop];
+export const MODIFIER = [gravity, fog, haste, ice, invert, shieldDrop, starDrop];

@@ -46,14 +46,6 @@ export function updateBullets(g, dt) {
 
     b.rot += b.spin * d;
 
-    if (g.flags.wrap) {
-      const span = g.hi - g.lo + 1;
-      if (b.x < g.lo - 0.5) b.x += span;
-      if (b.x > g.hi + 0.5) b.x -= span;
-      if (b.y < g.lo - 0.5) b.y += span;
-      if (b.y > g.hi + 0.5) b.y -= span;
-    }
-
     if (b.trailRate > 0) {
       b.trailT += d;
       if (b.trailT >= b.trailRate) {

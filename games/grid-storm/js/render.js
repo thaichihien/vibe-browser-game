@@ -191,7 +191,7 @@ export function makeRenderer(canvas) {
     const side = (g.hi - g.lo + 1) * CELL + 8;
 
     ctx.save();
-    ctx.strokeStyle = g.flags.gravity ? '#ff8a3d' : g.flags.wrap ? '#b388ff' : COLORS.edge;
+    ctx.strokeStyle = g.flags.gravity ? '#ff8a3d' : COLORS.edge;
     ctx.lineWidth = 2;
     ctx.shadowColor = ctx.strokeStyle;
     ctx.shadowBlur = 12;
