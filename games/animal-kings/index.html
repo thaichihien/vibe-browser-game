@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Vương Quốc Muông Thú</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <a class="link" href="../../index.html">← ARCADE.SYS</a>
+  <div class="topbar-actions">
+    <button class="tbtn" id="btn-rules">📖<span class="lbl"> CÁCH CHƠI</span></button>
+    <button class="tbtn" id="btn-pause" title="Tạm dừng (P)">⏸</button>
+    <button class="tbtn" id="btn-mute" title="Tắt tiếng (M)">🔊</button>
+  </div>
+</header>
+
+<main class="stage">
+  <canvas id="board" aria-label="bản đồ vương quốc"></canvas>
+
+  <!-- ══ in-play HUD ══ -->
+  <div class="hud" id="hud" hidden>
+    <div class="res">
+      <div class="chip"><span>🌾</span><b id="r-food">0</b></div>
+      <div class="chip"><span>🪵</span><b id="r-wood">0</b></div>
+      <div class="chip"><span>🪙</span><b id="r-gold">0</b></div>
+      <div class="chip pop"><span>👥</span><b id="r-pop">0/0</b></div>
+      <div class="chip clock"><span id="r-phase">☀️</span><b id="r-time">0:00</b></div>
+    </div>
+
+    <div class="king-strip">
+      <div class="portrait" id="king-portrait">👑</div>
+      <div class="meters">
+        <div class="meter hp"><i id="m-hp"></i><span id="m-hp-txt">0</span></div>
+        <div class="meter st"><i id="m-st"></i><span>THỂ LỰC</span></div>
+      </div>
+      <div class="ability" id="ability" title="Kỹ năng (R)">
+        <span id="ability-icon">✨</span>
+        <i id="ability-cd"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ the retinue bar ══ -->
+  <div class="retinue" id="retinue" hidden>
+    <div class="ret-head">
+      <b id="ret-count">0/8</b><span>ĐOÀN TÙY TÙNG</span>
+      <em id="ret-hint">Tới gần quân và bấm E để chiêu mộ</em>
+    </div>
+    <div class="ret-list" id="ret-list"></div>
+    <div class="ret-orders">
+      <button class="ord" data-vbtn="order-attack"><b>⚔</b><span>TẤN CÔNG</span><i>1</i></button>
+      <button class="ord" data-vbtn="order-hold"><b>🛡</b><span>GIỮ</span><i>2</i></button>
+      <button class="ord" data-vbtn="order-home"><b>🏠</b><span>VỀ NHÀ</span><i>3</i></button>
+      <button class="ord" data-vbtn="order-scout"><b>🔎</b><span>DO THÁM</span><i>4</i></button>
+      <button class="ord dim" data-vbtn="dismiss"><b>✋</b><span>GIẢI TÁN</span><i>F</i></button>
+    </div>
+  </div>
+
+  <div class="notice" id="notice" hidden></div>
+
+  <!-- ══ royal duties — the only tutorial ══ -->
+  <div class="duty" id="duty" hidden>
+    <span class="duty-icon" id="duty-icon">🪵</span>
+    <div class="duty-text">
+      <b id="duty-title">…</b>
+      <em id="duty-hint"></em>
+    </div>
+  </div>
+
+  <!-- ══ what the couriers actually managed to deliver ══ -->
+  <aside class="reports" id="reports" hidden>
+    <header class="panel-head">
+      <span class="panel-icon">📜</span>
+      <h3>TIN BÁO</h3>
+      <button class="close" id="reports-close">✕</button>
+    </header>
+    <div class="reports-list" id="reports-list"></div>
+    <p class="panel-foot">
+      Tin từ ngoài tầm mắt phải có người mang về. Liên lạc bị giết dọc đường thì
+      tin đó <b>không bao giờ tới</b>.
+    </p>
+  </aside>
+
+  <!-- ══ the panel you get by walking up to someone ══ -->
+  <aside class="panel" id="panel" hidden>
+    <header class="panel-head">
+      <span class="panel-icon" id="panel-icon">🛒</span>
+      <h3 id="panel-title">…</h3>
+      <button class="close" id="panel-close">✕</button>
+    </header>
+    <div class="panel-body" id="panel-body"></div>
+    <p class="panel-foot" id="panel-foot"></p>
+  </aside>
+
+  <!-- floating prompt over whatever the king is standing next to -->
+  <div class="prompt" id="prompt" hidden><b>E</b><span id="prompt-text"></span></div>
+
+  <!-- ══ start / setup ══ -->
+  <div class="screen" id="screen-menu">
+    <div class="menu-card">
+      <h1 class="title">VƯƠNG QUỐC<b>MUÔNG THÚ</b></h1>
+      <p class="lead">
+        Bạn không phải con trỏ chuột. Bạn là <b>Vua</b>. Muốn mua thì đi gặp thương nhân,
+        muốn xây thì đi gặp thợ xây, muốn quân đi theo thì tự đến mà gọi.
+        Không có bản đồ nhỏ — chỉ có những gì bạn nhìn thấy.
+      </p>
+
+      <div class="setup">
+        <div class="setup-block">
+          <h3>CHỌN VƯƠNG QUỐC</h3>
+          <div class="factions" id="faction-picker"></div>
+          <p class="faction-desc" id="faction-desc"></p>
+        </div>
+
+        <div class="setup-row">
+          <div class="setup-block">
+            <h3>ĐỐI THỦ</h3>
+            <div class="opts" id="opp-picker">
+              <button class="opt on" data-opp="1">1 vương quốc</button>
+              <button class="opt" data-opp="2">2 vương quốc</button>
+            </div>
+          </div>
+          <div class="setup-block">
+            <h3>ĐỘ KHÓ</h3>
+            <div class="opts" id="diff-picker">
+              <button class="opt" data-diff="0">Dễ</button>
+              <button class="opt on" data-diff="1">Thường</button>
+              <button class="opt" data-diff="2">Khó</button>
+              <button class="opt" data-diff="3">Bạo Chúa</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="go" id="btn-start">⚔️ XUẤT QUÂN</button>
+      <p class="hint">
+        <b>WASD</b> đi — và đó cũng là hướng nhìn · <b>Space</b> chặt / gặt / đào / đánh ·
+        <b>Shift</b> chạy · <b>E</b> nói chuyện · <b>1–4</b> ra lệnh · <b>R</b> kỹ năng
+      </p>
+    </div>
+  </div>
+
+  <!-- ══ rules ══ -->
+  <div class="screen modal" id="screen-rules" hidden>
+    <div class="menu-card narrow">
+      <button class="close" id="rules-close">✕</button>
+      <h2>📖 CÁCH CHƠI</h2>
+      <div class="rules-body" id="rules-body"></div>
+    </div>
+  </div>
+
+  <!-- ══ pause ══ -->
+  <div class="screen modal" id="screen-pause" hidden>
+    <div class="menu-card narrow">
+      <h2>⏸ TẠM DỪNG</h2>
+      <p class="lead">Thế trận vẫn còn đó khi bạn quay lại.</p>
+      <button class="go" id="btn-resume">TIẾP TỤC</button>
+    </div>
+  </div>
+
+  <!-- ══ end ══ -->
+  <div class="screen" id="screen-over" hidden>
+    <div class="menu-card narrow">
+      <h2 id="over-title">…</h2>
+      <p class="lead" id="over-text"></p>
+      <div class="report" id="over-report"></div>
+      <button class="go" id="btn-again">CHƠI LẠI</button>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

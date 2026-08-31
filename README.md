@@ -20,6 +20,7 @@ Một bộ sưu tập mini game viết bằng HTML/CSS/JavaScript thuần và vi
 - `magic-shooter.html` - Bắn súng 3D góc nhìn thứ nhất với 20 loại đạn phép thuật.
 - `last-quarter/` - Bạn là nhân vật trong 3 máy arcade khác nhau: nghe theo người chơi vừa đủ để máy không bị dẹp.
 - `grid-storm/` - Bản mở rộng của Grid Survival: sau 20 giây lưới nở ra 9×9, các sự kiện bão đạn lần lượt đổ xuống, và mỗi lượt chơi kiếm ⚡ để mua 30 skin và 20 hiệu ứng.
+- `animal-kings/` - RTS nhập vai Vua: tự tay thu hoạch, đi gặp thương nhân/thợ xây/đội trưởng, chiêu mộ đoàn tùy tùng. 5 vương quốc muông thú, 4 mức AI, không có bản đồ nhỏ — tin từ xa phải có liên lạc chạy về.
 
 ## Chạy local
 
