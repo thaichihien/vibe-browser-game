@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<title>Quán Ăn Của Tôi</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <a class="link" href="../../index.html">← ARCADE.SYS</a>
+    <div class="brand"><span>🍜</span><b>Quán Ăn Của Tôi</b></div>
+    <div class="topbar-actions">
+      <button class="tbtn" id="btn-rules">HƯỚNG DẪN</button>
+      <button class="tbtn" id="btn-mute" title="Tắt tiếng (M)">🔊</button>
+    </div>
+  </header>
+
+  <main class="stage">
+
+    <div class="hud" id="hud" hidden>
+      <div class="hud-left">
+        <div class="chip money"><span>💰</span><b id="hud-money">0₫</b></div>
+        <div class="chip" id="hud-mode-chip"><span id="hud-mode-icon">🔥</span><b id="hud-mode">CA PHỤC VỤ</b></div>
+      </div>
+
+      <div class="hud-mid">
+        <div class="timer" id="hud-timer">3:30</div>
+        <div class="goal">
+          <div class="goal-bar"><i id="hud-goal-fill"></i><u id="hud-goal-mark"></u></div>
+          <div class="goal-text"><span id="hud-goal-now">0₫</span><span id="hud-goal-target">/ 0₫</span></div>
+        </div>
+      </div>
+
+      <div class="hud-right">
+        <div class="chip" id="hud-tray"><span>🍽️</span><b id="hud-carry">0/2</b></div>
+        <button class="tbtn ghost" id="btn-pause">⏸</button>
+      </div>
+    </div>
+
+    <div class="board-wrap">
+      <canvas id="floor" aria-label="mặt bằng quán ăn"></canvas>
+      <div class="orders" id="orders" hidden></div>
+      <div class="prompt" id="prompt" hidden></div>
+      <div class="toasts" id="toasts"></div>
+      <pre class="dbg" id="dbg" hidden></pre>
+    </div>
+
+    <div class="touch" id="touch" hidden>
+      <div class="stick" id="stick" aria-label="di chuyển"><i></i></div>
+      <button class="act" id="btn-act">TƯƠNG TÁC</button>
+    </div>
+
+  </main>
+
+  <div class="screens" id="screens">
+    <section class="screen show" id="screen-boot"></section>
+    <section class="screen" id="screen-hub"></section>
+    <section class="screen wide" id="screen-shop"></section>
+    <section class="screen" id="screen-missions"></section>
+    <section class="screen" id="screen-result"></section>
+    <section class="screen" id="screen-pause"></section>
+    <section class="screen" id="screen-rules"></section>
+    <section class="screen" id="screen-ledger"></section>
+    <section class="screen" id="screen-settings"></section>
+    <section class="screen" id="screen-day"></section>
+    <section class="screen" id="screen-name"></section>
+    <section class="screen wide" id="screen-signs"></section>
+    <section class="screen" id="screen-market"></section>
+    <section class="screen" id="screen-cafe"></section>
+    <section class="screen wide" id="screen-debug"></section>
+  </div>
+
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
