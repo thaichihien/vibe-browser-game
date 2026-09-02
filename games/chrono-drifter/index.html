@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kẻ Trôi Thời Gian</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%8F%B3</text></svg>" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="machine">
+
+  <header class="topbar">
+    <a class="link" href="../../index.html">← ARCADE.SYS</a>
+    <span class="brand">KẺ TRÔI THỜI GIAN</span>
+    <span class="spacer"></span>
+    <span class="purse" id="purse">⧗ 0</span>
+    <button class="ctl" id="btn-rules">HƯỚNG DẪN</button>
+    <button class="ctl" id="btn-mute" title="Tắt tiếng (M)">🔊</button>
+  </header>
+
+  <!-- ── menu ───────────────────────────────────────────────── -->
+  <section class="screen" id="screen-menu">
+    <div class="title-block">
+      <div class="glyph">⏳</div>
+      <h1>KẺ TRÔI THỜI GIAN</h1>
+      <p class="tagline">Bạn bị bật ra khỏi dòng thời gian. Bấm CHƠI là rơi thẳng vào cuộc chiến
+        của người khác, đang giữa chừng, và chỉ huy bất kỳ ai đang đứng cạnh mình.
+        Một nửa số lần, đó là phe "xấu".</p>
+      <div class="stat-row" id="menu-stats"></div>
+      <div class="menu-actions">
+        <button class="big" id="btn-play">▶ CHƠI</button>
+        <button class="ctl" id="btn-shop">🎒 CỬA HÀNG</button>
+        <button class="ctl" id="btn-satchel">🧳 SẮP TÚI</button>
+      </div>
+      <p class="note" id="menu-satchel"></p>
+    </div>
+  </section>
+
+  <!-- ── the roll ───────────────────────────────────────────── -->
+  <section class="screen" id="screen-roll" hidden>
+    <div class="roll-card">
+      <div class="roll-line" data-k="era"><span>THỜI ĐẠI</span><b>—</b></div>
+      <div class="roll-line" data-k="sides"><span>HAI PHE</span><b>—</b></div>
+      <div class="roll-line" data-k="fmt"><span>DẠNG TRẬN</span><b>—</b></div>
+      <div class="roll-line" data-k="diff"><span>ĐỘ KHÓ</span><b>—</b></div>
+      <div class="roll-line" data-k="you"><span>PHE BẠN</span><b>—</b></div>
+      <button class="big" id="btn-enter" hidden>VÀO TRẬN</button>
+    </div>
+  </section>
+
+  <!-- ── battle ─────────────────────────────────────────────── -->
+  <section class="screen battle" id="screen-battle" hidden>
+    <div class="hud-meta" id="hud-meta"></div>
+    <div class="timeline" id="timeline"><span class="lbl">DÒNG LƯỢT</span></div>
+
+    <div class="arena">
+    <aside class="inspect ally" id="inspect-ally" hidden></aside>
+
+    <div class="stage" id="stage">
+      <div class="sky" id="sky"></div>
+      <div class="glow" id="glow"></div>
+      <div class="ground" id="ground"></div>
+      <div class="horizon" id="horizon"></div>
+      <div class="fog" id="fog"></div>
+      <div class="vignette"></div>
+      <div class="scrim" id="scrim"></div>
+      <div class="flash" id="flash"></div>
+      <div class="banner" id="banner"></div>
+    </div>
+
+    <aside class="inspect foe" id="inspect-foe" hidden></aside>
+    </div>
+
+    <div class="deck">
+      <div class="deck-hd">
+        <span class="who" id="deck-who">—</span>
+        <span class="hint" id="deck-hint"></span>
+      </div>
+      <div class="moves" id="moves"></div>
+      <div class="satchel-row" id="satchel-row"></div>
+      <div class="log" id="log"></div>
+    </div>
+
+    <div class="legend">
+      <span>1–5 · CHIÊU THỨC</span><span>0 · CHỜ</span>
+      <span>Q W E R · TÚI ĐỒ</span><span>ESC · HUỶ CHỌN MỤC TIÊU</span><span>BẤM VÀO NHÂN VẬT · XEM HỒ SƠ</span>
+    </div>
+  </section>
+
+  <!-- ── shop ───────────────────────────────────────────────── -->
+  <section class="screen" id="screen-shop" hidden>
+    <div class="shop-head">
+      <h2>CỬA HÀNG ĐỒ LẠC THỜI</h2>
+      <p>Thứ duy nhất đi cùng bạn qua mọi thời đại là chiếc túi — và trong đó toàn đồ hiện đại.</p>
+      <div class="tabs">
+        <button class="tab on" data-tab="consumable">ĐỒ TIÊU HAO</button>
+        <button class="tab" data-tab="relic">CỔ VẬT</button>
+        <button class="ctl" id="btn-shop-back">← QUAY LẠI</button>
+      </div>
+    </div>
+    <div class="shop-grid" id="shop-grid"></div>
+  </section>
+
+  <!-- ── satchel loadout ────────────────────────────────────── -->
+  <section class="screen" id="screen-satchel" hidden>
+    <div class="shop-head">
+      <h2>SẮP TÚI</h2>
+      <p id="satchel-note"></p>
+      <button class="ctl" id="btn-satchel-back">← QUAY LẠI</button>
+    </div>
+    <div class="shop-grid" id="satchel-grid"></div>
+  </section>
+
+  <div class="overlay" id="overlay" hidden>
+    <div class="overlay-card">
+      <h2 id="ov-title"></h2>
+      <p id="ov-body"></p>
+      <div class="ov-actions">
+        <button class="big" id="ov-again">⟳ TRÔI TIẾP</button>
+        <button class="ctl" id="ov-menu">VỀ MÀN CHÍNH</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="rules" hidden>
+    <div class="overlay-card wide">
+      <h2>HƯỚNG DẪN</h2>
+      <div class="rules-body">
+        <p><b>Bạn không chọn gì cả.</b> Mỗi lần bấm CHƠI, trò chơi quay ra một thời đại, hai phe
+          đối địch, một dạng trận, một độ khó — rồi tung đồng xu xem bạn thuộc phe nào.
+          Bạn có thể là ba người hùng, hoặc tám tên lâu la; là đội đi săn, hoặc chính con trùm.</p>
+        <p><b>Vòng khắc chế.</b> STORM → TIDE → EMBER → VERDANT → FORGE → FROST → STORM, mỗi hệ
+          đánh hệ kế tiếp ×1.6 và đánh ngược lại chỉ ×0.7. RADIANT và UMBRA khắc nhau ×1.6 cả hai
+          chiều. STEEL trung tính. Tên hệ đổi theo thời đại nhưng cơ chế thì không.</p>
+        <p><b>Chờ là một nước đi thật.</b> Bỏ lượt để nhận +25 nộ và +20% phòng thủ. Nhịn một vòng
+          cho huyền thoại kịp nạp tuyệt kỹ thường là nước đi đúng.</p>
+        <p><b>Thứ tự lượt</b> chạy theo SPD tích luỹ, nên tăng/giảm tốc làm dòng lượt đảo ngay
+          trước mắt bạn.</p>
+        <p><b>Túi đồ</b> là đồ hiện đại mang qua thời gian. Dùng một món tốn nguyên lượt của nhân
+          vật đó — đấy là cái giá. Thắng trận để lấy ⧗ mảnh thời gian mà mua thêm.</p>
+      </div>
+      <button class="big" id="rules-close">ĐÃ HIỂU</button>
+    </div>
+  </div>
+
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
