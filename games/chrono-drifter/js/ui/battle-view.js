@@ -18,6 +18,7 @@ let S = null, slots = { ally: [], foe: [] };
 export function mount(state) {
   S = state;
   resetInspect();
+  resetLog();
   buildScenery(state.era);
   slots.ally = formation(living(state, 'ally').length, true, state.units.find(u => u.side === 'ally').tier === 'boss');
   slots.foe = formation(living(state, 'foe').length, false, state.units.find(u => u.side === 'foe').tier === 'boss');
@@ -44,6 +45,7 @@ function drawActors() {
         <div class="nm">${u.n}</div>
         ${hasRelic('torch') ? `<div class="el">${elName(S.era, u.el)}</div>` : ''}
         <div class="bar"><i class="ghost"></i><i class="fill"></i></div>
+        <div class="bar ep"><i class="epfill"></i></div>
         <div class="num"></div>
         <div class="sts"></div>
         ${u.ult ? '<div class="ultpip"><i></i></div>' : ''}
@@ -62,6 +64,7 @@ export function paint(u) {
   fill.style.width = pct + '%';
   fill.className = 'fill' + (pct < 25 ? ' low' : pct < 55 ? ' mid' : '');
   u.node.querySelector('.ghost').style.width = pct + '%';
+  u.node.querySelector('.epfill').style.width = Math.max(0, u.ep / u.epMax) * 100 + '%';
   u.node.querySelector('.num').textContent = `${Math.max(0, Math.round(u.hp))}/${u.max}`;
   const sts = [];
   if (u.shield > 0) sts.push('🛡️');
@@ -100,7 +103,87 @@ export function drawTimeline(order) {
   });
 }
 
-export const log = (html) => { $('log').innerHTML = html; };
+/* ── the action log ─────────────────────────────────────────────
+   One line was never enough to follow a fight: by the time you read it the next
+   unit had already acted. Five entries, newest first, each saying who did what to
+   whom and how it landed. Numbers stay on the floating combat text. */
+const HISTORY_MAX = 5;
+let history = [];
+
+export const log = (html) => { notice = html; renderLog(); };
+let notice = '';
+
+export function resetLog() { history = []; notice = ''; renderLog(); }
+
+function renderLog() {
+  // always five rows: a log that grows from one entry to five walks the deck down
+  const rows = [];
+  for (let i = 0; i < HISTORY_MAX; i++) {
+    rows.push(history[i]
+      ? `<li class="${i === 0 ? 'fresh' : ''}">${history[i]}</li>`
+      : '<li class="blank" aria-hidden="true">&nbsp;</li>');
+  }
+  $('log').innerHTML =
+    `<div class="log-notice">${notice || '&nbsp;'}</div>` +
+    `<ol class="log-list">${rows.join('')}</ol>`;
+}
+
+const who = (u) => u ? `<b>${u.e} ${u.n}</b>` : '?';
+
+/** Turn one resolved action into a single readable line. */
+export function record(actor, label, events) {
+  const by = (id) => S.units.find(u => u.uid === id);
+  const hits = [], misses = [], heals = [], lifts = [], falls = [];
+  let crits = 0;
+
+  for (const e of events) {
+    const t = by(e.tgt);
+    switch (e.t) {
+      case 'dmg':
+        if (e.dot || e.self || !t) break;
+        hits.push(t); if (e.crit) crits++;
+        break;
+      case 'miss':   if (t) misses.push(t); break;
+      case 'heal':   if (t && e.n > 0) heals.push(t); break;
+      case 'revive': if (t) lifts.push(t); break;
+      case 'buff':
+      case 'debuff': if (t) lifts.push(t); break;
+      case 'death':  if (t) falls.push(t); break;
+    }
+  }
+
+  let line;
+  if (label === null) {
+    line = `${who(actor)} chờ, hồi sức.`;
+  } else {
+    const parts = [];
+    const total = hits.length + misses.length;
+    if (total === 1) {
+      const target = hits[0] || misses[0];
+      const how = misses.length ? '<i class="miss">TRƯỢT</i>'
+                : crits ? '<i class="crit">CHÍ MẠNG</i>' : 'trúng';
+      parts.push(`lên ${who(target)} — ${how}`);
+    } else if (total > 1) {
+      const bits = [];
+      if (hits.length) bits.push(`${hits.length} trúng`);
+      if (crits) bits.push(`<i class="crit">${crits} chí mạng</i>`);
+      if (misses.length) bits.push(`<i class="miss">${misses.length} trượt</i>`);
+      parts.push(`— ${bits.join(', ')}`);
+    }
+    if (heals.length) parts.push(`hồi máu ${heals.map(who).join(', ')}`);
+    if (!parts.length && lifts.length) {
+      const uniq = [...new Set(lifts)];
+      parts.push(uniq.length > 2 ? `lên ${uniq.length} mục tiêu` : `lên ${uniq.map(who).join(', ')}`);
+    }
+    line = `${who(actor)} dùng <span class="g">${label}</span>${parts.length ? ' ' + parts.join(' · ') : ''}.`;
+  }
+  if (falls.length) line += ` <i class="fell">${falls.map(u => u.e + ' ' + u.n).join(', ')} gục ngã.</i>`;
+
+  history.unshift(line);
+  if (history.length > HISTORY_MAX) history.length = HISTORY_MAX;
+  notice = '';
+  renderLog();
+}
 
 /* ── the dossier rails ──────────────────────────────────────── */
 const shown = { ally: null, foe: null };
@@ -167,7 +250,7 @@ export async function play(events) {
     const tgt = e.tgt && S.units.find(u => u.uid === e.tgt);
     const src = e.src && S.units.find(u => u.uid === e.src);
     switch (e.t) {
-      case 'log':   log(e.text.replace(/^(\S+[^—]*?) dùng (.+)\.$/, '<b>$1</b> dùng <span class="g">$2</span>.')); break;
+      case 'log':   if (e.sys) log(e.text); break;   // action lines live in the history instead
       case 'ult':   await ultCutIn(src, e.name); break;
       case 'lunge': await lunge(src, tgt); break;
       case 'proj':  await projectile(src, tgt, e.el); burst(tgt, e.el); break;
@@ -187,6 +270,8 @@ export async function play(events) {
       case 'debuff': sfx.debuff(); burst(tgt, 'UMBRA'); floatText(tgt, `${e.label} ▼`, 'note'); paint(tgt); await wait(150); break;
       case 'note':   floatText(tgt, e.text, 'note'); paint(tgt); await wait(180); break;
       case 'wait':   floatText(src, '+25 ⚡ nộ', 'note'); paint(src); await wait(360); break;
+      case 'ep':     paint(tgt); break;
+      case 'miss':   sfx.miss(); await missDodge(tgt); floatText(tgt, 'TRƯỢT', 'miss'); await wait(260); break;
       case 'death':  sfx.death(); await die(tgt); break;
       case 'skip':   await wait(340); break;
       case 'end':    break;
@@ -218,6 +303,15 @@ export function floatText(u, text, cls, dy = 0) {
     { transform: 'translate(-50%,-140%) scale(1)', opacity: 0 }
   ], { duration: REDUCED ? 380 : 1050, easing: 'cubic-bezier(.2,.8,.3,1)' })
     .finished.then(() => f.remove()).catch(() => f.remove());
+}
+
+async function missDodge(u) {
+  if (REDUCED || !u || !u.node) return;
+  await u.node.animate(
+    [{ transform: 'translate(-50%,-100%)' },
+     { transform: `translate(calc(-50% + ${u.side === 'foe' ? 16 : -16}px), -104%)`, offset: .45 },
+     { transform: 'translate(-50%,-100%)' }],
+    { duration: 300, easing: 'ease-out' }).finished.catch(() => {});
 }
 
 function flinch(u) {

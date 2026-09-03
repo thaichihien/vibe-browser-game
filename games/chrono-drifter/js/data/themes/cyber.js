@@ -1,7 +1,9 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
          H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
-         X, XALL, STEAL, U, UEXEC, UMEND, UTIME } from '../../engine/moves.js';
+         X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
+         UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
+  from '../../engine/moves.js';
 
 export default {
   key: 'cyber', name: 'CYBERPUNK',
@@ -43,14 +45,14 @@ export default {
   units: [
     u('Vệ Binh K-9', '🤖', 'corp', 'legend', 'FORGE', 1.2, 640, 90, 58, 44, 78,
       [S('Đạn Chống Bạo', 'STEEL', 1.15), R('Phong Toả', 'grd', 30), TAUNT('Lá Chắn Bạo Động', 130), H('Vá Nanite', 115)],
-      U('LƯỚI TRẤN ÁP', 'FORGE', 2.1)),
+      UGUARD('LƯỚI TRẤN ÁP', 197, 41)),
     u('Đặc Vụ Vex', '🕴️', 'corp', 'legend', 'STORM', .95, 320, 110, 24, 38, 116,
       [S('Súng Hồ Quang', 'STORM', 1.3), AOE('Xung Điện Từ', 'STORM', .75), B('Ép Xung', 'pwr', 30), DOT('Đinh Thần Kinh', 'STORM', .6, 32)],
-      U('THANH TẨY HỆ THỐNG', 'STORM', 2.2)),
+      UCHAIN('THANH TẨY HỆ THỐNG', 'STORM', 1.5)),
     u('Drone Cứu Thương', '🛸', 'corp', 'elite', 'RADIANT', 1.0, 300, 70, 30, 46, 90,
       [S('Thương Tín Hiệu', 'RADIANT', 1.05), H('Khâu Dã Chiến', 130), AOE('Quét Tia', 'RADIANT', .7), R('Dựng Khiên', 'wrd', 30)]),
     u('Xạ Thủ Nóc Nhà', '🎯', 'corp', 'elite', 'STEEL', .95, 300, 104, 22, 26, 114,
-      [SNIPE('Phát Bắn Lạnh', 'STEEL', 1.2), MARK('Chấm Đỏ', 'STEEL', .8), B('Nín Thở', 'pwr', 30), EXEC('Dứt Điểm', 'STEEL', 1.05)]),
+      [SNIPE('Phát Bắn Lạnh', 'STEEL', 1.2), MARK('Chấm Đỏ', 'STEEL', .8), B('Nín Thở', 'crt', 30), EXEC('Dứt Điểm', 'STEEL', 1.05)]),
     u('Cảnh Vệ Áo Giáp', '👮', 'corp', 'grunt', 'STEEL', 1.0, 450, 72, 46, 28, 80,
       [S('Dùi Cui Điện', 'STORM', 1.05), R('Dàn Khiên', 'grd', 28), STUN('Đạn Cao Su', 'STEEL', .8), H('Bình Cứu Thương', 100)]),
     u('Kỹ Sư Mạng', '💻', 'corp', 'grunt', 'RADIANT', .9, 310, 76, 24, 40, 100,
@@ -60,7 +62,7 @@ export default {
 
     u('Kade "Hắc Băng"', '🥷', 'street', 'legend', 'UMBRA', .95, 620, 98, 40, 40, 88,
       [S('Lưỡi Ma', 'UMBRA', 1.25), AOE('Chém Khói', 'STEEL', .7), B('Da Băng', 'grd', 40), DOT('Rữa Thần Kinh', 'UMBRA', .75, 38)],
-      U('MẤT ĐIỆN TOÀN KHU', 'UMBRA', 2.35)),
+      UCURSE('MẤT ĐIỆN TOÀN KHU', 'UMBRA', 44)),
     u('Nyx, Tay Trộm Dữ Liệu', '🦹', 'street', 'legend', 'RADIANT', .95, 350, 102, 26, 42, 120,
       [PIERCE('Bẻ Khoá', 'RADIANT', 1.15), STEAL('Rút Ví Điện', 40), X('Xoá Nhật Ký', 'pwr', 30), B('Tàng Hình', 'spd', 35)],
       UTIME('DỪNG ĐỒNG HỒ')),
@@ -69,7 +71,7 @@ export default {
     u('Bầy Drone Hoang', '🐝', 'street', 'elite', 'STORM', .8, 370, 64, 32, 38, 98,
       [DRAIN('Cổng Hút', 'STORM', .9), XALL('Nhiễu Tĩnh', 'pwr', 22), B('Kết Bầy', 'grd', 35), X('Máy Phá Sóng', 'spd', 25)]),
     u('Tay Đua Ống Cống', '🛹', 'street', 'grunt', 'STEEL', .9, 320, 78, 26, 24, 124,
-      [S('Tông Ván', 'STEEL', 1.1), B('Tăng Ga', 'spd', 35), ARC('Lướt Qua', 'STEEL', .85), X('Ném Đinh', 'spd', 25)]),
+      [S('Tông Ván', 'STEEL', 1.1), B('Tăng Ga', 'spd', 35), ARC('Lướt Qua', 'STEEL', .85), X('Ném Đinh', 'acc', 25)]),
     u('Bà Chủ Quán Mì', '🍜', 'street', 'grunt', 'EMBER', .95, 400, 66, 34, 34, 84,
       [HALL('Bát Mì Nóng', 95), S('Chảo Nóng', 'EMBER', 1.05), R('No Bụng', 'pwr', 25), CLEANSE('Nước Dùng', 80)]),
     u('Gã Tiêm Chích', '💉', 'street', 'grunt', 'VERDANT', .9, 330, 84, 22, 28, 106,
@@ -77,7 +79,7 @@ export default {
 
     u('Đại Tế Sắt', '⛓️', 'chrome', 'legend', 'FORGE', 1.25, 700, 92, 56, 46, 68,
       [S('Xích Nghiền', 'FORGE', 1.2), TAUNT('Thân Xác Hiến Dâng', 160), R('Ban Phép Thép', 'grd', 35), DRAIN('Đồng Hoá', 'FORGE', 1.0)],
-      U('LỄ QUY Y', 'FORGE', 2.3)),
+      UDRAIN('LỄ QUY Y', 'FORGE', 1.9)),
     u('Tiên Tri Nhiễu Sóng', '📻', 'chrome', 'legend', 'STORM', .9, 340, 106, 24, 44, 108,
       [AOE('Sóng Trắng', 'STORM', .85), SILENCE('Tạp Âm', 'STORM', .9), MARK('Toạ Độ', 'STORM', .8), B('Bắt Sóng', 'pwr', 32)],
       UEXEC('TÍN HIỆU CUỐI', 'STORM', 1.45)),
@@ -88,7 +90,7 @@ export default {
     u('Xác Máy Lang Thang', '🦾', 'chrome', 'grunt', 'FORGE', 1.0, 430, 70, 42, 26, 76,
       [S('Đấm Thuỷ Lực', 'FORGE', 1.1), B('Khoá Khớp', 'grd', 32), STUN('Đè Nghiến', 'FORGE', .85), X('Rỉ Sét', 'grd', 25)]),
     u('Ống Kính Do Thám', '📷', 'chrome', 'grunt', 'RADIANT', .8, 300, 74, 24, 36, 116,
-      [MARK('Chụp Hình', 'RADIANT', .9), S('Đèn Flash', 'RADIANT', 1.05), X('Loá Mắt', 'pwr', 26), B('Lấy Nét', 'pwr', 25)]),
+      [MARK('Chụp Hình', 'RADIANT', .9), S('Đèn Flash', 'RADIANT', 1.05), X('Loá Mắt', 'acc', 26), B('Lấy Nét', 'crt', 25)]),
     u('Bể Nuôi Thịt', '🧫', 'chrome', 'grunt', 'VERDANT', 1.1, 480, 68, 36, 40, 66,
       [DOT('Bào Tử Ghép', 'VERDANT', .7, 34), REGEN('Nuôi Cấy', 38), S('Xúc Tu Thịt', 'VERDANT', 1.05), X('Ăn Mòn Giáp', 'grd', 28)])
   ],
@@ -100,5 +102,5 @@ export default {
   ],
   boss: boss('ARES Nguyên Bản', '🦾', 'FORGE', 2.1, 2050, 116, 68, 52, 72,
     [S('Nắm Đấm Công Thành', 'FORGE', 1.4), AOE('Quét Trấn Áp', 'STEEL', .95), B('Lên Giáp', 'grd', 35), DOT('Bầy Nanite', 'VERDANT', .9, 46)],
-    U('THU HỒI TOÀN BỘ', 'FORGE', 2.55))
+    UCURSE('THU HỒI TOÀN BỘ', 'FORGE', 52))
 };

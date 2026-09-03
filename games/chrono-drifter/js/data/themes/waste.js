@@ -1,7 +1,9 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
          H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
-         X, XALL, STEAL, U, UEXEC, UMEND, UTIME } from '../../engine/moves.js';
+         X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
+         UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
+  from '../../engine/moves.js';
 
 export default {
   key: 'waste', name: 'HẬU TẬN THẾ',
@@ -43,10 +45,10 @@ export default {
   units: [
     u('Giám Quản Hầm 12', '🔒', 'vault', 'legend', 'FORGE', 1.05, 620, 92, 56, 44, 76,
       [S('Dùi Cui Điện', 'STORM', 1.2), TAUNT('Cửa Thép', 150), R('Quy Định Khẩn Cấp', 'grd', 32), H('Bộ Sơ Cứu', 118)],
-      U('PHONG TOẢ TOÀN HẦM', 'FORGE', 2.3)),
+      UGUARD('PHONG TOẢ TOÀN HẦM', 190, 41)),
     u('Kỹ Sư Lò Phản Ứng', '☢️', 'vault', 'legend', 'STORM', .95, 350, 106, 26, 44, 106,
       [S('Thanh Nhiên Liệu', 'STORM', 1.3), AOE('Rò Rỉ', 'STORM', .8), DOT('Nhiễm Xạ', 'STORM', .7, 40), B('Quá Tải Lò', 'pwr', 34)],
-      U('TAN CHẢY LÒ', 'STORM', 2.35)),
+      UCHAIN('TAN CHẢY LÒ', 'STORM', 1.5)),
     u('Y Tá Hầm Trú', '💉', 'vault', 'elite', 'RADIANT', .95, 340, 74, 30, 46, 94,
       [S('Kim Tiêm', 'RADIANT', 1.05), H('Truyền Dịch', 132), REVIVE('Sốc Điện', .4), CLEANSE('Thuốc Kháng Xạ', 88)]),
     u('Lính Gác Cửa Hầm', '🪖', 'vault', 'elite', 'STEEL', 1.0, 480, 86, 46, 30, 88,
@@ -60,14 +62,14 @@ export default {
 
     u('Vua Xăng', '⛽', 'raider', 'legend', 'EMBER', 1.15, 640, 98, 48, 36, 92,
       [S('Cưa Máy', 'EMBER', 1.3), AOE('Phun Lửa', 'EMBER', .85), R('Gào Thét', 'pwr', 32), DOT('Xăng Dính', 'EMBER', .75, 40)],
-      U('CẢ SA MẠC BỐC CHÁY', 'EMBER', 2.4)),
+      UCURSE('CẢ SA MẠC BỐC CHÁY', 'EMBER', 44)),
     u('Tay Lái Cuồng', '🏍️', 'raider', 'legend', 'FORGE', 1.05, 540, 100, 40, 32, 122,
       [S('Tông Thẳng', 'FORGE', 1.3), ARC('Lượn Cắt', 'FORGE', .9), B('Đạp Hết Ga', 'spd', 40), EXEC('Cán Qua', 'FORGE', 1.15)],
       UTIME('KHÔNG PHANH')),
     u('Thợ Đóng Đinh', '🔨', 'raider', 'elite', 'FORGE', 1.05, 500, 92, 44, 26, 84,
       [S('Búa Đinh', 'FORGE', 1.25), RAMP('Đóng Liên Tục', 'FORGE', .95), X('Phá Giáp', 'grd', 32), B('Cơ Bắp', 'pwr', 32)]),
     u('Cung Thủ Nỏ Tự Chế', '🏹', 'raider', 'elite', 'VERDANT', .95, 360, 94, 28, 30, 112,
-      [SNIPE('Mũi Tên Gỉ', 'VERDANT', 1.2), DOT('Đầu Tên Bẩn', 'VERDANT', .7, 36), B('Ngắm Kỹ', 'pwr', 30), X('Bắn Chân', 'spd', 28)]),
+      [SNIPE('Mũi Tên Gỉ', 'VERDANT', 1.2), DOT('Đầu Tên Bẩn', 'VERDANT', .7, 36), B('Ngắm Kỹ', 'crt', 30), X('Bắn Chân', 'spd', 28)]),
     u('Kẻ Đeo Mặt Nạ Khí', '😷', 'raider', 'grunt', 'VERDANT', .95, 400, 74, 34, 34, 92,
       [XALL('Xả Khí Độc', 'pwr', 22), DOT('Hơi Cay', 'VERDANT', .7, 32), S('Ống Sắt', 'FORGE', 1.05), B('Bịt Kín', 'wrd', 30)]),
     u('Kẻ Cướp Bãi Rác', '🗑️', 'raider', 'grunt', 'STEEL', .9, 370, 76, 30, 26, 104,
@@ -77,7 +79,7 @@ export default {
 
     u('Đầu Sỏ Hai Đầu', '🧟‍♂️', 'mutant', 'legend', 'VERDANT', 1.35, 720, 96, 50, 42, 70,
       [S('Hai Nắm Đấm', 'VERDANT', 1.3), AOE('Gào Đôi', 'VERDANT', .85), DRAIN('Nuốt Sống', 'VERDANT', 1.1), B('Thịt Mọc Lại', 'grd', 38)],
-      U('PHÂN BÀO', 'VERDANT', 2.4)),
+      UDRAIN('PHÂN BÀO', 'VERDANT', 1.9)),
     u('Kẻ Thấy Trước', '🧠', 'mutant', 'legend', 'UMBRA', .95, 360, 104, 26, 48, 108,
       [S('Đòn Ý Nghĩ', 'UMBRA', 1.3), SILENCE('Bóp Nghẹt Trí Óc', 'UMBRA', .9), MARK('Nhìn Thấu', 'UMBRA', .9), X('Gieo Sợ Hãi', 'pwr', 34)],
       UEXEC('MỌI NGƯỜI ĐỀU CHẾT', 'UMBRA', 1.5)),
@@ -100,5 +102,5 @@ export default {
   ],
   boss: boss('Lò Phản Ứng Biết Đi', '☢️', 'STORM', 2.2, 2180, 116, 58, 62, 68,
     [S('Cần Trục Nghiền', 'FORGE', 1.4), AOE('Xả Xạ', 'STORM', .95), B('Vỏ Chì', 'wrd', 35), DOT('Bụi Phóng Xạ', 'STORM', .95, 50)],
-    U('TAN CHẢY TOÀN PHẦN', 'STORM', 2.6))
+    UCURSE('TAN CHẢY TOÀN PHẦN', 'STORM', 52))
 };

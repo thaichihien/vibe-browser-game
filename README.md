@@ -22,7 +22,7 @@ Một bộ sưu tập mini game viết bằng HTML/CSS/JavaScript thuần và vi
 - `grid-storm/` - Bản mở rộng của Grid Survival: sau 20 giây lưới nở ra 9×9, các sự kiện bão đạn lần lượt đổ xuống, và mỗi lượt chơi kiếm ⚡ để mua 30 skin và 20 hiệu ứng.
 - `quan-an/` - Quán ăn nhìn từ trên xuống: chạy ca phục vụ 3,5 phút, làm hết nhiệm vụ để sang tên quán, rồi mua bàn ghế, nhân viên và công thức bằng giá Việt Nam thật.
 - `animal-kings/` - RTS nhập vai Vua: tự tay thu hoạch, đi gặp thương nhân/thợ xây/đội trưởng, chiêu mộ đoàn tùy tùng. 5 vương quốc muông thú, 4 mức AI, không có bản đồ nhỏ — tin từ xa phải có liên lạc chạy về.
-- `chrono-drifter/` - RPG theo lượt của một kẻ trôi thời gian: mỗi lần bấm chơi là một thời đại, một dạng trận và một phe ngẫu nhiên. 12 thời đại, 252 nhân vật, vòng khắc chế 9 hệ đổi tên theo từng thời đại, và 26 món đồ hiện đại mua bằng ⧗ mảnh thời gian.
+- `chrono-drifter/` - RPG theo lượt của một kẻ trôi thời gian: mỗi lần bấm chơi là một thời đại, một dạng trận và một phe ngẫu nhiên. 23 thời đại, 483 nhân vật, vòng khắc chế 9 hệ đổi tên theo từng thời đại, và 26 món đồ hiện đại mua bằng ⧗ mảnh thời gian.
 
 ## Chạy local
 

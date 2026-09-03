@@ -49,7 +49,7 @@ body.in-battle .machine { max-width: 1600px; }
 
 button { font-family: var(--mono); cursor: pointer; }
 .ctl {
-  font-size: 10.5px; letter-spacing: .1em;
+  font-size: 10.5px; letter-spacing: .1em; white-space: nowrap;
   background: var(--chrome-3); color: var(--ink-dim);
   border: 1px solid var(--edge); border-radius: 4px; padding: 6px 11px;
 }
@@ -255,29 +255,46 @@ button { font-family: var(--mono); cursor: pointer; }
 /* ── deck ───────────────────────────────────────────────────── */
 .deck {
   background: var(--chrome-2); border: 1px solid var(--edge); border-radius: 6px;
-  padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 118px;
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;
 }
-.deck-hd { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.deck-hd .who { font-family: var(--disp); font-weight: 700; font-size: 14px; color: var(--gold); }
-.deck-hd .hint { font-size: 10.5px; color: var(--ink-dim); letter-spacing: .05em; }
+/* placeholders hold the grid open without drawing anything */
+.move.ghost { visibility: hidden; pointer-events: none; }
+.deck-hd { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; min-height: 28px; }
+
+.deck-hd .who { font-family: var(--disp); font-weight: 700; font-size: 14px; color: var(--gold);
+  flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.deck-hd .hint { font-size: 10.5px; color: var(--ink-dim); letter-spacing: .05em;
+  flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .moves { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 7px; }
 .move {
   text-align: left; background: var(--chrome-3); border: 1px solid var(--edge);
   border-radius: 5px; padding: 7px 10px; color: var(--ink);
-  display: flex; flex-direction: column; gap: 3px;
+  height: 64px; overflow: hidden;
+  display: flex; flex-direction: column; gap: 3px; justify-content: center;
   transition: border-color .12s, background .12s, transform .12s;
 }
 .move:hover:not(:disabled) { border-color: var(--gold-deep); background: #222840; transform: translateY(-1px); }
 .move:disabled { opacity: .4; cursor: default; }
 .move .top { display: flex; align-items: baseline; gap: 7px; }
 .move .key { font-size: 9px; color: var(--gold-deep); }
-.move .nm { font-size: 12px; font-weight: 500; }
-.move .sub { font-size: 9.5px; color: var(--ink-dim); letter-spacing: .03em; }
+.move .nm { font-size: 12px; font-weight: 500; line-height: 16px; }
+.move .sub { font-size: 9.5px; color: var(--ink-dim); letter-spacing: .03em; line-height: 14px;
+  display: block; min-width: 0; }
+/* one line each, so a long description cannot make one button taller than its neighbours */
+.move .txt { display: block; height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.move .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.move .top { min-width: 0; }
 .move.ult { border-color: var(--gold-deep); background: linear-gradient(180deg, #2a2314, var(--chrome-3)); }
 .move.ult .nm { color: var(--gold); }
 .move.wait .nm { color: var(--ink-dim); }
 
-.satchel-row { display: flex; gap: 7px; flex-wrap: wrap; }
+/* holds its row whether it carries items, a note, or nothing at all */
+.satchel-row { display: flex; gap: 7px; flex-wrap: nowrap; align-items: center;
+  min-height: 30px; overflow-x: auto; }
+.satchel-row > * { flex: none; }
+.sat-note { font-size: 9.5px; letter-spacing: .12em; color: var(--ink-dim); }
+.sat .n { font-size: 9px; color: var(--gold-deep); margin-left: 2px; }
+.shop-msg { margin: 0; font-size: 11px; color: var(--heal); min-height: 14px; }
 .sat {
   background: var(--chrome-3); border: 1px solid var(--edge); border-radius: 5px;
   padding: 5px 9px; font-size: 11px; color: var(--ink); display: flex; gap: 6px; align-items: center;
@@ -286,9 +303,33 @@ button { font-family: var(--mono); cursor: pointer; }
 .sat:disabled { opacity: .35; cursor: default; }
 .sat .k { font-size: 9px; color: var(--gold-deep); }
 
-.log { font-size: 10.5px; color: var(--ink-dim); letter-spacing: .03em; min-height: 15px; line-height: 1.55; }
-.log b { color: var(--ink); }
+.log { font-size: 10.5px; color: var(--ink-dim); letter-spacing: .03em; line-height: 1.55; }
+.log b { color: var(--ink); font-weight: 600; }
 .log .g { color: var(--gold); }
+/* the system notice is a long sentence; clipping it keeps the deck from growing
+   the moment the era starts pushing you out */
+.log-notice { padding: 2px 0 4px; height: 20px; line-height: 14px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--gold); }
+.log-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+/* newest at the top, older entries fading back so the eye lands on what just happened */
+.log-list li { padding: 1px 0 1px 12px; position: relative; opacity: .55;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log-list li::before { content: '·'; position: absolute; left: 3px; color: var(--edge); }
+.log-list li:nth-child(1) { opacity: 1; }
+.log-list li:nth-child(2) { opacity: .82; }
+.log-list li:nth-child(3) { opacity: .66; }
+.log-list li.fresh::before { content: '▸'; color: var(--gold); }
+.log-list li.blank::before { content: ''; }
+.log i { font-style: normal; }
+.log i.crit { color: var(--gold); font-weight: 600; }
+.log i.miss { color: #b6bed6; }
+.log i.fell { color: var(--foe); }
+
+/* the label changes length as the toll and the arming state change; never let it
+   wrap, or the header grows and walks the whole deck down */
+.ctl.flee { margin-left: auto; flex: none; white-space: nowrap; }
+.ctl.flee.costly { color: #d8a06a; border-color: #6b4b2a; }
+.ctl.flee.armed { color: #14161f; background: var(--foe); border-color: var(--foe); font-weight: 600; }
 .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 9.5px; color: var(--ink-dim); letter-spacing: .07em; padding: 0 2px; }
 
 /* ── shop ───────────────────────────────────────────────────── */
@@ -461,3 +502,21 @@ button { font-family: var(--mono); cursor: pointer; }
   letter-spacing: .02em; box-shadow: 0 6px 18px rgba(0,0,0,.6); pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) { [data-tip]:hover::after { transition: none; } }
+
+/* ── energy, odds and misses ────────────────────────────────── */
+.plate .bar.ep { height: 3px; margin-top: 2px; background: rgba(255,255,255,.1); }
+.plate .bar.ep .epfill { position: absolute; inset: 0; background: #4fa8e8; transition: width .3s ease; }
+.ins-bar.ep i { background: #4fa8e8; }
+.ep-cost { font-style: normal; color: #4fa8e8; }
+
+.deck-ep { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.ep-pip { display: block; width: 68px; height: 5px; background: rgba(255,255,255,.13); border-radius: 3px; overflow: hidden; }
+.ep-pip i { display: block; height: 100%; background: #4fa8e8; transition: width .3s ease; }
+.ep-num { font-size: 10px; color: #7dc0ea; letter-spacing: .05em; }
+
+.move .cost { margin-left: auto; font-size: 9.5px; color: #4fa8e8; }
+.move .odds { display: block; margin-top: 2px; font-size: 9px; color: var(--ink-dim);
+  letter-spacing: .04em; line-height: 13px; height: 13px; overflow: hidden; }
+.move:disabled .cost { color: var(--foe); }
+
+.float.miss { color: #cfd6e8; font-size: 22px; letter-spacing: .08em; }

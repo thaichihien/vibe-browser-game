@@ -1,7 +1,9 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
          H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
-         X, XALL, STEAL, U, UEXEC, UMEND, UTIME } from '../../engine/moves.js';
+         X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
+         UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
+  from '../../engine/moves.js';
 
 export default {
   key: 'steam', name: 'STEAMPUNK',
@@ -43,16 +45,16 @@ export default {
   units: [
     u('Đại Uý Nồi Hơi', '🎩', 'aether', 'legend', 'EMBER', 1.1, 630, 94, 54, 42, 82,
       [S('Gậy Ba Toong Nóng', 'EMBER', 1.28), TAUNT('Áo Giáp Đồng', 145), R('Lệnh Nữ Hoàng', 'pwr', 32), H('Bình Trà Nóng', 116)],
-      U('XẢ VAN TOÀN LỰC', 'EMBER', 2.35)),
+      UGUARD('XẢ VAN TOÀN LỰC', 184, 42)),
     u('Nhà Phát Minh Tesla', '⚡', 'aether', 'legend', 'STORM', .95, 350, 108, 26, 44, 110,
       [S('Cuộn Tesla', 'STORM', 1.32), AOE('Vòng Cung Điện', 'STORM', .82), STUN('Sốc Điện', 'STORM', .9), B('Nạp Tụ', 'pwr', 34)],
-      U('CƠN GIÔNG TRONG PHÒNG', 'STORM', 2.35)),
+      USTUN('CƠN GIÔNG TRONG PHÒNG', 'STORM', 1.6)),
     u('Nữ Bá Tước Súng Hơi', '🌂', 'aether', 'elite', 'FROST', 1.0, 400, 96, 30, 34, 108,
-      [SNIPE('Phi Tiêu Khí Nén', 'FROST', 1.22), MARK('Kính Một Mắt', 'FROST', .88), B('Điềm Tĩnh', 'pwr', 30), X('Bắn Gối', 'spd', 28)]),
+      [SNIPE('Phi Tiêu Khí Nén', 'FROST', 1.22), MARK('Kính Một Mắt', 'FROST', .88), B('Điềm Tĩnh', 'crt', 30), X('Bắn Gối', 'spd', 28)]),
     u('Bác Sĩ Máu Đen', '🩺', 'aether', 'elite', 'VERDANT', .95, 350, 78, 30, 44, 94,
       [S('Ống Tiêm Lớn', 'VERDANT', 1.1), H('Truyền Huyết Thanh', 130), CLEANSE('Lọc Bồ Hóng', 88), DOT('Thuốc Sai Liều', 'VERDANT', .7, 34)]),
     u('Cảnh Binh Đèn Khí', '🏮', 'aether', 'grunt', 'RADIANT', .95, 420, 72, 42, 32, 86,
-      [S('Đèn Bão', 'RADIANT', 1.1), R('Tuần Phố', 'grd', 28), X('Chói Mắt', 'pwr', 26), H('Còi Gọi Cứu', 100)]),
+      [S('Đèn Bão', 'RADIANT', 1.1), R('Tuần Phố', 'grd', 28), X('Chói Mắt', 'acc', 26), H('Còi Gọi Cứu', 100)]),
     u('Thợ Đốt Lò', '🔥', 'aether', 'grunt', 'EMBER', 1.05, 470, 80, 40, 26, 78,
       [S('Xẻng Than', 'EMBER', 1.15), DOT('Ném Than Đỏ', 'EMBER', .7, 34), B('Chai Sạn', 'grd', 32), R('Đốt Mạnh Lên', 'pwr', 26)]),
     u('Bồ Câu Đưa Thư Máy', '🕊️', 'aether', 'grunt', 'FORGE', .8, 300, 76, 24, 30, 128,
@@ -60,12 +62,12 @@ export default {
 
     u('Thủ Lĩnh Công Đoàn', '✊', 'cog', 'legend', 'FORGE', 1.15, 660, 92, 56, 40, 76,
       [S('Búa Đình Công', 'FORGE', 1.3), R('Đoàn Kết', 'pwr', 34), TAUNT('Hàng Rào Người', 150), HALL('Bánh Mì Chia Đều', 92)],
-      U('TỔNG ĐÌNH CÔNG', 'FORGE', 2.35)),
+      UGUARD('TỔNG ĐÌNH CÔNG', 190, 41)),
     u('Kẻ Phá Máy', '🔨', 'cog', 'legend', 'STEEL', 1.05, 560, 102, 42, 32, 104,
       [PIERCE('Đập Bánh Răng', 'STEEL', 1.28), X('Tháo Ốc', 'grd', 36), RAMP('Đập Liên Hồi', 'STEEL', .98), SILENCE('Kẹt Máy', 'STEEL', .9)],
       UEXEC('PHÁ SẠCH XƯỞNG', 'STEEL', 1.52)),
     u('Cô Bé Ống Khói', '🧹', 'cog', 'elite', 'UMBRA', .78, 300, 86, 24, 30, 126,
-      [S('Chổi Quét Bồ Hóng', 'UMBRA', 1.15), B('Luồn Ống Hẹp', 'spd', 36), X('Bụi Vào Mắt', 'pwr', 26), ARC('Chạy Vòng', 'UMBRA', .85)]),
+      [S('Chổi Quét Bồ Hóng', 'UMBRA', 1.15), B('Luồn Ống Hẹp', 'spd', 36), X('Bụi Vào Mắt', 'acc', 26), ARC('Chạy Vòng', 'UMBRA', .85)]),
     u('Thợ Hàn Mặt Nạ', '🥽', 'cog', 'elite', 'EMBER', 1.0, 470, 88, 44, 28, 86,
       [S('Mỏ Hàn', 'EMBER', 1.22), BARRIER('Hàn Vá Giáp', 120), DOT('Xỉ Nóng', 'EMBER', .7, 36), B('Kính Chắn', 'wrd', 32)]),
     u('Kế Toán Nổi Loạn', '📒', 'cog', 'grunt', 'RADIANT', .9, 320, 76, 26, 38, 100,
@@ -77,12 +79,12 @@ export default {
 
     u('Nguyên Mẫu Số Một', '🤖', 'automata', 'legend', 'FORGE', 1.3, 720, 94, 60, 46, 66,
       [S('Cánh Tay Đòn', 'FORGE', 1.3), AOE('Quét Ngang', 'FORGE', .88), B('Khoá Khớp', 'grd', 40), H('Tự Bôi Trơn', 118)],
-      U('GIAO THỨC GỐC', 'FORGE', 2.4)),
+      URAGE('GIAO THỨC GỐC')),
     u('Vũ Công Dây Cót', '🩰', 'automata', 'legend', 'RADIANT', .95, 400, 100, 30, 44, 124,
       [S('Xoay Lưỡi', 'RADIANT', 1.28), ARC('Vòng Xoay', 'RADIANT', .9), B('Lên Dây Cót', 'spd', 42), HALL('Điệu Nhạc Hộp', 88)],
       UTIME('HỘP NHẠC NGƯNG')),
     u('Người Máy Đánh Cờ', '♟️', 'automata', 'elite', 'STORM', 1.0, 430, 92, 34, 40, 100,
-      [MARK('Tính Nước Đi', 'STORM', .9), S('Quân Hậu', 'STORM', 1.22), X('Chiếu Tướng', 'pwr', 32), B('Tính Trước Ba Nước', 'pwr', 32)]),
+      [MARK('Tính Nước Đi', 'STORM', .9), S('Quân Hậu', 'STORM', 1.22), X('Chiếu Tướng', 'pwr', 32), B('Tính Trước Ba Nước', 'crt', 32)]),
     u('Tay Máy Nồi Áp Suất', '🫖', 'automata', 'elite', 'EMBER', 1.1, 520, 86, 46, 32, 74,
       [S('Xả Hơi Nóng', 'EMBER', 1.2), AOE('Nổ Áp Suất', 'EMBER', .85), B('Van An Toàn', 'grd', 36), DOT('Bỏng Hơi', 'EMBER', .72, 36)]),
     u('Búp Bê Sứ', '🎎', 'automata', 'grunt', 'FROST', .85, 320, 80, 24, 34, 112,
@@ -100,5 +102,5 @@ export default {
   ],
   boss: boss('Nồi Hơi Khổng Lồ Số 3', '🏭', 'EMBER', 2.15, 2120, 117, 66, 54, 62,
     [S('Piston Nghiền', 'FORGE', 1.4), AOE('Xả Hơi Toàn Sàn', 'EMBER', .95), B('Vỏ Đồng Dày', 'grd', 35), DOT('Xỉ Than Đỏ', 'EMBER', .95, 48)],
-    U('NỔ TUNG NỒI HƠI', 'EMBER', 2.6))
+    UCURSE('NỔ TUNG NỒI HƠI', 'EMBER', 53))
 };

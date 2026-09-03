@@ -1,5 +1,7 @@
 /* Everything that survives a battle. Two keys, per the house convention. */
 
+import { RELICS } from './data/shop.js';
+
 const SAVE = 'chronoDrifter.save';
 const MUTED = 'chronoDrifter.muted';
 
@@ -32,15 +34,21 @@ export function reset() {
 
 export const hasRelic = (id) => save.relics.includes(id);
 
+export const isRelic = (id) => RELICS.some(r => r.id === id);
+
 export function buy(item) {
+  if (isRelic(item.id) && hasRelic(item.id)) return false;
   const price = priceOf(item);
   if (save.shards < price) return false;
   save.shards -= price;
-  if (item.id in { backpack: 1, watch: 1, torch: 1, gps: 1, gloves: 1, card: 1, helmet: 1, marker: 1, camera: 1, hourglass: 1 }) {
-    if (hasRelic(item.id)) return false;
+  if (isRelic(item.id)) {
     save.relics.push(item.id);
   } else {
-    save.stock[item.id] = (save.stock[item.id] || 0) + 1;
+    save.stock[item.id] = (save.stock[item.id] || 0) + (hasRelic('backpack') ? 2 : 1);
+    // an item you paid for should be usable without hunting for a loadout screen
+    if (!save.satchel.includes(item.id) && save.satchel.length < satchelSize()) {
+      save.satchel.push(item.id);
+    }
   }
   flush();
   return true;
@@ -49,7 +57,9 @@ export function buy(item) {
 /** The credit card is the only thing that moves a price. */
 export const priceOf = (item) => Math.round(item.price * (hasRelic('card') ? 0.8 : 1));
 
-export const satchelSize = () => 3 + (hasRelic('backpack') ? 1 : 0);
+/** Five satchel slots, always. Using one costs the unit's turn, so five is plenty. */
+export const SATCHEL_MAX = 5;
+export const satchelSize = () => SATCHEL_MAX;
 
 export function setSatchel(ids) {
   save.satchel = ids.slice(0, satchelSize());
@@ -65,11 +75,12 @@ export function consume(id) {
   return true;
 }
 
-export function recordResult({ won, score, shards, eraKey }) {
+export function recordResult({ won, score, shards, eraKey, fled }) {
   save.score += score;
   save.best = Math.max(save.best, score);
-  save.shards += shards;
+  save.shards = Math.max(0, save.shards + shards);
   if (won) save.wins++; else save.losses++;
+  if (fled) save.fled = (save.fled || 0) + 1;
   if (!save.seen.includes(eraKey)) save.seen.push(eraKey);
   flush();
 }

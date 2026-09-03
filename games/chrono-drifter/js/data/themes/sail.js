@@ -1,7 +1,9 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
          H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
-         X, XALL, STEAL, U, UEXEC, UMEND, UTIME } from '../../engine/moves.js';
+         X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
+         UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
+  from '../../engine/moves.js';
 
 export default {
   key: 'sail', name: 'THỜI ĐẠI BUỒM',
@@ -43,12 +45,12 @@ export default {
   units: [
     u('Thuyền Trưởng Ashgrove', '🎖️', 'crown', 'legend', 'STEEL', 1.0, 610, 90, 56, 40, 80,
       [S('Đường Kiếm', 'STEEL', 1.2), R('Khép Hàng', 'grd', 30), AOE('Đạn Chùm', 'EMBER', .75), H('Y Sĩ Tàu', 115)],
-      U('LOẠT PHÁO MẠN TÀU', 'EMBER', 2.25)),
+      UGUARD('LOẠT PHÁO MẠN TÀU', 190, 41)),
     u('Đề Đốc Bão Tố', '⚓', 'crown', 'legend', 'STORM', 1.05, 580, 94, 48, 44, 86,
       [S('Roi Sét Biển', 'STORM', 1.25), AOE('Gọi Gió', 'STORM', .8), TAUNT('Đứng Mũi', 130), R('Hiệu Kỳ', 'pwr', 28)],
-      U('CƠN THỊNH NỘ ĐẠI DƯƠNG', 'STORM', 2.3)),
+      UGUARD('CƠN THỊNH NỘ ĐẠI DƯƠNG', 163, 42)),
     u('Phó Thuốc Súng', '💣', 'crown', 'elite', 'EMBER', .9, 320, 106, 26, 32, 108,
-      [S('Ném Ngòi Nổ', 'EMBER', 1.3), DOT('Bỏng Thuốc Súng', 'EMBER', .65, 34), B('Tay Vững', 'pwr', 30), AOE('Đạn Xích', 'STEEL', .7)]),
+      [S('Ném Ngòi Nổ', 'EMBER', 1.3), DOT('Bỏng Thuốc Súng', 'EMBER', .65, 34), B('Tay Vững', 'crt', 30), AOE('Đạn Xích', 'STEEL', .7)]),
     u('Cha Xứ Trên Tàu', '⛪', 'crown', 'elite', 'RADIANT', .95, 340, 72, 30, 48, 90,
       [S('Lời Nguyện', 'RADIANT', 1.1), HALL('Ban Phép', 95), REVIVE('Gọi Về', .4), CLEANSE('Nước Thánh', 90)]),
     u('Lính Thuỷ Đánh Bộ', '🪖', 'crown', 'grunt', 'STEEL', .95, 400, 68, 40, 30, 88,
@@ -56,11 +58,11 @@ export default {
     u('Thợ Mộc Tàu', '🪚', 'crown', 'grunt', 'FORGE', .95, 440, 66, 46, 28, 76,
       [S('Rìu Đóng', 'FORGE', 1.1), H('Vá Thân Tàu', 120), BARRIER('Ván Chắn', 110), X('Cưa Cột', 'grd', 26)]),
     u('Người Quan Trắc', '🔭', 'crown', 'grunt', 'RADIANT', .9, 300, 78, 24, 36, 114,
-      [MARK('Chỉ Điểm', 'RADIANT', .9), SNIPE('Bắn Tầm Xa', 'STEEL', 1.15), B('Trèo Cột Buồm', 'spd', 30), X('Loá Kính', 'pwr', 24)]),
+      [MARK('Chỉ Điểm', 'RADIANT', .9), SNIPE('Bắn Tầm Xa', 'STEEL', 1.15), B('Trèo Cột Buồm', 'spd', 30), X('Loá Kính', 'acc', 24)]),
 
     u('Mắt Đen Sáu Ngón', '🏴‍☠️', 'pirate', 'legend', 'UMBRA', 1.05, 620, 100, 44, 36, 96,
       [S('Chém Cướp', 'UMBRA', 1.25), ARC('Song Kiếm', 'STEEL', .9), STEAL('Cướp Vàng', 40), B('Rượu Mạnh', 'pwr', 38)],
-      U('KHÔNG AI SỐNG SÓT', 'UMBRA', 2.35)),
+      URAGE('KHÔNG AI SỐNG SÓT')),
     u('Bà Đồng La Bàn', '🧭', 'pirate', 'legend', 'STORM', .95, 350, 104, 26, 44, 112,
       [S('Kim Chỉ Nam', 'STORM', 1.25), X('Lạc Hướng', 'spd', 32), MARK('Định Vị', 'STORM', .85), HALL('Gió Thuận', 90)],
       UTIME('ĐỔI CHIỀU GIÓ')),
@@ -77,14 +79,14 @@ export default {
 
     u('Davy Chết Đuối', '🧟', 'drowned', 'legend', 'TIDE', 1.2, 700, 95, 44, 42, 78,
       [S('Quăng Mỏ Neo', 'TIDE', 1.25), AOE('Dòng Xoáy Ngầm', 'TIDE', .7), B('Da Hà Bám', 'grd', 40), DRAIN('Tay Dìm Chết', 'TIDE', 1.0)],
-      U('XOÁY NƯỚC TỬ THẦN', 'TIDE', 2.35)),
+      UDRAIN('XOÁY NƯỚC TỬ THẦN', 'TIDE', 1.9)),
     u('Thuyền Ma Không Đáy', '⛵', 'drowned', 'legend', 'UMBRA', 1.45, 760, 86, 56, 48, 62,
       [AOE('Sương Mù Tử Khí', 'UMBRA', .8), TAUNT('Vỏ Tàu Mục', 170), REVIVE('Kéo Xác Lên Boong', .4), DOT('Nước Mặn', 'TIDE', .7, 40)],
       UMEND('CẢ ĐOÀN TRỞ LẠI', 270)),
     u('Mỹ Nhân Ngư Rạn', '🧜‍♀️', 'drowned', 'elite', 'UMBRA', 1.0, 290, 80, 26, 44, 114,
       [S('Khúc Ca Nguyền', 'UMBRA', 1.15), X('Dụ Dỗ', 'spd', 30), H('Gọi Triều', 125), DOT('Rữa Biển', 'VERDANT', .6, 32)]),
     u('Con Kraken', '🦑', 'drowned', 'elite', 'TIDE', 1.15, 390, 88, 34, 36, 92,
-      [DRAIN('Giác Bám', 'TIDE', .95), X('Mây Mực', 'pwr', 28), B('Cuộn Xiết', 'grd', 35), STUN('Xúc Tu Quật', 'STEEL', .9)]),
+      [DRAIN('Giác Bám', 'TIDE', .95), X('Mây Mực', 'acc', 28), B('Cuộn Xiết', 'grd', 35), STUN('Xúc Tu Quật', 'STEEL', .9)]),
     u('Bộ Xương Đội Mũ', '💀', 'drowned', 'grunt', 'UMBRA', .9, 340, 70, 30, 30, 100,
       [PIERCE('Đâm Xương', 'UMBRA', 1.05), B('Ráp Lại', 'grd', 30), S('Ném Sọ', 'UMBRA', 1.0), X('Cười Khô', 'pwr', 22)]),
     u('Cá Mập Đói', '🦈', 'drowned', 'grunt', 'TIDE', 1.25, 420, 88, 28, 24, 110,
@@ -100,5 +102,5 @@ export default {
   ],
   boss: boss('Titan Rạn San Hô', '🐙', 'TIDE', 2.25, 2200, 115, 58, 60, 66,
     [S('Vòng Xiết Titan', 'TIDE', 1.4), AOE('Nghiền Sóng', 'TIDE', .95), B('Da Vực Sâu', 'grd', 35), DOT('Mực Đen', 'UMBRA', .9, 48)],
-    U('RẠN SAN HÔ THỨC GIẤC', 'TIDE', 2.6))
+    UCURSE('RẠN SAN HÔ THỨC GIẤC', 'TIDE', 52))
 };

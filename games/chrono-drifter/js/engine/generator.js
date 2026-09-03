@@ -41,7 +41,7 @@ function draft(rng, era, factionKey, spec) {
   return out;
 }
 
-/** Rough parity without balancing 5 formats × 12 eras by hand. */
+/** Rough parity without balancing 5 formats × every era by hand. */
 export function balance(a, b) {
   const score = arr => arr.reduce((s, u) => s + u.pwr * Math.sqrt(u.hp), 0);
   const r = score(a) / score(b);

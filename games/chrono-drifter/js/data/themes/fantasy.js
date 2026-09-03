@@ -1,7 +1,9 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
          H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
-         X, XALL, STEAL, U, UEXEC, UMEND, UTIME } from '../../engine/moves.js';
+         X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
+         UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
+  from '../../engine/moves.js';
 
 export default {
   key: 'fantasy', name: 'GIẢ TƯỞNG',
@@ -43,16 +45,16 @@ export default {
   units: [
     u('Roland Thề Nguyện', '🛡️', 'realm', 'legend', 'STEEL', 1.05, 600, 88, 61, 40, 74,
       [S('Nhát Thề', 'STEEL', 1.15), R('Thành Luỹ Thề', 'grd', 30), TAUNT('Khiên Thề', 120), H('Hồi Sức', 110)],
-      U('PHÁN QUYẾT', 'STEEL', 2.0)),
+      UGUARD('PHÁN QUYẾT', 207, 40)),
     u('Ilsa Bút Lửa', '🧙', 'realm', 'legend', 'EMBER', .95, 310, 112, 22, 35, 118,
       [S('Thương Lửa', 'EMBER', 1.35), AOE('Tường Lửa', 'EMBER', .75), B('Nhóm Lửa', 'pwr', 30), DOT('Thiêu Đốt', 'EMBER', .6, 34)],
-      U('HOẢ DIỆM TINH', 'EMBER', 2.2)),
+      UCHAIN('HOẢ DIỆM TINH', 'EMBER', 1.5)),
     u('Nữ Tu Vane', '👼', 'realm', 'elite', 'RADIANT', .9, 300, 74, 28, 46, 88,
       [S('Dấu Nắng', 'RADIANT', 1.1), H('Ánh Bình Minh', 130), AOE('Xích Thánh Quang', 'RADIANT', .7), R('Ban Phúc', 'wrd', 30)]),
     u('Kỵ Sĩ Bạch Mã', '🐴', 'realm', 'elite', 'STEEL', 1.15, 430, 84, 42, 30, 104,
       [S('Xung Phong', 'STEEL', 1.25), ARC('Vòng Kiếm', 'STEEL', .8), B('Thúc Ngựa', 'spd', 30), X('Hất Ngã', 'grd', 25)]),
     u('Cung Thủ Rừng Sồi', '🏹', 'realm', 'grunt', 'VERDANT', .9, 300, 82, 24, 26, 112,
-      [SNIPE('Mũi Tên Xuyên Tim', 'VERDANT', 1.15), S('Bắn Nhanh', 'STEEL', .95), B('Ngắm Kỹ', 'pwr', 25), X('Bắn Gân', 'spd', 25)]),
+      [SNIPE('Mũi Tên Xuyên Tim', 'VERDANT', 1.15), S('Bắn Nhanh', 'STEEL', .95), B('Ngắm Kỹ', 'crt', 25), X('Bắn Gân', 'spd', 25)]),
     u('Thợ Rèn Đá Lửa', '⚒️', 'realm', 'grunt', 'FORGE', 1.0, 460, 70, 48, 28, 70,
       [S('Búa Nện', 'FORGE', 1.1), R('Rèn Giáp', 'grd', 30), BARRIER('Khiên Thép', 100), X('Đập Vỡ Giáp', 'grd', 30)]),
     u('Lính Gác Cổng', '🪖', 'realm', 'grunt', 'STEEL', .95, 400, 66, 44, 30, 82,
@@ -63,7 +65,7 @@ export default {
       UMEND('MÙA XUÂN VĨNH CỬU', 260)),
     u('Nữ Đồng Trăng', '🌙', 'wild', 'legend', 'RADIANT', .95, 340, 100, 26, 44, 110,
       [S('Tia Trăng', 'RADIANT', 1.3), HALL('Sương Lành', 90), MARK('Dấu Trăng', 'RADIANT', .8), B('Ánh Bạc', 'wrd', 35)],
-      U('NGUYỆT THỰC', 'RADIANT', 2.15)),
+      UCHAIN('NGUYỆT THỰC', 'RADIANT', 1.5)),
     u('Gấu Xám Vách Núi', '🐻', 'wild', 'elite', 'FORGE', 1.35, 620, 92, 46, 26, 76,
       [S('Vồ', 'FORGE', 1.25), DRAIN('Ngoạm', 'FORGE', .95), B('Gầm Vang', 'pwr', 35), STUN('Đập Đất', 'FORGE', .8)]),
     u('Sói Tuyết Đầu Đàn', '🐺', 'wild', 'elite', 'FROST', 1.05, 400, 90, 30, 30, 122,
@@ -77,12 +79,12 @@ export default {
 
     u('Vharn, Long Tro', '🐉', 'abyss', 'legend', 'EMBER', 1.5, 720, 96, 44, 38, 82,
       [S('Cào Than', 'EMBER', 1.2), AOE('Vỗ Cánh', 'STEEL', .7), B('Da Nham Thạch', 'grd', 40), DOT('Dấu Thiêu', 'EMBER', .8, 40)],
-      U('MƯA TRO', 'EMBER', 2.4)),
+      UCURSE('MƯA TRO', 'EMBER', 43)),
     u('Lãnh Chúa Xương', '☠️', 'abyss', 'legend', 'UMBRA', 1.1, 560, 94, 46, 40, 90,
       [PIERCE('Lưỡi Hái', 'UMBRA', 1.15), AOE('Gió Mộ', 'UMBRA', .75), REVIVE('Gọi Hồn', .4), X('Nguyền Rủa', 'pwr', 30)],
       UEXEC('THU HOẠCH', 'UMBRA', 1.5)),
     u('Gnash Bới Mộ', '💀', 'abyss', 'elite', 'UMBRA', .85, 280, 71, 26, 31, 118,
-      [PIERCE('Xé Sườn', 'UMBRA', 1.0), X('Phá Giáp', 'grd', 35), DOT('Bùa Thối Rữa', 'UMBRA', .5, 30), B('Cười Rợn', 'pwr', 35)]),
+      [PIERCE('Xé Sườn', 'UMBRA', 1.0), X('Phá Giáp', 'grd', 35), DOT('Bùa Thối Rữa', 'UMBRA', .5, 30), B('Cười Rợn', 'crt', 35)]),
     u('Quỷ Sừng Đỏ', '👹', 'abyss', 'elite', 'EMBER', 1.15, 520, 96, 38, 28, 94,
       [S('Chém Quỷ', 'EMBER', 1.25), DRAIN('Ăn Thịt', 'EMBER', 1.0), B('Cuồng Nộ', 'pwr', 40), SILENCE('Tiếng Thét', 'UMBRA', .8)]),
     u('Bầy Dơi Đêm', '🦇', 'abyss', 'grunt', 'UMBRA', 1.0, 380, 63, 33, 40, 95,
@@ -100,5 +102,5 @@ export default {
   ],
   boss: boss('Malgrath, Bạo Chúa Tro', '🐲', 'EMBER', 2.15, 2100, 118, 62, 58, 70,
     [S('Vuốt Bạo Chúa', 'EMBER', 1.4), AOE('Bão Lửa', 'EMBER', .95), B('Vảy Hắc Diệu', 'grd', 35), DRAIN('Nuốt Linh Hồn', 'UMBRA', 1.2)],
-    U('BÌNH MINH CUỐI CÙNG', 'EMBER', 2.6))
+    UDRAIN('BÌNH MINH CUỐI CÙNG', 'EMBER', 1.9))
 };

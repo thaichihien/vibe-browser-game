@@ -131,16 +131,60 @@ exactly the "wizard and dragon share a fire attack" the brief asks for.
 - **Buff** — Rally (PWR) · Bulwark (GRD) · Haste (SPD) · Focus (crit) · Charge-up (double next)
 - **Debuff** — Weaken · Sunder · Slow · Blind · Burn/Poison/Bleed (DoT) · Stun · Silence · Mark (+25% taken)
 - **Control** — Taunt · Guard-ally · Steal charge · Sacrifice (HP→power) · Summon
-- **Ultimates** — Annihilate (AoE ×2.4) · Full mend + cleanse · Purge (execute all under 30%) ·
+- **Ultimates — twelve shapes, because "damage everyone" is not a signature.**
+  Annihilate (AoE) · Purge (AoE execute) · Devour (AoE that heals the caster) ·
+  Shatter (AoE + stun all) · Sunderblow (one target, huge, ignores armour) ·
+  Chain (three hops, each +35%) · Curse (no damage at all — wrecks every enemy stat and
+  leaves them burning) · Aegis (team shield + regeneration) · Raise (every fallen ally
+  stands back up) · Full Mend (heal all + cleanse) · Rage (the caster becomes the problem
+  for four turns) · Sacrifice (spend 35% of your own HP for one impossible hit) ·
   **Time Stop** (act twice more immediately — the one ultimate that is *about* the premise)
+
+  Each legend's shape is drawn from their own move set, so a taunting tank gets Aegis, a
+  sniper gets Sunderblow, and a damage-over-time dragon gets Curse. Across the 84 legends
+  and bosses no single shape exceeds 18%; it was 67% when every ultimate was an area attack.
 
 ## 7. Combat math
 
 ```
+hit%  = 92 + accBuffs + (SPD.src − SPD.tgt)/8            clamped 45…99
+crit% = 8  + critBuffs + (move.crit ? 22 : 0)            clamped 0…75
 raw   = PWR × move.pow × rand(0.92, 1.08)
 def   = move.el === STEEL ? target.GRD : target.WRD
 dmg   = raw × 100/(100 + def) × element(move.el, target.affinity) × crit × buffs
 ```
+
+### Accuracy and crit are stats, not hidden dice
+
+Attacks can simply **miss**. `acc` and `crt` are percentage *points* rather than
+multipliers, which is what lets a blinding move subtract flat accuracy and an aiming
+move buy flat crit. Fifteen moves across the twelve eras move accuracy (smoke, sand,
+ink, glare); twelve buy crit (taking aim, holding breath, calculating three moves
+ahead). Both numbers print on the move button — `🎯 87% · 💥 8%` — because odds you
+cannot see are not a decision.
+
+Measured over 600 simulated battles: **7.7% miss rate, 9.1% crit rate.**
+
+### Energy
+
+Every skill draws on one 80-point pool that regenerates **10 at the top of your own
+turn**. Cheap pokes are sustainable on regeneration alone; the heavy hitters are not,
+and that gap is the decision. A move you cannot afford is locked and says how short
+you are. **Chờ costs nothing and refunds 30**, so a drained unit always has a legal
+move and stalling to refill is a genuine tactic rather than a dead button.
+
+| Tier | Cost |
+|---|---|
+| Strike · Mark · Hex · Buff | 11–15 |
+| Pierce · Drain · Dot · Taunt · Arc · Barrier | 16–21 |
+| Heal · Rally · Stun · Silence · Cleave | 22–29 |
+| Mend All · Hex All · Revive | 27–36 |
+| Ultimates | 0 — gated by the CHARGE meter instead |
+
+Tuned by sweeping regeneration and pool size across 400-battle runs. At 10/80 the AI
+finds at least one move unaffordable on ~7% of turns and is fully starved on 0.8%; a
+human clicking the strongest option first hits the wall far more often — **13 of 28
+turns in a played-through battle.**
 
 Diminishing-returns defence keeps late-game stats from producing immortal units.
 
@@ -248,6 +292,24 @@ every format and asserts median rounds land inside the bands above.
 | ★★★★ Hard | ×1.15 | 1-ply lookahead, focus fire, holds ults | +1 legend | ×1.5 |
 | ★★★★★ Very Hard | ×1.30 | 1-ply + threat/combo scoring | +1 unit, +1 legend | ×2.2 |
 
+### The action log
+
+Five entries, newest first, each naming the actor, the move, the target and how it
+landed — **trúng / CHÍ MẠNG / TRƯỢT**, or a tally for an area attack (`7 trúng, 1 chí
+mạng, 1 trượt`). Deaths are appended to the line that caused them. Exact numbers stay
+on the floating combat text; the log is for following the fight, not auditing it. One
+line was never enough: by the time you read it, the next unit had already acted.
+
+### Fleeing
+
+You may withdraw from any battle. Inside the first **5 turns** the era takes half of
+what a win there would have paid; after that leaving is free but pays nothing. The
+button arms on the first click and only flees on the second.
+
+The toll is derived from `winShards()` rather than its own constant, so it can never
+exceed a victory — priced independently it did, in all 25 difficulty × format
+combinations, which would have made fleeing a trap rather than a choice.
+
 ## 10. Rewards, ranking, economy
 
 - **Score** = `100 × difficulty × format` + no-deaths `+150` + under-par rounds `+100` +
@@ -257,7 +319,8 @@ every format and asserts median rounds land inside the bands above.
 
 ## 11. The shop — 26 anachronisms
 
-**Consumables** (bought in stacks, 3 satchel slots chosen pre-battle; 4 with the backpack):
+**Consumables** (bought in stacks; **5 satchel slots**, armed automatically on purchase and
+re-orderable on the loadout screen):
 
 | Item | ⧗ | Effect |
 |---|---|---|
@@ -282,7 +345,7 @@ every format and asserts median rounds land inside the bands above.
 
 | Item | ⧗ | Effect |
 |---|---|---|
-| 🎒 Bigger Backpack | 1200 | A 4th satchel slot |
+| 🎒 Ba lô hai ngăn | 1200 | Every consumable purchase yields double |
 | ⌚ Wristwatch | 1400 | Win every timeline tie, +5% SPD |
 | 🔦 Flashlight | 1500 | Enemy affinities and counters shown in the HUD |
 | 🧭 GPS | 1600 | Exact damage preview before you confirm a move |

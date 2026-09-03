@@ -1,7 +1,9 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
          H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
-         X, XALL, STEAL, U, UEXEC, UMEND, UTIME } from '../../engine/moves.js';
+         X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
+         UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
+  from '../../engine/moves.js';
 
 export default {
   key: 'space', name: 'VŨ TRỤ SÂU',
@@ -43,12 +45,12 @@ export default {
   units: [
     u('Chỉ Huy Aurelis', '👩‍🚀', 'navy', 'legend', 'RADIANT', 1.0, 600, 92, 52, 48, 84,
       [S('Đạn Ray', 'STEEL', 1.2), R('Giữ Đội Hình', 'grd', 30), AOE('Loạt Ánh Sao', 'RADIANT', .75), H('Khoang Y Tế', 120)],
-      U('THƯƠNG QUỸ ĐẠO', 'RADIANT', 2.25)),
+      UGUARD('THƯƠNG QUỸ ĐẠO', 177, 41)),
     u('Đô Đốc Sắt', '🎖️', 'navy', 'legend', 'FORGE', 1.1, 660, 88, 60, 42, 68,
       [S('Pháo Chính', 'FORGE', 1.25), TAUNT('Lệnh Chắn', 150), R('Toàn Hạm Khai Hoả', 'pwr', 28), BARRIER('Trường Lực', 140)],
       UEXEC('LỆNH TIÊU DIỆT', 'FORGE', 1.5)),
     u('Pháo Thủ Roe', '🔫', 'navy', 'elite', 'FORGE', .9, 330, 104, 26, 34, 110,
-      [S('Loạt Đạn', 'FORGE', 1.3), AOE('Đạn Phòng Không', 'STEEL', .7), B('Ngắm Vững', 'pwr', 30), DOT('Bỏng Plasma', 'EMBER', .6, 32)]),
+      [S('Loạt Đạn', 'FORGE', 1.3), AOE('Đạn Phòng Không', 'STEEL', .7), B('Ngắm Vững', 'crt', 30), DOT('Bỏng Plasma', 'EMBER', .6, 32)]),
     u('Phi Công Cảm Tử', '🚀', 'navy', 'elite', 'EMBER', 1.0, 380, 100, 28, 26, 118,
       [S('Đâm Thẳng', 'EMBER', 1.35), EXEC('Lao Vào', 'EMBER', 1.1), B('Đốt Hết Nhiên Liệu', 'spd', 40), ARC('Bay Xuyên', 'EMBER', .85)]),
     u('Robot Phụ Trợ 7', '🤖', 'navy', 'grunt', 'STORM', .85, 340, 68, 34, 40, 92,
@@ -60,7 +62,7 @@ export default {
 
     u('Miệng Vực', '🐙', 'swarm', 'legend', 'UMBRA', 1.55, 760, 94, 46, 36, 76,
       [S('Quất Xúc Tu', 'UMBRA', 1.25), AOE('Giếng Trọng Lực', 'UMBRA', .7), B('Mai Giáp', 'grd', 40), DRAIN('Nuốt Chửng', 'UMBRA', 1.0)],
-      U('CHÂN TRỜI SỰ KIỆN', 'UMBRA', 2.4)),
+      UDRAIN('CHÂN TRỜI SỰ KIỆN', 'UMBRA', 1.9)),
     u('Nữ Hoàng Tổ', '🪺', 'swarm', 'legend', 'VERDANT', 1.3, 700, 88, 44, 44, 70,
       [DOT('Đẻ Trứng', 'VERDANT', .8, 42), HALL('Hoóc Môn Bầy', 95), R('Mệnh Lệnh Tổ', 'pwr', 30), S('Ngòi Chích', 'VERDANT', 1.2)],
       UMEND('TỔ HỒI SINH', 280)),
@@ -100,5 +102,5 @@ export default {
   ],
   boss: boss('Thuỷ Quái Khe Nứt', '🐋', 'FROST', 2.25, 2250, 114, 60, 62, 64,
     [S('Hàm Khe Nứt', 'FROST', 1.4), AOE('Nghiền Trọng Lực', 'UMBRA', .95), B('Da Hư Không', 'wrd', 35), DRAIN('Nuốt Trọn', 'FROST', 1.2)],
-    U('ĐIỂM KỲ DỊ', 'UMBRA', 2.6))
+    UDRAIN('ĐIỂM KỲ DỊ', 'UMBRA', 1.9))
 };

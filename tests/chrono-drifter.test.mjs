@@ -11,11 +11,14 @@ import { CONSUMABLES, RELICS, SHOP } from '../games/chrono-drifter/js/data/shop.
 import { mult, RING, ELEMENTS, STRONG, WEAK, EL_ICON, weakTo, strongAgainst, resists }
   from '../games/chrono-drifter/js/engine/elements.js';
 import { EFFECTS, effectsOf } from '../games/chrono-drifter/js/data/effects.js';
-import { ARCHETYPES, tagOf, WAIT } from '../games/chrono-drifter/js/engine/moves.js';
-import { FORMATS, DIFFICULTIES } from '../games/chrono-drifter/js/engine/formats.js';
+import { ARCHETYPES, tagOf, WAIT, costOf, EP_MAX, EP_REGEN, EP_WAIT, DMG }
+  from '../games/chrono-drifter/js/engine/moves.js';
+import { FORMATS, DIFFICULTIES, fleeCost, FLEE_GRACE_TURNS, FORMAT_WORTH, winShards, lossShards }
+  from '../games/chrono-drifter/js/engine/formats.js';
 import { generate, balance } from '../games/chrono-drifter/js/engine/generator.js';
 import { createBattle, nextActor, openTurn, resolve, legalMoves, targetsFor,
-         turnOrder, living, statOf, damageOf, checkEnd } from '../games/chrono-drifter/js/engine/combat.js';
+         turnOrder, living, statOf, damageOf, checkEnd, hitChance, critChance,
+         pointStat, canAfford, BASE_ACC, BASE_CRIT } from '../games/chrono-drifter/js/engine/combat.js';
 import { chooseAction } from '../games/chrono-drifter/js/engine/ai.js';
 import { mulberry32 } from '../games/chrono-drifter/js/engine/rng.js';
 
@@ -50,8 +53,8 @@ test('no accidental gaps: every ring pair is 1.6, 0.7 or a deliberate 1.0', () =
 
 /* ── content audit ──────────────────────────────────────────── */
 
-test('twelve eras, each with 20+ characters across three factions', () => {
-  assert.equal(ERAS.length, 12);
+test('every era carries 20+ characters across three factions', () => {
+  assert.equal(ERAS.length, 23);
   for (const era of ERAS) {
     const factions = Object.keys(era.factions);
     assert.equal(factions.length, 3, `${era.key} should have 3 factions`);
@@ -185,6 +188,53 @@ test('the shop stocks 26 items with unique ids and real prices', () => {
   assert.ok(CONSUMABLES.length >= 16 && RELICS.length >= 10);
 });
 
+/* ── the satchel ────────────────────────────────────────────────
+   state.js guards every storage call, so it imports cleanly under node and the
+   purchase rules can be tested without a browser. */
+
+test('the satchel holds exactly five, and buying arms an item straight away', async () => {
+  const st = await import('../games/chrono-drifter/js/state.js');
+  st.reset();
+  assert.equal(st.satchelSize(), 5, 'the promise to the player is five slots');
+  assert.equal(st.SATCHEL_MAX, 5);
+
+  st.save.shards = 99999;
+  // an item you paid for must be usable without visiting a loadout screen
+  for (const item of CONSUMABLES.slice(0, 3)) assert.ok(st.buy(item), `could not buy ${item.id}`);
+  assert.deepEqual(st.save.satchel, CONSUMABLES.slice(0, 3).map(i => i.id));
+
+  for (const item of CONSUMABLES.slice(3, 9)) st.buy(item);
+  assert.equal(st.save.satchel.length, 5, 'the satchel overfilled');
+  assert.ok(Object.keys(st.save.stock).length > 5, 'stock should keep what the satchel cannot hold');
+  st.reset();
+});
+
+test('relics are one-per-customer and the backpack doubles consumables', async () => {
+  const st = await import('../games/chrono-drifter/js/state.js');
+  st.reset();
+  st.save.shards = 99999;
+  const relic = RELICS.find(r => r.id === 'backpack');
+  assert.ok(st.buy(relic), 'first relic purchase should succeed');
+  assert.equal(st.buy(relic), false, 'a relic must not be sold twice');
+  assert.ok(st.hasRelic('backpack'));
+
+  const item = CONSUMABLES[0];
+  const before = st.save.stock[item.id] || 0;
+  st.buy(item);
+  assert.equal(st.save.stock[item.id], before + 2, 'the backpack should double a purchase');
+  st.reset();
+});
+
+test('a shortfall of shards buys nothing', async () => {
+  const st = await import('../games/chrono-drifter/js/state.js');
+  st.reset();
+  st.save.shards = 10;
+  assert.equal(st.buy(CONSUMABLES[0]), false);
+  assert.equal(st.save.shards, 10, 'a failed purchase must not charge');
+  assert.deepEqual(st.save.satchel, []);
+  st.reset();
+});
+
 /* ── the generator ──────────────────────────────────────────── */
 
 test('the generator never seats rival factions together or repeats a legend', () => {
@@ -309,6 +359,194 @@ test('the tick queue orders by SPD and Haste actually reorders it', () => {
   const after = turnOrder(s, 6).map(u => u.uid);
   assert.notDeepEqual(first, after, 'a 5x speed buff did not change the timeline');
   assert.equal(after[0], slowest.uid, 'the hasted unit should now lead');
+});
+
+/* ── accuracy and crit ──────────────────────────────────────── */
+
+test('attacks can miss, and blinding is what makes them miss more', () => {
+  const clear = { spd: 100, buffs: [] };
+  const blind = { spd: 100, buffs: [{ stat: 'acc', pct: -25, t: 3 }] };
+  assert.equal(hitChance(clear, clear, {}), BASE_ACC);
+  assert.ok(hitChance(blind, clear, {}) < hitChance(clear, clear, {}), 'blind did nothing');
+  assert.equal(hitChance(blind, clear, {}), BASE_ACC - 25);
+  // a faster target is harder to hit, and the range stays sane
+  assert.ok(hitChance(clear, { spd: 300, buffs: [] }, {}) < hitChance(clear, { spd: 40, buffs: [] }, {}));
+  for (const spd of [1, 50, 200, 900]) {
+    const h = hitChance(clear, { spd, buffs: [] }, {});
+    assert.ok(h >= 45 && h <= 99, `hit chance escaped its band at spd ${spd}: ${h}`);
+  }
+});
+
+test('crit is buyable with aim and capped', () => {
+  const plain = { buffs: [] };
+  assert.equal(critChance(plain, {}), BASE_CRIT);
+  assert.ok(critChance(plain, { crit: true }) > BASE_CRIT, 'a sniping move should crit more');
+  const aimed = { buffs: [{ stat: 'crt', pct: 30, t: 3 }] };
+  assert.ok(critChance(aimed, { crit: true }) > critChance(plain, { crit: true }));
+  assert.ok(critChance({ buffs: [{ stat: 'crt', pct: 900, t: 3 }] }, { crit: true }) <= 75, 'crit must stay capped');
+  assert.equal(pointStat(plain, 'crt', BASE_CRIT), BASE_CRIT);
+});
+
+test('some real moves actually move accuracy and crit', () => {
+  let acc = 0, crt = 0;
+  for (const era of ERAS) for (const u of [...era.units, ...era.mooks, era.boss]) for (const m of u.mv) {
+    if (m.stat === 'acc') acc++;
+    if (m.stat === 'crt') crt++;
+  }
+  assert.ok(acc >= 8, `only ${acc} moves touch accuracy — the stat would be decoration`);
+  assert.ok(crt >= 8, `only ${crt} moves touch crit`);
+});
+
+/* ── energy ─────────────────────────────────────────────────── */
+
+test('skills cost energy, ultimates do not, and Chờ is always affordable', () => {
+  for (const era of ERAS) for (const u of [...era.units, ...era.mooks, era.boss]) {
+    for (const m of u.mv) {
+      const c = costOf(m);
+      assert.ok(c > 0, `${era.key}/${u.n}: ${m.name} is free`);
+      assert.ok(c <= EP_MAX / 2, `${era.key}/${u.n}: ${m.name} costs ${c}, more than half a full bar`);
+    }
+    if (u.ult) assert.equal(costOf(u.ult), 0, `${u.n}'s ultimate should be gated by charge, not energy`);
+  }
+  assert.equal(costOf(WAIT), 0);
+  assert.ok(canAfford({ ep: 0 }, WAIT), 'a drained unit must still be able to wait');
+});
+
+test('a full bar affords a few turns, and regeneration outpaces the cheapest move', () => {
+  const cheapest = Math.min(...ERAS.flatMap(e => e.units.flatMap(u => u.mv.map(costOf))));
+  assert.ok(EP_REGEN >= cheapest, `regen ${EP_REGEN} cannot even pay for the cheapest move (${cheapest})`);
+  const dearest = Math.max(...ERAS.flatMap(e => e.units.flatMap(u => u.mv.map(costOf))));
+  assert.ok(EP_MAX / dearest >= 2, 'a full bar should buy at least two of the priciest move');
+  assert.ok(EP_MAX / dearest <= 5, 'if a full bar buys five of anything, energy is not a constraint');
+  assert.ok(EP_WAIT > EP_REGEN, 'waiting should beat simply passing time');
+});
+
+test('energy is spent, regenerates, and refills faster when you wait', () => {
+  const s = fixture({ formatKey: 'even', difficulty: 2 });
+  const [a] = living(s, 'ally');
+  const move = legalMoves(s, a).find(m => m.kind === DMG && !m.isUlt);
+  const start = a.ep;
+  resolve(s, a, move, targetsFor(s, a, move)[0] ?? null);
+  assert.equal(a.ep, start - costOf(move), 'the move was not paid for');
+
+  a.ep = 10;
+  openTurn(s, a);
+  assert.equal(a.ep, 10 + EP_REGEN, 'no regeneration at the top of the turn');
+
+  a.ep = 10;
+  resolve(s, a, { ...WAIT }, null);
+  assert.equal(a.ep, 10 + EP_WAIT, 'waiting did not restore the bar');
+});
+
+test('a starved unit still has a legal move', () => {
+  const s = fixture({ formatKey: 'even', difficulty: 2 });
+  const [a] = living(s, 'ally');
+  a.ep = 0;
+  const moves = legalMoves(s, a);
+  const open = moves.filter(m => !m.locked);
+  assert.ok(open.length >= 1, 'a drained unit was left with nothing to do');
+  assert.ok(open.every(m => m.kind === 'wait' || m.isUlt), 'skills should be locked at zero energy');
+  assert.ok(moves.some(m => m.lockReason === 'ep'), 'the deck should say why a move is unavailable');
+});
+
+/* ── ultimate variety ───────────────────────────────────────── */
+
+test('ultimates are not all the same shape', () => {
+  const tally = {};
+  let total = 0;
+  for (const era of ERAS) for (const u of [...era.units.filter(x => x.ult), era.boss]) {
+    tally[u.ult.id] = (tally[u.ult.id] || 0) + 1;
+    total++;
+  }
+  const shapes = Object.keys(tally).length;
+  assert.ok(shapes >= 8, `only ${shapes} ultimate shapes across the whole game`);
+  const worst = Math.max(...Object.values(tally));
+  assert.ok(worst / total < 0.35, `one ultimate shape covers ${Math.round(worst / total * 100)}% of all legends`);
+});
+
+test('every era fields at least three different ultimate shapes', () => {
+  for (const era of ERAS) {
+    const shapes = new Set([...era.units.filter(u => u.ult), era.boss].map(u => u.ult.id));
+    assert.ok(shapes.size >= 3, `${era.key} has only ${shapes.size} ultimate shape(s)`);
+  }
+});
+
+test('the non-damaging ultimates actually do their thing', () => {
+  const mk = () => fixture({ formatKey: 'even', difficulty: 2 });
+
+  // AEGIS shields the whole team
+  let s = mk(); let [a] = living(s, 'ally');
+  const before = living(s, 'ally').map(u => u.shield);
+  resolve(s, a, { id: 'AEGIS', name: 'X', kind: 'buff', team: true, shield: 200, regen: 40, ult: true }, null);
+  assert.ok(living(s, 'ally').every((u, i) => u.shield > before[i]), 'AEGIS shielded nobody');
+
+  // RAISE brings back the fallen
+  s = mk(); [a] = living(s, 'ally');
+  const victim = living(s, 'ally')[1] || living(s, 'ally')[0];
+  victim.alive = false; victim.hp = 0;
+  resolve(s, a, { id: 'RAISE', name: 'X', kind: 'heal', amt: 0, reviveAll: .5, ult: true }, null);
+  assert.ok(victim.alive && victim.hp > 0, 'RAISE left the dead where they were');
+
+  // CURSE debuffs without dealing a point of damage
+  s = mk(); [a] = living(s, 'ally');
+  const foe = living(s, 'foe')[0];
+  const hp = foe.hp;
+  resolve(s, a, { id: 'CURSE', name: 'X', kind: 'debuff', all: true, pct: 30, curse: true, dot: 40, el: 'UMBRA', ult: true }, null);
+  assert.equal(foe.hp, hp, 'CURSE should not deal damage on cast');
+  assert.ok(foe.buffs.filter(b => b.pct < 0).length >= 4, 'CURSE should hit every stat');
+  assert.ok(foe.dots.length > 0, 'CURSE should leave something burning');
+
+  // RAGE turns the caster into the problem
+  s = mk(); [a] = living(s, 'ally');
+  const pwr = statOf(a, 'pwr');
+  resolve(s, a, { id: 'RAGE', name: 'X', kind: 'buff', self: true, rage: true, ult: true }, null);
+  assert.ok(statOf(a, 'pwr') > pwr * 1.5, 'RAGE did not enrage');
+  assert.ok(critChance(a, {}) > BASE_CRIT, 'RAGE should sharpen the caster');
+
+  // SACRIFICE costs the caster real blood
+  s = mk(); [a] = living(s, 'ally');
+  const own = a.hp;
+  const target = living(s, 'foe')[0];
+  resolve(s, a, { id: 'SACRIFICE', name: 'X', kind: 'dmg', el: 'STEEL', pow: 4, sacrifice: .35, crit: true, ult: true }, target.uid);
+  assert.ok(a.hp < own, 'SACRIFICE was free');
+  assert.ok(a.hp >= 1, 'SACRIFICE must never kill the caster');
+});
+
+/* ── fleeing ────────────────────────────────────────────────── */
+
+test('running early costs shards; running late only costs the reward', () => {
+  const normal = DIFFICULTIES[2], even = FORMATS.find(f => f.key === 'even');
+  for (let t = 0; t <= FLEE_GRACE_TURNS; t++) {
+    assert.ok(fleeCost(normal, even, t) > 0, `turn ${t} should still be inside the grace window`);
+  }
+  assert.equal(fleeCost(normal, even, FLEE_GRACE_TURNS + 1), 0, 'the toll should lapse after the window');
+  assert.equal(fleeCost(normal, even, 999), 0);
+});
+
+test('the flight toll tracks difficulty and format, and never exceeds a win', () => {
+  const even = FORMATS.find(f => f.key === 'even');
+  const easy = fleeCost(DIFFICULTIES[0], even, 1);
+  const hard = fleeCost(DIFFICULTIES[4], even, 1);
+  assert.ok(hard > easy, 'abandoning a hard fight should sting more');
+  for (const d of DIFFICULTIES) for (const f of FORMATS) {
+    const toll = fleeCost(d, f, 1);
+    const winnings = winShards(d, f);
+    assert.ok(toll > 0, `${f.key}/${d.name}: running should cost something`);
+    assert.ok(toll < winnings,
+      `${f.key}/${d.name}: toll ${toll} must stay under the ${winnings} a win pays, or fleeing is a trap`);
+    assert.ok(lossShards(d, f) < winnings, 'losing should never pay better than winning');
+  }
+});
+
+test('shards can never be driven below zero by a forfeit', async () => {
+  const st = await import('../games/chrono-drifter/js/state.js');
+  st.reset();
+  st.save.shards = 10;
+  st.recordResult({ won: false, score: 0, shards: -500, eraKey: 'fantasy', fled: true });
+  assert.equal(st.save.shards, 0, 'the purse went negative');
+  assert.equal(st.save.losses, 1);
+  assert.equal(st.save.fled, 1);
+  st.reset();
 });
 
 /* ── termination and pacing ─────────────────────────────────── */

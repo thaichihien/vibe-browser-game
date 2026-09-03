@@ -22,7 +22,7 @@ export const CONSUMABLES = [
 ];
 
 export const RELICS = [
-  { id: 'backpack', icon: '🎒', name: 'Ba lô lớn hơn',    price: 1200, desc: 'Thêm ô túi thứ tư.' },
+  { id: 'backpack', icon: '🎒', name: 'Ba lô hai ngăn',   price: 1200, desc: 'Mỗi lần mua đồ tiêu hao, nhận gấp đôi số lượng.' },
   { id: 'watch',    icon: '⌚', name: 'Đồng hồ đeo tay',  price: 1400, desc: 'Thắng mọi thế hoà tốc độ, +5% SPD cho cả đội.' },
   { id: 'torch',    icon: '🔦', name: 'Đèn pin',          price: 1500, desc: 'Hiện hệ và quan hệ khắc chế của địch ngay trên thanh máu.' },
   { id: 'gps',      icon: '🧭', name: 'GPS',              price: 1600, desc: 'Xem trước sát thương chính xác trước khi xác nhận.' },
@@ -36,4 +36,4 @@ export const RELICS = [
 
 export const SHOP = [...CONSUMABLES, ...RELICS];
 export const byId = (id) => SHOP.find(i => i.id === id);
-export const SATCHEL_SLOTS = 3;
+export const SATCHEL_SLOTS = 5;

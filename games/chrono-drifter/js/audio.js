@@ -41,6 +41,7 @@ function noise({ dur = .18, gain = .06, delay = 0 }) {
 export const sfx = {
   select:  () => tone({ freq: 520, dur: .05, gain: .04 }),
   confirm: () => tone({ freq: 700, dur: .08, type: 'triangle', gain: .05 }),
+  miss:    () => tone({ freq: 300, dur: .1, type: 'sine', slide: -120, gain: .035 }),
   hit:     () => { noise({ dur: .13, gain: .05 }); tone({ freq: 180, dur: .1, slide: -90, gain: .05 }); },
   crit:    () => { noise({ dur: .2, gain: .08 }); tone({ freq: 320, dur: .18, slide: -180, type: 'sawtooth', gain: .06 }); },
   heal:    () => { tone({ freq: 520, dur: .1, type: 'sine', gain: .05 }); tone({ freq: 780, dur: .12, type: 'sine', gain: .04, delay: .07 }); },

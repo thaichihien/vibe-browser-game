@@ -1,7 +1,9 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
          H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
-         X, XALL, STEAL, U, UEXEC, UMEND, UTIME } from '../../engine/moves.js';
+         X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
+         UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
+  from '../../engine/moves.js';
 
 export default {
   key: 'norse', name: 'BẮC ÂU',
@@ -43,7 +45,7 @@ export default {
   units: [
     u('Vua Chiến Binh Sigurd', '🛡️', 'einherjar', 'legend', 'STEEL', 1.1, 660, 96, 56, 40, 84,
       [S('Rìu Vua', 'STEEL', 1.3), TAUNT('Tường Khiên', 150), R('Lời Thề Valhalla', 'pwr', 32), H('Mật Ong Chiến', 118)],
-      U('KHÚC CA TỬ TRẬN', 'STEEL', 2.4)),
+      UGUARD('KHÚC CA TỬ TRẬN', 190, 43)),
     u('Valkyrie Cánh Bạc', '🕊️', 'einherjar', 'legend', 'RADIANT', 1.1, 540, 100, 40, 48, 112,
       [S('Giáo Ánh Sáng', 'RADIANT', 1.3), REVIVE('Đón Về Valhalla', .5), HALL('Cánh Che Chở', 95), ARC('Bổ Nhào', 'RADIANT', .9)],
       UMEND('CỔNG VALHALLA MỞ', 275)),
@@ -60,10 +62,10 @@ export default {
 
     u('Jotun Núi Đá', '⛰️', 'jotun', 'legend', 'FORGE', 1.75, 900, 98, 62, 44, 54,
       [S('Đấm Núi', 'FORGE', 1.35), AOE('Rung Chuyển', 'FORGE', .9), TAUNT('Thân Núi', 180), STUN('Giẫm Sập', 'FORGE', .95)],
-      U('NÚI ĐỔ', 'FORGE', 2.45)),
+      USTUN('NÚI ĐỔ', 'FORGE', 1.6)),
     u('Surtr Con', '🔥', 'jotun', 'legend', 'EMBER', 1.45, 700, 106, 46, 40, 78,
       [S('Kiếm Lửa', 'EMBER', 1.35), AOE('Biển Lửa', 'EMBER', .9), DOT('Tro Muspell', 'EMBER', .8, 44), B('Thân Nham', 'grd', 36)],
-      U('MUSPELLHEIM GIÁNG', 'EMBER', 2.5)),
+      UCURSE('MUSPELLHEIM GIÁNG', 'EMBER', 48)),
     u('Khổng Lồ Băng', '🧊', 'jotun', 'elite', 'FROST', 1.4, 660, 88, 52, 42, 62,
       [S('Chuỳ Băng', 'FROST', 1.25), XALL('Hơi Lạnh', 'spd', 24), B('Vỏ Băng', 'grd', 38), STUN('Đóng Băng', 'FROST', .9)]),
     u('Sói Fenrir Nhỏ', '🐺', 'jotun', 'elite', 'UMBRA', 1.3, 580, 100, 40, 30, 110,
@@ -77,7 +79,7 @@ export default {
 
     u('Draugr Vua Mộ', '⚰️', 'draugr', 'legend', 'UMBRA', 1.2, 700, 94, 54, 44, 70,
       [PIERCE('Kiếm Mộ', 'UMBRA', 1.25), AOE('Sương Hel', 'UMBRA', .85), REVIVE('Trỗi Dậy', .45), DRAIN('Rút Hơi Ấm', 'UMBRA', 1.0)],
-      U('CẢ GÒ MỘ THỨC DẬY', 'UMBRA', 2.4)),
+      URAISE('CẢ GÒ MỘ THỨC DẬY', .5)),
     u('Nữ Phù Thuỷ Seidr', '🔮', 'draugr', 'legend', 'FROST', .95, 380, 102, 26, 48, 106,
       [S('Lời Nguyền Băng', 'FROST', 1.25), XALL('Điềm Xấu', 'pwr', 24), SILENCE('Trói Lưỡi', 'FROST', .9), MARK('Sợi Định Mệnh', 'FROST', .9)],
       UEXEC('CẮT CHỈ SỐ MỆNH', 'FROST', 1.5)),
@@ -100,5 +102,5 @@ export default {
   ],
   boss: boss('Jormungandr Non', '🐉', 'TIDE', 2.25, 2250, 116, 60, 60, 66,
     [S('Cuộn Siết', 'TIDE', 1.4), AOE('Sóng Thần', 'TIDE', .95), B('Vảy Đại Dương', 'grd', 35), DOT('Nọc Thế Giới', 'VERDANT', .95, 50)],
-    U('VÒNG QUANH THẾ GIỚI', 'TIDE', 2.6))
+    UCURSE('VÒNG QUANH THẾ GIỚI', 'TIDE', 52))
 };

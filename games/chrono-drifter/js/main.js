@@ -4,14 +4,15 @@
 import { ERAS } from './data/themes.js';
 import { CONSUMABLES, RELICS, SHOP, byId } from './data/shop.js';
 import { generate } from './engine/generator.js';
-import { FORMAT_WORTH } from './engine/formats.js';
+import { FORMAT_WORTH, fleeCost, FLEE_GRACE_TURNS, winShards, lossShards } from './engine/formats.js';
 import { createBattle, nextActor, openTurn, turnOrder, resolve, legalMoves,
-         targetsFor, needsTarget, living, checkEnd, statOf } from './engine/combat.js';
+         targetsFor, needsTarget, living, checkEnd, statOf,
+         hitChance, critChance } from './engine/combat.js';
 import { chooseAction } from './engine/ai.js';
 import { useItem } from './engine/items.js';
-import { tagOf, WAIT_KIND } from './engine/moves.js';
+import { tagOf, WAIT_KIND, DMG } from './engine/moves.js';
 import * as view from './ui/battle-view.js';
-import { save, flush, buy, priceOf, hasRelic, satchelSize, setSatchel, consume, recordResult, muted } from './state.js';
+import { save, flush, buy, priceOf, hasRelic, isRelic, satchelSize, SATCHEL_MAX, setSatchel, consume, recordResult, muted } from './state.js';
 import { sfx } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
@@ -34,11 +35,15 @@ function renderMenu() {
     <div><b>${save.score}</b>ĐIỂM TÍCH LUỸ</div>
     <div><b>${save.best}</b>TRẬN CAO NHẤT</div>
     <div><b>${save.wins}/${save.wins + save.losses}</b>THẮNG</div>
-    <div><b>${save.seen.length}/12</b>THỜI ĐẠI ĐÃ QUA</div>`;
-  const bag = save.satchel.map(id => { const i = byId(id); return i ? i.icon + ' ' + i.name : null; }).filter(Boolean);
+    <div><b>${save.seen.length}/${ERAS.length}</b>THỜI ĐẠI ĐÃ QUA</div>`;
+  const bag = save.satchel.filter(id => (save.stock[id] || 0) > 0)
+    .map(id => { const i = byId(id); return i ? `${i.icon} ${i.name} ×${save.stock[id]}` : null; }).filter(Boolean);
+  const owned = Object.keys(save.stock).length;
   $('menu-satchel').textContent = bag.length
-    ? `Túi đồ: ${bag.join(' · ')}`
-    : `Túi đồ trống — thắng vài trận rồi ghé cửa hàng.`;
+    ? `Túi đồ (${bag.length}/${satchelSize()}): ${bag.join(' · ')}`
+    : owned
+      ? `Bạn có đồ nhưng chưa xếp vào túi — bấm 🧳 SẮP TÚI.`
+      : `Túi đồ trống — thắng vài trận rồi ghé 🎒 CỬA HÀNG mua đồ.`;
 }
 
 /* ── the roll ───────────────────────────────────────────────── */
@@ -119,13 +124,41 @@ async function afterAction(actor) {
   turnLoop();
 }
 
+/* The deck holds the move buttons and the log. Both used to resize as the battle
+   went on — the grid emptied on every AI turn, the log grew from one entry to five —
+   which walked the whole lower half of the screen up and down. Everything below now
+   reserves its space: a fixed slot count, a uniform button height, five log rows. */
+const MOVE_SLOTS = 6;
+
+/** The one place a move button's markup is written, so a placeholder is exactly a
+    blank one and the grid cannot change height between turns. */
+const moveHTML = ({ key = '&nbsp;', name = '&nbsp;', cost = '', sub = '&nbsp;', odds = '&nbsp;' }) =>
+  `<span class="top"><span class="key">${key}</span><span class="nm">${name}</span>${cost}</span>` +
+  `<span class="sub"><span class="txt">${sub}</span><span class="odds">${odds}</span></span>`;
+
+function padSlots(box) {
+  for (let i = box.children.length; i < MOVE_SLOTS; i++) {
+    const g = document.createElement('button');
+    g.className = 'move ghost';
+    g.disabled = true;
+    g.tabIndex = -1;
+    g.setAttribute('aria-hidden', 'true');
+    g.innerHTML = moveHTML({});
+    box.appendChild(g);
+  }
+}
+
 function showDeck(actor, msg) {
   const box = $('moves');
   box.innerHTML = '';
   $('deck-who').textContent = actor ? actor.n : (B.actorName || '—');
+  $('deck-ep').innerHTML = actor
+    ? `<span class="ep-pip"><i style="width:${(actor.ep / actor.epMax) * 100}%"></i></span>`
+      + `<span class="ep-num">${Math.round(actor.ep)}/${actor.epMax} NL</span>` : '';
   $('deck-hint').textContent = actor ? 'Chọn chiêu, rồi chọn mục tiêu.' : (msg || '');
   renderSatchel(actor);
-  if (!actor) return;
+  renderFlee(actor);
+  if (!actor) { padSlots(box); return; }
   B.actorName = actor.n;
 
   legalMoves(B, actor).forEach((m, i) => {
@@ -133,26 +166,82 @@ function showDeck(actor, msg) {
     b.className = 'move' + (m.isUlt ? ' ult' : '') + (m.kind === WAIT_KIND ? ' wait' : '');
     b.disabled = !!m.locked;
     const key = m.kind === WAIT_KIND ? '0' : String(i + 1);
-    const sub = m.locked && m.isUlt ? `đang nạp ${Math.round(actor.charge)}/100`
-              : m.locked ? 'bị câm lặng' : tagOf(m, B.era);
-    b.innerHTML = `<span class="top"><span class="key">${key}</span>
-      <span class="nm">${m.isUlt ? '★ ' + m.name : m.name}</span></span>
-      <span class="sub">${sub}</span>`;
+    const sub = m.lockReason === 'charge' ? `đang nạp ${Math.round(actor.charge)}/100`
+              : m.lockReason === 'silenced' ? 'bị câm lặng'
+              : m.lockReason === 'ep' ? `thiếu năng lượng (cần ${m.cost}, còn ${Math.round(actor.ep)})`
+              : tagOf(m, B.era);
+    // odds are part of the decision, so they belong on the button
+    const odds = m.kind === DMG
+      ? `🎯 ${hitChance(actor, worstTarget(actor, m), m)}% · 💥 ${critChance(actor, m)}%` : '&nbsp;';
+    const cost = m.cost > 0 ? `<span class="cost">${m.cost} NL</span>` : '';
+    b.title = `${m.name} — ${sub}${m.cost ? ` · ${m.cost} năng lượng` : ''}`;
+    b.innerHTML = moveHTML({ key, name: m.isUlt ? '★ ' + m.name : m.name, cost, sub, odds });
     b.onclick = () => pickMove(actor, m);
     box.appendChild(b);
   });
+  padSlots(box);
+}
+
+let fleeArmed = false;
+
+function renderFlee(actor) {
+  const b = $('btn-flee');
+  const live = actor && actor.side === 'ally' && !B.over;
+  b.hidden = false;                       // stays in the layout; only its ink changes
+  b.disabled = !live;
+  b.style.visibility = live ? 'visible' : 'hidden';
+  if (!live) { fleeArmed = false; return; }
+  const cost = Math.min(save.shards, fleeCost(B.difficulty, B.format, B.turns));
+  b.className = 'ctl flee' + (fleeArmed ? ' armed' : '') + (cost ? ' costly' : '');
+  b.textContent = fleeArmed
+    ? 'BẤM LẦN NỮA ĐỂ CHẠY'
+    : cost ? `🏳️ BỎ CHẠY (−${cost} ⧗)` : '🏳️ BỎ CHẠY';
+  b.title = cost
+    ? `Bỏ chạy trong ${FLEE_GRACE_TURNS} lượt đầu phải trả ${cost} ⧗ mảnh thời gian.`
+    : `Sau lượt ${FLEE_GRACE_TURNS} thì bỏ chạy không mất phí, nhưng cũng không có thưởng.`;
+}
+
+function onFlee() {
+  if (busy || B.over) return;
+  if (!fleeArmed) { fleeArmed = true; sfx.select(); return renderFlee(B.units.find(u => u.node.classList.contains('active'))); }
+  fleeArmed = false;
+  B.fled = true;
+  B.over = true;
+  B.won = false;
+  finish();
+}
+
+/** Show the odds against the likeliest target, so the number means something. */
+function worstTarget(actor, m) {
+  const foes = living(B, actor.side === 'ally' ? 'foe' : 'ally');
+  const wall = foes.filter(f => f.taunt > 0);
+  const pool = wall.length && !m.all ? wall : foes;
+  return pool.reduce((a, b) => statOf(a, 'spd') >= statOf(b, 'spd') ? a : b, pool[0]) || actor;
 }
 
 function renderSatchel(actor) {
   const row = $('satchel-row');
   row.innerHTML = '';
-  if (!actor || actor.side !== 'ally' || !B.bag.length) return;
-  const keys = ['Q', 'W', 'E', 'R'];
+  if (!actor || actor.side !== 'ally') {
+    row.innerHTML = '<span class="sat-note">&nbsp;</span>';
+    return;
+  }
+  if (!B.bag.length) {
+    // never leave the player staring at a blank strip wondering where items went
+    row.innerHTML = Object.keys(save.stock).length
+      ? `<span class="sat-note">Túi rỗng trận này — xếp đồ ở 🧳 SẮP TÚI trước khi vào trận.</span>`
+      : `<span class="sat-note">Chưa có đồ. Thắng trận để lấy ⧗ rồi ghé 🎒 CỬA HÀNG.</span>`;
+    return;
+  }
+  const keys = ['Q', 'W', 'E', 'R', 'T'];
+  row.innerHTML = '<span class="sat-note">TÚI ĐỒ</span>';
   B.bag.forEach((id, i) => {
     const item = byId(id);
     const b = document.createElement('button');
     b.className = 'sat';
-    b.innerHTML = `<span class="k">${keys[i]}</span>${item.icon} ${item.name}`;
+    b.title = item.desc;
+    b.innerHTML = `<span class="k">${keys[i]}</span>${item.icon} ${item.name}`
+      + `<span class="n">×${save.stock[item.id] || 0}</span>`;
     b.onclick = () => pickItem(actor, item);
     row.appendChild(b);
   });
@@ -172,10 +261,12 @@ async function pickMove(actor, m) {
     if (!tgt) return showDeck(actor);
   }
   busy = true;
-  $('moves').innerHTML = '';
+  $('moves').innerHTML = ''; padSlots($('moves'));
   $('deck-hint').textContent = 'đang xử lý…';
   sfx.confirm();
-  await view.play(resolve(B, actor, m, tgt));
+  const ev = resolve(B, actor, m, tgt);
+  view.record(actor, m.kind === WAIT_KIND ? null : m.name, ev);
+  await view.play(ev);
   busy = false;
   afterAction(actor);
 }
@@ -196,8 +287,9 @@ async function pickItem(actor, item) {
   consume(item.id);
   B.bag = B.bag.filter(id => id !== item.id || (save.stock[id] || 0) > 0);
   busy = true;
-  $('moves').innerHTML = '';
+  $('moves').innerHTML = ''; padSlots($('moves'));
   sfx.coin();
+  view.record(actor, `${item.icon} ${item.name}`, ev);
   await view.play(ev);
   busy = false;
   if (checkEnd(B)) return finish();
@@ -207,7 +299,9 @@ async function pickItem(actor, item) {
 async function aiTurn(actor) {
   const { move, targetUid } = chooseAction(B, actor);
   busy = true;
-  await view.play(resolve(B, actor, move, targetUid));
+  const ev = resolve(B, actor, move, targetUid);
+  view.record(actor, move.kind === WAIT_KIND ? null : move.name, ev);
+  await view.play(ev);
   busy = false;
   afterAction(actor);
 }
@@ -215,6 +309,7 @@ async function aiTurn(actor) {
 /* ── results ────────────────────────────────────────────────── */
 function finish() {
   const won = B.won;
+  if (B.fled) return finishFlight();
   const rounds = Math.ceil(B.turns / Math.max(1, B.units.length));
   const noDeaths = B.units.filter(u => u.side === 'ally').every(u => u.alive);
   const worth = FORMAT_WORTH[B.format.key] || 2;
@@ -224,9 +319,9 @@ function finish() {
     score = Math.round(100 * B.difficulty.reward * worth);
     if (noDeaths) score += 150;
     if (B.turns <= B.format.par) score += 100;
-    shards = Math.round((12 + 14 * worth) * B.difficulty.reward);
+    shards = winShards(B.difficulty, B.format);
   } else {
-    shards = Math.round((12 + 14 * worth) * B.difficulty.reward * 0.25);
+    shards = lossShards(B.difficulty, B.format);
   }
   recordResult({ won, score, shards, eraKey: B.era.key });
   won ? sfx.win() : sfx.lose();
@@ -241,6 +336,22 @@ function finish() {
   $('overlay').hidden = false;
   view.setActive(null);
   showDeck(null, won ? 'Thời đại thả bạn đi.' : 'Thời đại giữ bạn lại.');
+}
+
+function finishFlight() {
+  const cost = Math.min(save.shards, fleeCost(B.difficulty, B.format, B.turns));
+  recordResult({ won: false, score: 0, shards: -cost, eraKey: B.era.key, fled: true });
+  sfx.lose();
+  $('ov-title').textContent = 'BỎ CHẠY';
+  $('ov-title').style.color = 'var(--ink-dim)';
+  $('ov-body').innerHTML = cost
+    ? `Bạn rút khỏi <b>${B.title}</b> sau ${B.turns} lượt — quá sớm để thời đại tha cho.<br>
+       −${cost} ⧗ mảnh thời gian.`
+    : `Bạn rút khỏi <b>${B.title}</b> sau ${B.turns} lượt.<br>
+       Không mất gì, nhưng cũng không mang được gì về.`;
+  $('overlay').hidden = false;
+  view.setActive(null);
+  showDeck(null, 'Thời đại khép lại sau lưng bạn.');
 }
 
 /* ── shop ───────────────────────────────────────────────────── */
@@ -263,7 +374,17 @@ function renderShop() {
       <span class="pr">⧗ ${price}</span></span>
       <span class="ds">${item.desc}</span>
       ${owned ? `<span class="own">${shopTab === 'relic' ? 'ĐÃ SỞ HỮU' : 'ĐANG CÓ ' + owned}</span>` : ''}`;
-    b.onclick = () => { if (buy(item)) { sfx.coin(); renderShop(); } };
+    b.onclick = () => {
+      if (!buy(item)) return;
+      sfx.coin();
+      if (!isRelic(item.id)) {
+        const armed = save.satchel.includes(item.id);
+        $('shop-msg').textContent = armed
+          ? `${item.icon} ${item.name} đã vào túi — dùng được ngay trận sau.`
+          : `${item.icon} ${item.name} đã mua, nhưng túi đã đầy (${satchelSize()} ô). Đổi đồ ở 🧳 SẮP TÚI.`;
+      }
+      renderShop();
+    };
     grid.appendChild(b);
   }
 }
@@ -310,6 +431,7 @@ $('btn-satchel-back').onclick = renderMenu;
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => { shopTab = t.dataset.tab; renderShop(); });
 $('ov-again').onclick = () => { $('overlay').hidden = true; rollAndStart(); };
 $('ov-menu').onclick = () => { $('overlay').hidden = true; renderMenu(); };
+$('btn-flee').onclick = onFlee;
 $('btn-rules').onclick = () => { $('rules').hidden = false; };
 $('rules-close').onclick = () => { $('rules').hidden = true; };
 
@@ -327,16 +449,16 @@ addEventListener('keydown', (e) => {
   }
   if (e.key.toLowerCase() === 'm') { muted.value = !muted.value; paintMute(); return; }
   if (busy || !B || B.over || $('screen-battle').hidden) return;
-  const bagKeys = { q: 0, w: 1, e: 2, r: 3 };
+  const bagKeys = { q: 0, w: 1, e: 2, r: 3, t: 4 };
   const k = e.key.toLowerCase();
   if (k in bagKeys) { document.querySelectorAll('.sat')[bagKeys[k]]?.click(); return; }
   const idx = e.key === '0' ? 99 : parseInt(e.key, 10) - 1;
-  const btns = [...$('moves').querySelectorAll('.move')];
+  const btns = [...$('moves').querySelectorAll('.move:not(.ghost)')];   // never the placeholders
   if (idx === 99) btns.at(-1)?.click();
   else if (btns[idx] && !btns[idx].disabled) btns[idx].click();
 });
 
 // expose a little surface for the verification harness
-window.CD = { get battle() { return B; }, ERAS, save, generate, renderMenu };
+window.CD = { get battle() { return B; }, ERAS, save, generate, renderMenu, view, satchelSize };
 
 renderMenu();

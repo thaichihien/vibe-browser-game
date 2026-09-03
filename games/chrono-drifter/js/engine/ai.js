@@ -4,7 +4,7 @@
 
 import { statOf, living, damageOf, legalMoves, targetsFor, ULT_FULL } from './combat.js';
 import { mult } from './elements.js';
-import { HEAL, BUFF, DEBUFF, DMG, WAIT_KIND } from './moves.js';
+import { HEAL, BUFF, DEBUFF, DMG, WAIT_KIND, costOf } from './moves.js';
 
 /** Pick a move and a target for `actor`. Returns { move, targetUid }. */
 export function chooseAction(state, actor) {
@@ -13,7 +13,9 @@ export function chooseAction(state, actor) {
   const foes = living(state, actor.side === 'ally' ? 'foe' : 'ally');
   const allies = living(state, actor.side);
   const moves = legalMoves(state, actor).filter(m => !m.locked && m.kind !== WAIT_KIND);
+  // nothing affordable: Chờ is the correct play, and it refunds energy
   if (!moves.length || !foes.length) return { move: legalMoves(state, actor).at(-1), targetUid: null };
+  if (actor.ep < 22 && rng() < .6) return { move: legalMoves(state, actor).at(-1), targetUid: null };
 
   // tier 0: pick anything at all
   if (tier === 0) {
@@ -24,11 +26,11 @@ export function chooseAction(state, actor) {
   // an ultimate that is ready is almost always the play — but the mean tiers wait
   // for a turn where it actually kills something
   const ult = moves.find(m => m.isUlt);
-  // a pure-heal ultimate on a healthy team is a wasted meter
-  const ultIsWaste = ult && ult.kind === HEAL && allies.every(a => a.hp / a.max > .7);
-  if (ult && !ultIsWaste && actor.charge >= ULT_FULL) {
-    const kills = foes.filter(f => damageOf({ ...state, rng: () => .5 }, actor, f, ult).n >= f.hp).length;
-    if (tier < 3 || kills > 0 || foes.length >= 3 || rng() < .35) {
+  if (ult && actor.charge >= ULT_FULL && !ultWasted(state, actor, ult, allies)) {
+    const kills = ult.kind === DMG
+      ? foes.filter(f => damageOf({ ...state, rng: () => .5 }, actor, f, ult).n >= f.hp).length
+      : 0;
+    if (tier < 3 || kills > 0 || ult.kind !== DMG || foes.length >= 3 || rng() < .35) {
       return { move: ult, targetUid: firstTarget(state, actor, ult, rng) };
     }
   }
@@ -61,6 +63,7 @@ export function chooseAction(state, actor) {
         if (m.mark && t.marked) sc *= .7;
       }
       if (tier >= 4 && t.hp / t.max < .4 && m.execute) sc *= 1.4;
+      if (tier >= 3) sc /= 1 + costOf(m) / 90;               // value energy, not just damage
       if (sc > (best?.sc ?? -1)) best = { move: m, tgt: (m.all || m.arc) ? null : t, sc };
     }
   }
@@ -77,6 +80,16 @@ export function chooseAction(state, actor) {
     return { move: m, targetUid: firstTarget(state, actor, m, rng) };
   }
   return { move: best.move, targetUid: best.tgt ? best.tgt.uid : null };
+}
+
+/** Some ultimates do nothing at all in the wrong moment. Do not burn the meter. */
+function ultWasted(state, actor, ult, allies) {
+  if (ult.reviveAll) return !state.units.some(u => u.side === actor.side && !u.alive);
+  if (ult.kind === HEAL) return allies.every(a => a.hp / a.max > .7);
+  if (ult.shield) return allies.every(a => a.hp / a.max > .85);
+  if (ult.sacrifice) return actor.hp / actor.max < .45;      // it would kill the caster's own tempo
+  if (ult.rage) return actor.hp / actor.max < .25;
+  return false;
 }
 
 /** How much trouble this unit is if left alone. */

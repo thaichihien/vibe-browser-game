@@ -3,8 +3,8 @@
    on the same side as the unit it describes. */
 
 import { EL_ICON, elName, weakTo, strongAgainst, resists } from '../engine/elements.js';
-import { statOf, ULT_FULL } from '../engine/combat.js';
-import { tagOf } from '../engine/moves.js';
+import { statOf, ULT_FULL, BASE_ACC, BASE_CRIT, pointStat } from '../engine/combat.js';
+import { tagOf, costOf, EP_REGEN, EP_WAIT } from '../engine/moves.js';
 import { effectsOf } from '../data/effects.js';
 
 const TIER_VI = { legend: 'HUYỀN THOẠI', elite: 'TINH NHUỆ', grunt: 'QUÂN THƯỜNG', boss: 'TRÙM' };
@@ -56,6 +56,9 @@ export function renderInspect(el, u, era) {
       <div class="sec-hd">MÁU</div>
       <div class="ins-bar"><i class="${bar}" style="width:${pct}%"></i></div>
       <div class="ins-hp">${Math.max(0, Math.round(u.hp))} / ${u.max}${u.shield > 0 ? ` <span class="sh">+🛡️${Math.round(u.shield)}</span>` : ''}</div>
+      <div class="sec-hd sub">NĂNG LƯỢNG</div>
+      <div class="ins-bar ep"><i style="width:${(u.ep / u.epMax) * 100}%"></i></div>
+      <div class="ins-hp">${Math.round(u.ep)} / ${u.epMax} — hồi ${EP_REGEN} mỗi lượt, Chờ hồi thêm ${EP_WAIT}</div>
       ${u.ult ? `<div class="sec-hd sub">TUYỆT KỸ</div>
         <div class="ins-bar ult"><i style="width:${u.charge}%"></i></div>
         <div class="ins-hp">${Math.round(u.charge)} / ${ULT_FULL} — ${esc(u.ult.name)}</div>` : ''}
@@ -72,6 +75,10 @@ export function renderInspect(el, u, era) {
     <div class="sec">
       <div class="sec-hd">CHỈ SỐ</div>
       <div class="stat-grid">
+        <div class="stat" data-tip="Cơ hội đánh trúng cơ bản. Mục tiêu nhanh hơn thì khó trúng hơn." title="Chính xác">
+          <span class="sk">CHÍNH XÁC</span><span class="sv">${pointStat(u, 'acc', BASE_ACC)}%</span></div>
+        <div class="stat" data-tip="Cơ hội gây chí mạng ×1.5. Chiêu ngắm bắn cộng thêm 22 điểm." title="Chí mạng">
+          <span class="sk">CHÍ MẠNG</span><span class="sv">${pointStat(u, 'crt', BASE_CRIT)}%</span></div>
         ${STATS.map(([k, label, desc]) => {
           const now = Math.round(statOf(u, k)), base = u[k];
           const cls = now > base ? 'up' : now < base ? 'down' : '';
@@ -85,7 +92,8 @@ export function renderInspect(el, u, era) {
     <div class="sec">
       <div class="sec-hd">CHIÊU THỨC</div>
       <div class="mv-list">
-        ${u.mv.map(m => `<div class="mv-row"><b>${esc(m.name)}</b><span>${esc(tagOf(m, era))}</span></div>`).join('')}
+        ${u.mv.map(m => `<div class="mv-row"><b>${esc(m.name)}</b>
+          <span>${esc(tagOf(m, era))} · <em class="ep-cost">${costOf(m)} NL</em></span></div>`).join('')}
         ${u.ult ? `<div class="mv-row ult"><b>★ ${esc(u.ult.name)}</b><span>${esc(tagOf(u.ult, era))}</span></div>` : ''}
       </div>
     </div>

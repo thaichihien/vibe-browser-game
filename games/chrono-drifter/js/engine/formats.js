@@ -22,6 +22,23 @@ export const FORMATS = [
 /** Score multiplier — a pitched battle is worth more than a duel. */
 export const FORMAT_WORTH = { duel: 1.4, even: 2.0, horde: 2.6, boss: 2.8, war: 3.2 };
 
+/** What winning this battle pays. The single source of truth for the economy. */
+export function winShards(difficulty, format) {
+  return Math.round((12 + 14 * (FORMAT_WORTH[format.key] || 2)) * difficulty.reward);
+}
+
+/** What losing pays — the consolation of a witness. */
+export const lossShards = (difficulty, format) => Math.round(winShards(difficulty, format) * 0.25);
+
+/* Bail out in the first few turns and the era takes its toll. Priced off the same
+   payout table, at half a win: enough to make running hurt, never so much that
+   fleeing digs a hole a win cannot fill. */
+export const FLEE_GRACE_TURNS = 5;
+export function fleeCost(difficulty, format, turns) {
+  if (turns > FLEE_GRACE_TURNS) return 0;
+  return Math.max(5, Math.round(winShards(difficulty, format) * 0.5));
+}
+
 export const DIFFICULTIES = [
   { key: 0, name: 'RẤT DỄ',  stars: '★☆☆☆☆', stat: 0.75, ai: 0, reward: 0.6, edge: 0 },
   { key: 1, name: 'DỄ',      stars: '★★☆☆☆', stat: 0.90, ai: 1, reward: 0.8, edge: 0 },

@@ -1,7 +1,9 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
          H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
-         X, XALL, STEAL, U, UEXEC, UMEND, UTIME } from '../../engine/moves.js';
+         X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
+         UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
+  from '../../engine/moves.js';
 
 export default {
   key: 'japan', name: 'NHẬT BẢN PHONG KIẾN',
@@ -43,9 +45,9 @@ export default {
   units: [
     u('Tướng Quân Ienari', '🏯', 'shogun', 'legend', 'STEEL', 1.1, 640, 94, 56, 42, 82,
       [S('Nhất Đao Lưu', 'STEEL', 1.3), R('Quân Lệnh', 'pwr', 30), TAUNT('Đứng Trấn', 140), H('Trà Đạo', 115)],
-      U('THIÊN HẠ NHẤT KIẾM', 'STEEL', 2.35)),
+      UGUARD('THIÊN HẠ NHẤT KIẾM', 190, 42)),
     u('Kiếm Thánh Mù', '🎋', 'shogun', 'legend', 'FROST', 1.0, 540, 108, 36, 40, 118,
-      [SNIPE('Cư Hợp Trảm', 'FROST', 1.3), EXEC('Nghe Hơi Thở', 'FROST', 1.15), B('Tĩnh Tâm', 'spd', 35), ARC('Song Trảm', 'FROST', .9)],
+      [SNIPE('Cư Hợp Trảm', 'FROST', 1.3), EXEC('Nghe Hơi Thở', 'FROST', 1.15), B('Tĩnh Tâm', 'crt', 35), ARC('Song Trảm', 'FROST', .9)],
       UEXEC('MỘT HƠI, MỘT KIẾM', 'FROST', 1.55)),
     u('Cung Thủ Yabusame', '🏹', 'shogun', 'elite', 'STORM', 1.0, 380, 96, 28, 30, 114,
       [SNIPE('Bắn Trên Ngựa', 'STORM', 1.2), MARK('Ngắm Đích', 'STORM', .85), ARC('Liên Châu', 'STORM', .88), B('Ghìm Cương', 'pwr', 30)]),
@@ -60,16 +62,16 @@ export default {
 
     u('Chưởng Môn Bóng Đêm', '🥷', 'shadow', 'legend', 'UMBRA', 1.0, 580, 104, 40, 40, 112,
       [S('Ám Sát', 'UMBRA', 1.3), EXEC('Cắt Cổ', 'UMBRA', 1.2), B('Phân Thân', 'spd', 40), SILENCE('Bịt Miệng', 'UMBRA', .9)],
-      U('MÀN ĐÊM BUÔNG', 'UMBRA', 2.35)),
+      UNUKE('MÀN ĐÊM BUÔNG', 'UMBRA', 3.4)),
     u('Kunoichi Áo Đỏ', '🌹', 'shadow', 'legend', 'VERDANT', .95, 370, 100, 26, 42, 122,
       [DOT('Độc Hoa', 'VERDANT', .8, 40), X('Hương Mê', 'spd', 32), MARK('Dấu Son', 'VERDANT', .85), STEAL('Móc Túi', 38)],
       UTIME('KHOẢNH KHẮC NGƯNG')),
     u('Nhẫn Giả Khói', '💨', 'shadow', 'elite', 'STORM', .9, 360, 88, 28, 32, 118,
-      [S('Phi Tiêu', 'STORM', 1.15), ARC('Chùm Phi Tiêu', 'STORM', .85), B('Độn Thổ', 'grd', 35), X('Bom Khói', 'pwr', 26)]),
+      [S('Phi Tiêu', 'STORM', 1.15), ARC('Chùm Phi Tiêu', 'STORM', .85), B('Độn Thổ', 'grd', 35), X('Bom Khói', 'acc', 26)]),
     u('Sát Thủ Dây Xích', '⛓️', 'shadow', 'elite', 'FORGE', 1.0, 480, 90, 38, 30, 98,
       [S('Xích Quăng', 'FORGE', 1.2), STUN('Trói Cổ', 'FORGE', .9), X('Kéo Lại', 'spd', 30), RAMP('Siết Dần', 'FORGE', .95)]),
     u('Kẻ Nghe Trộm', '👂', 'shadow', 'grunt', 'UMBRA', .85, 310, 78, 24, 30, 124,
-      [MARK('Nghe Ngóng', 'UMBRA', .9), S('Dao Ngắn', 'UMBRA', 1.05), B('Nín Thở', 'spd', 32), X('Tin Giả', 'pwr', 24)]),
+      [MARK('Nghe Ngóng', 'UMBRA', .9), S('Dao Ngắn', 'UMBRA', 1.05), B('Nín Thở', 'crt', 32), X('Tin Giả', 'pwr', 24)]),
     u('Thầy Thuốc Độc', '⚗️', 'shadow', 'grunt', 'VERDANT', .9, 330, 76, 26, 36, 100,
       [DOT('Chén Trà Đắng', 'VERDANT', .75, 36), H('Thuốc Bí Truyền', 110), X('Làm Yếu', 'pwr', 30), CLEANSE('Giải Độc', 80)]),
     u('Chó Săn Đêm', '🐕‍🦺', 'shadow', 'grunt', 'STEEL', .85, 340, 82, 28, 24, 122,
@@ -77,7 +79,7 @@ export default {
 
     u('Oni Sừng Sắt', '👹', 'yokai', 'legend', 'EMBER', 1.45, 780, 100, 52, 36, 68,
       [S('Chuỳ Sắt', 'EMBER', 1.35), AOE('Gầm Địa Ngục', 'EMBER', .85), B('Da Quỷ', 'grd', 40), DRAIN('Nhai Xương', 'EMBER', 1.05)],
-      U('ĐỊA NGỤC MỞ CỬA', 'EMBER', 2.45)),
+      UDRAIN('ĐỊA NGỤC MỞ CỬA', 'EMBER', 1.9)),
     u('Cửu Vĩ Hồ', '🦊', 'yokai', 'legend', 'RADIANT', 1.15, 560, 104, 36, 48, 110,
       [S('Hồ Hoả', 'RADIANT', 1.3), AOE('Chín Đuôi', 'RADIANT', .85), X('Mê Hoặc', 'pwr', 34), HALL('Ảo Ảnh Lành', 90)],
       UMEND('BÙA HỘ MỆNH CHÍN ĐUÔI', 265)),
@@ -100,5 +102,5 @@ export default {
   ],
   boss: boss('Yamata-no-Orochi', '🐉', 'STORM', 2.2, 2200, 118, 60, 58, 72,
     [S('Tám Đầu Cắn', 'STORM', 1.4), AOE('Sấm Tám Phương', 'STORM', .95), B('Vảy Bát Kỳ', 'grd', 35), DRAIN('Nuốt Rượu Máu', 'TIDE', 1.15)],
-    U('TÁM ĐẦU CÙNG GẦM', 'STORM', 2.6))
+    UDRAIN('TÁM ĐẦU CÙNG GẦM', 'STORM', 1.9))
 };

@@ -1,4 +1,4 @@
-/* One wheel for all twelve eras. Only the NAMES are reskinned — each era carries
+/* One wheel for every era. Only the NAMES are reskinned — each era carries
    an `elNames` map and display tags are built at render time, so the same STRIKE
    reads "Lửa Rồng" in Giả Tưởng and "Xung EMP" in Cyberpunk. */
 

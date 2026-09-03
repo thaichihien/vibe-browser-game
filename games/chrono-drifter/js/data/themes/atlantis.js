@@ -1,7 +1,9 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
          H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
-         X, XALL, STEAL, U, UEXEC, UMEND, UTIME } from '../../engine/moves.js';
+         X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
+         UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
+  from '../../engine/moves.js';
 
 export default {
   key: 'atlantis', name: 'ATLANTIS CHÌM',
@@ -43,10 +45,10 @@ export default {
   units: [
     u('Nữ Hoàng San Hô', '👸', 'coral', 'legend', 'TIDE', 1.1, 620, 96, 50, 46, 86,
       [S('Trượng Triều', 'TIDE', 1.3), AOE('Sóng Ngầm', 'TIDE', .85), HALL('Ơn Của Biển', 98), R('Vương Lệnh', 'pwr', 32)],
-      U('CẢ ĐẠI DƯƠNG NGHE LỆNH', 'TIDE', 2.4)),
+      UGUARD('CẢ ĐẠI DƯƠNG NGHE LỆNH', 170, 43)),
     u('Vệ Binh Đinh Ba', '🔱', 'coral', 'legend', 'STEEL', 1.15, 660, 92, 58, 40, 80,
       [S('Đinh Ba Đâm', 'STEEL', 1.28), TAUNT('Tường Vảy', 155), PIERCE('Xuyên Ba Ngạnh', 'STEEL', 1.1), R('Khép Hàng Ngọc', 'grd', 32)],
-      U('BA MŨI CÙNG ĐÂM', 'STEEL', 2.35)),
+      UGUARD('BA MŨI CÙNG ĐÂM', 197, 41)),
     u('Nữ Tư Tế Phát Quang', '🪼', 'coral', 'elite', 'RADIANT', 1.0, 350, 78, 28, 48, 98,
       [S('Tia Sinh Học', 'RADIANT', 1.1), H('Ánh Sáng Lành', 132), REVIVE('Thắp Lại', .42), CLEANSE('Nước Trong', 88)]),
     u('Kỵ Sĩ Cá Đao', '🗡️', 'coral', 'elite', 'FROST', 1.15, 470, 96, 34, 32, 114,
@@ -60,9 +62,9 @@ export default {
 
     u('Chúa Tể Rãnh Sâu', '🦑', 'abyssal', 'legend', 'UMBRA', 1.6, 800, 98, 52, 44, 66,
       [S('Xúc Tu Quật', 'UMBRA', 1.32), AOE('Bóng Tối Ngàn Sải', 'UMBRA', .88), DRAIN('Kéo Xuống Đáy', 'UMBRA', 1.1), B('Da Áp Suất', 'grd', 38)],
-      U('KHÔNG CÓ ÁNH SÁNG Ở ĐÂY', 'UMBRA', 2.45)),
+      UDRAIN('KHÔNG CÓ ÁNH SÁNG Ở ĐÂY', 'UMBRA', 1.9)),
     u('Cá Câu Đèn Chúa', '🎣', 'abyssal', 'legend', 'RADIANT', 1.25, 560, 104, 40, 40, 96,
-      [MARK('Mồi Nhử', 'RADIANT', .92), S('Hàm Kim', 'RADIANT', 1.3), EXEC('Đớp Gọn', 'RADIANT', 1.18), X('Loá Sâu', 'pwr', 32)],
+      [MARK('Mồi Nhử', 'RADIANT', .92), S('Hàm Kim', 'RADIANT', 1.3), EXEC('Đớp Gọn', 'RADIANT', 1.18), X('Loá Sâu', 'acc', 32)],
       UEXEC('BỮA ĂN Ở ĐÁY BIỂN', 'RADIANT', 1.52)),
     u('Cá Chình Điện Khổng Lồ', '⚡', 'abyssal', 'elite', 'STORM', 1.25, 480, 98, 34, 36, 112,
       [S('Phóng Điện', 'STORM', 1.3), AOE('Vùng Tê Liệt', 'STORM', .85), STUN('Sốc', 'STORM', .9), B('Tích Điện', 'pwr', 34)]),
@@ -100,5 +102,5 @@ export default {
   ],
   boss: boss('Charybdis, Miệng Xoáy', '🌀', 'TIDE', 2.25, 2240, 116, 58, 62, 68,
     [S('Hút Vào Tâm', 'TIDE', 1.4), AOE('Xoáy Toàn Vùng', 'TIDE', .95), B('Áo Nước Xoáy', 'wrd', 35), DRAIN('Nuốt Cả Tàu', 'TIDE', 1.2)],
-    U('KHÔNG GÌ THOÁT KHỎI XOÁY', 'TIDE', 2.6))
+    UDRAIN('KHÔNG GÌ THOÁT KHỎI XOÁY', 'TIDE', 1.9))
 };

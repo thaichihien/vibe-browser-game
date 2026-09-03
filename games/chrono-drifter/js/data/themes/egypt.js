@@ -1,7 +1,9 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
          H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
-         X, XALL, STEAL, U, UEXEC, UMEND, UTIME } from '../../engine/moves.js';
+         X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
+         UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
+  from '../../engine/moves.js';
 
 export default {
   key: 'egypt', name: 'AI CẬP THẦN THOẠI',
@@ -52,15 +54,15 @@ export default {
     u('Lính Kopesh', '🗡️', 'ra', 'elite', 'STEEL', 1.0, 460, 88, 44, 28, 92,
       [S('Lưỡi Cong', 'STEEL', 1.2), R('Đội Hình Đền', 'grd', 30), PIERCE('Xuyên Giáp Đồng', 'STEEL', 1.05), X('Chặt Gân', 'spd', 26)]),
     u('Người Giữ Đèn', '🕯️', 'ra', 'grunt', 'EMBER', .9, 340, 74, 28, 36, 94,
-      [S('Ngọn Lửa Đền', 'EMBER', 1.1), DOT('Dầu Cháy', 'EMBER', .65, 32), REGEN('Giữ Lửa', 36), X('Khói Cay', 'pwr', 24)]),
+      [S('Ngọn Lửa Đền', 'EMBER', 1.1), DOT('Dầu Cháy', 'EMBER', .65, 32), REGEN('Giữ Lửa', 36), X('Khói Cay', 'acc', 24)]),
     u('Thợ Xây Kim Tự Tháp', '🧱', 'ra', 'grunt', 'FORGE', 1.05, 490, 68, 50, 28, 66,
       [S('Đá Tảng', 'FORGE', 1.1), TAUNT('Bức Tường Sống', 130), B('Chai Tay', 'grd', 35), STUN('Thả Đá', 'FORGE', .85)]),
     u('Mèo Đền Thờ', '🐈‍⬛', 'ra', 'grunt', 'UMBRA', .7, 270, 78, 20, 30, 128,
-      [S('Vuốt Thiêng', 'UMBRA', 1.1), B('Rình Rập', 'spd', 35), ARC('Vờn', 'UMBRA', .8), X('Ánh Mắt Vàng', 'pwr', 24)]),
+      [S('Vuốt Thiêng', 'UMBRA', 1.1), B('Rình Rập', 'spd', 35), ARC('Vờn', 'UMBRA', .8), X('Ánh Mắt Vàng', 'acc', 24)]),
 
     u('Pharaoh Khô Xác', '⚱️', 'tomb', 'legend', 'UMBRA', 1.15, 680, 94, 52, 46, 72,
       [S('Quyền Trượng Nguyền', 'UMBRA', 1.25), AOE('Mười Tai Ương', 'UMBRA', .85), TAUNT('Ngai Vàng Bất Tử', 150), DRAIN('Thu Mạng', 'UMBRA', 1.0)],
-      U('LỜI NGUYỀN LĂNG MỘ', 'UMBRA', 2.4)),
+      UDRAIN('LỜI NGUYỀN LĂNG MỘ', 'UMBRA', 1.9)),
     u('Anubis Cân Hồn', '🐺', 'tomb', 'legend', 'UMBRA', 1.25, 620, 98, 48, 44, 90,
       [EXEC('Cân Trái Tim', 'UMBRA', 1.2), MARK('Ghi Sổ Tử', 'UMBRA', .9), S('Trượng Cong', 'UMBRA', 1.2), X('Phán Xử', 'pwr', 32)],
       UEXEC('CÁN CÂN CUỐI CÙNG', 'UMBRA', 1.55)),
@@ -77,7 +79,7 @@ export default {
 
     u('Thủ Lĩnh Lạc Đà Đỏ', '🐫', 'nomad', 'legend', 'EMBER', 1.25, 620, 92, 46, 40, 96,
       [S('Giáo Sa Mạc', 'EMBER', 1.25), AOE('Bão Cát Cuốn', 'STORM', .8), R('Dẫn Đoàn', 'spd', 30), B('Chịu Khát', 'grd', 35)],
-      U('CƠN BÃO NUỐT ĐOÀN QUÂN', 'STORM', 2.3)),
+      URAGE('CƠN BÃO NUỐT ĐOÀN QUÂN')),
     u('Bà Đồng Ốc Đảo', '🏺', 'nomad', 'legend', 'TIDE', .95, 360, 98, 26, 46, 104,
       [S('Vòi Nước', 'TIDE', 1.25), HALL('Giếng Sâu', 95), X('Ảo Ảnh', 'pwr', 32), MARK('Điềm Gở', 'TIDE', .85)],
       UMEND('MẠCH NƯỚC NGẦM', 250)),
@@ -86,7 +88,7 @@ export default {
     u('Người Thổi Sáo Rắn', '🪈', 'nomad', 'elite', 'VERDANT', .9, 340, 80, 26, 40, 106,
       [SILENCE('Điệu Sáo', 'VERDANT', .9), DOT('Gọi Nọc', 'VERDANT', .7, 34), X('Ru Ngủ', 'spd', 30), B('Nhịp Nhanh', 'pwr', 30)]),
     u('Trinh Sát Cồn Cát', '🧭', 'nomad', 'grunt', 'STORM', .9, 320, 78, 26, 28, 120,
-      [SNIPE('Cung Dài', 'STORM', 1.15), MARK('Chỉ Hướng', 'STORM', .85), B('Chạy Trên Cát', 'spd', 32), X('Ném Cát', 'pwr', 24)]),
+      [SNIPE('Cung Dài', 'STORM', 1.15), MARK('Chỉ Hướng', 'STORM', .85), B('Chạy Trên Cát', 'spd', 32), X('Ném Cát', 'acc', 24)]),
     u('Lái Buôn Muối', '🧂', 'nomad', 'grunt', 'FORGE', .95, 420, 66, 40, 32, 82,
       [S('Đòn Gánh', 'FORGE', 1.05), R('Chia Phần', 'grd', 28), H('Nước Dự Trữ', 105), X('Rắc Muối', 'wrd', 26)]),
     u('Chó Hoang Sa Mạc', '🐕', 'nomad', 'grunt', 'EMBER', .8, 300, 80, 24, 24, 124,
@@ -100,5 +102,5 @@ export default {
   ],
   boss: boss('Apep, Rắn Nuốt Mặt Trời', '🐍', 'UMBRA', 2.2, 2150, 117, 58, 60, 74,
     [S('Nuốt Chửng', 'UMBRA', 1.4), AOE('Bóng Tối Vĩnh Cửu', 'UMBRA', .95), B('Vảy Hư Vô', 'wrd', 35), DOT('Nọc Nguyên Thuỷ', 'VERDANT', .95, 50)],
-    U('ĐÊM KHÔNG BAO GIỜ TÀN', 'UMBRA', 2.6))
+    UCURSE('ĐÊM KHÔNG BAO GIỜ TÀN', 'UMBRA', 53))
 };

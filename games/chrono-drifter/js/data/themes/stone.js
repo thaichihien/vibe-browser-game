@@ -1,7 +1,9 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
          H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
-         X, XALL, STEAL, U, UEXEC, UMEND, UTIME } from '../../engine/moves.js';
+         X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
+         UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
+  from '../../engine/moves.js';
 
 export default {
   key: 'stone', name: 'TIỀN SỬ',
@@ -43,7 +45,7 @@ export default {
   units: [
     u('Tộc Trưởng Cầm Lửa', '🔥', 'tribe', 'legend', 'EMBER', 1.15, 620, 96, 50, 38, 88,
       [S('Đuốc Quật', 'EMBER', 1.3), AOE('Vòng Lửa', 'EMBER', .85), R('Tiếng Gọi Bộ Tộc', 'pwr', 32), H('Thảo Dược', 114)],
-      U('LỬA KHÔNG BAO GIỜ TẮT', 'EMBER', 2.35)),
+      UGUARD('LỬA KHÔNG BAO GIỜ TẮT', 170, 43)),
     u('Thợ Săn Voi Ma Mút', '🏹', 'tribe', 'legend', 'FORGE', 1.05, 560, 102, 42, 32, 106,
       [SNIPE('Lao Đá', 'FORGE', 1.28), MARK('Dấu Chân', 'FORGE', .88), EXEC('Đâm Chí Mạng', 'FORGE', 1.18), B('Nín Thở Rình', 'pwr', 32)],
       UEXEC('CUỘC SĂN LỚN', 'FORGE', 1.5)),
@@ -54,20 +56,20 @@ export default {
     u('Người Vẽ Hang', '🖐️', 'tribe', 'grunt', 'RADIANT', .9, 320, 76, 26, 38, 98,
       [MARK('Vẽ Hình Con Mồi', 'RADIANT', .9), R('Kể Chuyện Săn', 'pwr', 28), S('Que Than', 'RADIANT', 1.05), X('Bôi Mặt', 'pwr', 24)]),
     u('Trẻ Nhặt Củi', '🪵', 'tribe', 'grunt', 'EMBER', .75, 280, 70, 24, 26, 118,
-      [S('Ném Củi', 'EMBER', 1.05), B('Chạy Nhanh', 'spd', 32), H('Nhóm Lửa Nhỏ', 95), X('Ném Cát', 'pwr', 22)]),
+      [S('Ném Củi', 'EMBER', 1.05), B('Chạy Nhanh', 'spd', 32), H('Nhóm Lửa Nhỏ', 95), X('Ném Cát', 'acc', 22)]),
     u('Chó Sói Thuần Hoá', '🐕', 'tribe', 'grunt', 'FROST', .95, 360, 82, 30, 24, 120,
       [S('Cắn', 'FROST', 1.1), ARC('Bầy Săn', 'FROST', .85), B('Tru Gọi', 'pwr', 28), EXEC('Ngoạm Cổ', 'FROST', 1.05)]),
 
     u('Voi Ma Mút Đầu Đàn', '🦣', 'beast', 'legend', 'FROST', 1.75, 900, 96, 60, 42, 58,
       [S('Ngà Húc', 'FROST', 1.35), AOE('Giẫm Rung Đất', 'FROST', .9), TAUNT('Thân Núi Lông', 175), B('Lông Dày', 'grd', 38)],
-      U('CẢ ĐÀN CHẠY QUA', 'FROST', 2.45)),
+      UGUARD('CẢ ĐÀN CHẠY QUA', 204, 43)),
     u('Hổ Răng Kiếm', '🐯', 'beast', 'legend', 'EMBER', 1.3, 600, 108, 40, 30, 118,
       [S('Răng Kiếm', 'EMBER', 1.35), EXEC('Cắn Gáy', 'EMBER', 1.2), B('Rình Trong Cỏ', 'spd', 38), ARC('Vồ Kép', 'EMBER', .9)],
-      U('SĂN ĐÊM', 'EMBER', 2.4)),
+      UNUKE('SĂN ĐÊM', 'EMBER', 3.4)),
     u('Gấu Hang Khổng Lồ', '🐻', 'beast', 'elite', 'FORGE', 1.45, 680, 94, 52, 28, 70,
       [S('Vồ Nặng', 'FORGE', 1.28), DRAIN('Ngoạm Xé', 'FORGE', 1.0), B('Gầm Rung Hang', 'pwr', 36), STUN('Đập Đất', 'FORGE', .9)]),
     u('Chim Khủng Bố', '🦤', 'beast', 'elite', 'VERDANT', 1.2, 480, 96, 34, 30, 116,
-      [S('Mỏ Bổ', 'VERDANT', 1.28), ARC('Đá Kép', 'VERDANT', .9), B('Chạy Nước Rút', 'spd', 38), X('Đá Cát', 'pwr', 26)]),
+      [S('Mỏ Bổ', 'VERDANT', 1.28), ARC('Đá Kép', 'VERDANT', .9), B('Chạy Nước Rút', 'spd', 38), X('Đá Cát', 'acc', 26)]),
     u('Bò Rừng Sừng Dài', '🦬', 'beast', 'grunt', 'FORGE', 1.35, 560, 80, 48, 26, 82,
       [RAMP('Húc Đà', 'FORGE', 1.0), S('Sừng Hất', 'FORGE', 1.12), TAUNT('Chắn Đàn', 140), B('Vai Dày', 'grd', 36)]),
     u('Cá Sấu Cổ Đại', '🐊', 'beast', 'grunt', 'TIDE', 1.25, 500, 88, 42, 28, 88,
@@ -77,14 +79,14 @@ export default {
 
     u('Pháp Sư Sọ Voi', '💀', 'bone', 'legend', 'UMBRA', 1.15, 600, 100, 46, 46, 84,
       [S('Trượng Xương', 'UMBRA', 1.28), AOE('Gió Từ Cõi Chết', 'UMBRA', .85), REVIVE('Gọi Tổ Tiên', .45), X('Nguyền Săn Trượt', 'pwr', 32)],
-      U('TỔ TIÊN TRỖI DẬY', 'UMBRA', 2.4)),
+      URAISE('TỔ TIÊN TRỖI DẬY', .5)),
     u('Người Đeo Mặt Nạ Xương', '🎭', 'bone', 'legend', 'STORM', 1.0, 380, 104, 28, 46, 110,
       [S('Sấm Gọi', 'STORM', 1.3), SILENCE('Cấm Khẩu', 'STORM', .9), MARK('Vẽ Dấu Tế', 'STORM', .9), HALL('Nhịp Trống Lành', 92)],
       UMEND('LỄ HIẾN SINH', 260)),
     u('Thợ Rèn Xương', '🦴', 'bone', 'elite', 'FORGE', 1.05, 500, 88, 48, 30, 78,
       [S('Chày Xương', 'FORGE', 1.22), BARRIER('Giáp Xương', 120), X('Bẻ Khớp', 'grd', 34), B('Cứng Như Đá', 'grd', 36)]),
     u('Người Nói Chuyện Với Khói', '🌫️', 'bone', 'elite', 'UMBRA', .95, 360, 90, 26, 44, 106,
-      [DOT('Khói Ngạt', 'UMBRA', .78, 38), X('Che Mắt', 'pwr', 30), DRAIN('Hút Hơi Thở', 'UMBRA', .95), B('Tan Vào Khói', 'wrd', 34)]),
+      [DOT('Khói Ngạt', 'UMBRA', .78, 38), X('Che Mắt', 'acc', 30), DRAIN('Hút Hơi Thở', 'UMBRA', .95), B('Tan Vào Khói', 'wrd', 34)]),
     u('Đứa Trẻ Không Bóng', '👤', 'bone', 'grunt', 'UMBRA', .78, 290, 80, 22, 30, 124,
       [S('Chạm Lạnh', 'UMBRA', 1.1), B('Biến Mất', 'spd', 34), X('Tiếng Cười Trong Hang', 'pwr', 26), ARC('Lượn Quanh', 'UMBRA', .85)]),
     u('Xác Ướp Đầm Lầy', '🪵', 'bone', 'grunt', 'VERDANT', 1.0, 460, 70, 44, 32, 66,
@@ -100,5 +102,5 @@ export default {
   ],
   boss: boss('Bạo Long Chúa Tể', '🦖', 'FORGE', 2.25, 2230, 118, 60, 54, 72,
     [S('Hàm Nghiến', 'FORGE', 1.42), AOE('Gầm Chấn Động', 'FORGE', .95), B('Da Giáp Cổ Đại', 'grd', 35), DRAIN('Nuốt Chửng', 'FORGE', 1.18)],
-    U('TIẾNG GẦM CUỐI KỶ', 'FORGE', 2.6))
+    UDRAIN('TIẾNG GẦM CUỐI KỶ', 'FORGE', 1.9))
 };

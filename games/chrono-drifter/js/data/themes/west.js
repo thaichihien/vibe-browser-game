@@ -1,7 +1,9 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
          H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
-         X, XALL, STEAL, U, UEXEC, UMEND, UTIME } from '../../engine/moves.js';
+         X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
+         UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
+  from '../../engine/moves.js';
 
 export default {
   key: 'west', name: 'MIỀN TÂY HOANG DÃ',
@@ -47,7 +49,7 @@ export default {
       UEXEC('CÔNG LÝ MIỀN TÂY', 'STEEL', 1.55)),
     u('Phó Cảnh Sát Súng Ổ Quay', '🔫', 'marshal', 'legend', 'EMBER', 1.0, 540, 102, 40, 34, 112,
       [S('Sáu Viên', 'EMBER', 1.3), ARC('Bắn Kép', 'EMBER', .9), B('Nạp Vội', 'spd', 35), EXEC('Viên Cuối', 'EMBER', 1.15)],
-      U('CẢ Ổ ĐẠN', 'EMBER', 2.3)),
+      UNUKE('CẢ Ổ ĐẠN', 'EMBER', 3.4)),
     u('Bác Sĩ Thị Trấn', '💊', 'marshal', 'elite', 'RADIANT', .95, 340, 74, 30, 46, 92,
       [S('Dao Mổ', 'RADIANT', 1.05), H('Khâu Nhanh', 130), REVIVE('Cứu Sống', .4), CLEANSE('Cồn Sát Trùng', 85)]),
     u('Thợ Săn Tiền Thưởng', '🤠', 'marshal', 'elite', 'STEEL', 1.0, 440, 96, 34, 30, 108,
@@ -60,11 +62,11 @@ export default {
       [S('Đá Hậu', 'FORGE', 1.15), STUN('Giẫm', 'FORGE', .85), B('Phi Nước Đại', 'spd', 38), R('Kéo Xe', 'grd', 26)]),
 
     u('Kid Mắt Rắn', '🐍', 'outlaw', 'legend', 'UMBRA', 1.0, 560, 104, 38, 34, 118,
-      [S('Bắn Từ Hông', 'UMBRA', 1.3), EXEC('Bắn Sau Lưng', 'UMBRA', 1.2), STEAL('Móc Ví', 40), B('Máu Lạnh', 'pwr', 35)],
-      U('KHÔNG AI RÚT NHANH HƠN', 'UMBRA', 2.35)),
+      [S('Bắn Từ Hông', 'UMBRA', 1.3), EXEC('Bắn Sau Lưng', 'UMBRA', 1.2), STEAL('Móc Ví', 40), B('Máu Lạnh', 'crt', 35)],
+      UNUKE('KHÔNG AI RÚT NHANH HƠN', 'UMBRA', 3.4)),
     u('Trùm Băng Đường Sắt', '🚂', 'outlaw', 'legend', 'FORGE', 1.25, 680, 92, 54, 40, 74,
       [S('Đấm Sắt', 'FORGE', 1.25), AOE('Nổ Toa Tàu', 'EMBER', .85), TAUNT('Đứng Chắn Toa', 150), R('Chia Chiến Lợi Phẩm', 'pwr', 30)],
-      U('CƯỚP CẢ CHUYẾN TÀU', 'FORGE', 2.35)),
+      UGUARD('CƯỚP CẢ CHUYẾN TÀU', 184, 41)),
     u('Tay Cờ Bạc Bịp', '🃏', 'outlaw', 'elite', 'RADIANT', .95, 360, 88, 28, 38, 110,
       [S('Ném Bài', 'RADIANT', 1.15), X('Lừa Bịp', 'pwr', 32), B('Vận May', 'pwr', 35), STEAL('Ăn Gian', 36)]),
     u('Kẻ Đặt Thuốc Nổ', '🧨', 'outlaw', 'elite', 'EMBER', .95, 400, 94, 30, 28, 96,
@@ -78,7 +80,7 @@ export default {
 
     u('Người Cưỡi Ngựa Không Đầu', '🎃', 'dust', 'legend', 'UMBRA', 1.3, 640, 100, 46, 44, 104,
       [S('Lưỡi Hái Đêm', 'UMBRA', 1.3), AOE('Vó Ngựa Oán', 'UMBRA', .85), B('Không Thể Chết', 'grd', 38), MARK('Chọn Người', 'UMBRA', .9)],
-      U('CUỘC SĂN LÚC NỬA ĐÊM', 'UMBRA', 2.4)),
+      URAGE('CUỘC SĂN LÚC NỬA ĐÊM')),
     u('Bà Đồng Bụi Đỏ', '🔮', 'dust', 'legend', 'STORM', .95, 360, 100, 26, 46, 106,
       [S('Sét Đồng Hoang', 'STORM', 1.25), XALL('Lời Nguyền Khô Hạn', 'pwr', 24), HALL('Mưa Hiếm', 95), MARK('Điềm Báo', 'STORM', .85)],
       UMEND('CƠN MƯA ĐẦU MÙA', 255)),
@@ -91,7 +93,7 @@ export default {
     u('Bù Nhìn Rơm', '🪦', 'dust', 'grunt', 'VERDANT', 1.0, 420, 66, 40, 30, 68,
       [TAUNT('Đứng Giữa Đồng', 120), S('Tay Rơm', 'VERDANT', 1.05), DOT('Rơm Mục', 'VERDANT', .65, 30), B('Không Biết Đau', 'grd', 35)]),
     u('Bụi Cuốn Biết Đi', '🌪️', 'dust', 'grunt', 'STORM', 1.1, 380, 78, 26, 34, 116,
-      [AOE('Cuốn Bụi', 'STORM', .8), X('Mù Mắt', 'pwr', 28), B('Xoáy Nhanh', 'spd', 35), S('Đá Văng', 'STORM', 1.05)])
+      [AOE('Cuốn Bụi', 'STORM', .8), X('Mù Mắt', 'acc', 28), B('Xoáy Nhanh', 'spd', 35), S('Đá Văng', 'STORM', 1.05)])
   ],
   mooks: [
     mook('Chuột Đồng Hoang', '🐀', 'VERDANT', .58, 130, 46, 16, 14, 106,
@@ -101,5 +103,5 @@ export default {
   ],
   boss: boss('Đầu Máy Ma Số 9', '🚂', 'FORGE', 2.2, 2150, 116, 64, 54, 70,
     [S('Đâm Thẳng', 'FORGE', 1.4), AOE('Xả Hơi Nóng', 'EMBER', .95), B('Vỏ Thép Dày', 'grd', 35), STUN('Còi Rúc', 'STORM', .95)],
-    U('CHUYẾN CUỐI KHÔNG DỪNG', 'FORGE', 2.6))
+    USTUN('CHUYẾN CUỐI KHÔNG DỪNG', 'FORGE', 1.6))
 };
