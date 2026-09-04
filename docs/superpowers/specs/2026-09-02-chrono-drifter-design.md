@@ -165,6 +165,28 @@ cannot see are not a decision.
 
 Measured over 600 simulated battles: **7.7% miss rate, 9.1% crit rate.**
 
+### Riders roll separately, and control cannot be chained
+
+A move landing and its rider landing are two different questions. Burn and mark apply at 85%;
+**stun at 55% and silence at 50%** — control is deliberately the least reliable thing in the
+game, because it is the only thing that takes a turn away.
+
+That alone was not enough. Silence originally locked *everything including a fully charged
+ultimate*, cost 23 energy against 10/turn regeneration, and could be re-applied on top of
+itself — so a lone survivor could be held from acting for the rest of the battle. Measured:
+**~100% of its turns.** Three changes:
+
+- **A control effect cannot be refreshed while it is still running.** This was the real hole:
+  re-applying every turn meant it never expired, so the immunity below never began.
+- **Shaking one off grants 3 turns immune to both stun and silence.** No amount of re-casting
+  gets through it.
+- **Silence takes the skills but never the ultimate.** The thing a legend spent the whole
+  battle charging still fires.
+
+Spammed every single turn with unlimited energy, a lone target now loses **18.8%** of its
+turns to silence and **22.9%** to stun. It is a real tool and never a lock. The AI also stops
+throwing locks at targets that are already locked or still resisting.
+
 ### Energy
 
 Every skill draws on one 80-point pool that regenerates **10 at the top of your own
@@ -192,6 +214,59 @@ Diminishing-returns defence keeps late-game stats from producing immortal units.
 at 100. Haste and Slow therefore visibly *reorder the timeline strip* at the top of the
 screen, which is what makes speed manipulation legible.
 
+## 7b. The menu — standing in the vortex
+
+The menu has no card and no chrome bar. A canvas is fixed to the viewport and
+everything else floats in front of it: the title, one line of pitch, ▶ CHƠI, and the
+two side doors (🎒 CỬA HÀNG, 🧳 SẮP TÚI) centred in the mouth of the tunnel; the
+frame controls (← ARCADE.SYS, the purse, HƯỚNG DẪN, mute) in the top-**left** corner
+of the screen and the run's numbers — score, best, record, eras seen — in the
+top-**right**, both read on the way past rather than as part of the pitch. The
+controls are the same elements with the same handlers as every other screen's top
+bar; only the bar around them goes away, and it comes back the moment you leave the
+menu. What is packed used to be a line of prose under the buttons; it is a count on
+the bag button instead (`SẮP TÚI 2/5`).
+
+`ui/vortex.js` draws the tunnel — no images, no libraries:
+
+- **Rings** of lumpy cloud rushing outward from a wandering vanishing point, each
+  stroked twice: a wide faint band that builds into cloud where rings overlap, and
+  a thin filament along its spine. Segment count scales with radius, or the near
+  rings facet.
+- **Debris** drawn as the streak it left rather than the point it is.
+- **Clock faces** — roman numerals in rings, because the vortex has always had
+  clocks in it — tumbling out of the depth.
+- **The mouth**: the one warm light in the picture, breathing. The wall is always
+  cooler than the mouth, which is what gives the tunnel its depth.
+
+**It is not always blue.** Eight palettes — blue, purple, magenta, red, amber,
+gold, green, teal — with a fresh one on every visit to the menu, never the one it
+just left. More of the cycle is spent moving than standing still (7–13s settled,
+13s to cross), so you never catch the moment it changes. Hue is interpolated the
+short way round the circle, or a red→blue change detours through green.
+
+The swap of one palette for the next happens **before** the mix is read, carrying
+the leftover time with it. Read after, it painted a single frame of the target
+colour before the fade had begun — a flash rather than a fade, invisible in a
+screenshot and obvious in motion. Measured off the palette state rather than a
+pixel: the largest frame-to-frame hue step is **0.3°**, none above 6°.
+
+**The roll falls through the same tunnel.** The menu and the roll share the backdrop
+— the drift out of one screen and into the next is one continuous fall, so the
+colour carries across the transition instead of re-rolling, and the roll card
+becomes a translucent panel floating in the vortex rather than a solid card. The
+palette only picks a new colour when the vortex has actually been put away (going
+into a battle), never on the menu → roll step.
+
+The loop only runs while the vortex is on screen, and `prefers-reduced-motion` gets
+a single still frame in one colour. Measured at 61fps on a software renderer.
+
+Two things the full-bleed backdrop cost, both found by measuring rather than
+looking: a canvas is a *replaced* element, so `inset: 0` leaves it at its intrinsic
+300×150 and the size has to be stated; and a viewport-fixed child inside a padded
+body makes the document wider than the screen, so the canvas sits outside
+`.machine` and the body's padding moves inside it while the menu is up.
+
 ## 8. Presentation — the stage, not a list of rows
 
 The battle screen is a painted battlefield with emoji actors standing on it, built from CSS
@@ -211,10 +286,37 @@ gradients and emoji only. No image files, consistent with the rest of the repo.
 | Foreground | One or two props cut off by the bottom edge — the cheapest depth cue available |
 | Vignette | Darkened corners so the centre of the fight reads first |
 
-Two camps with a gap down the middle — yours bottom-left, theirs bottom-right. Each side lays
-itself out in **ranks** for any count from 1 to 8: the front rank is lowest and largest, and
-every rank behind steps up, shrinks 12%, and pulls toward the outer edge so nobody is hidden.
-Enemy sprites are `scaleX(-1)` so the sides face each other.
+### Four stagings, not one
+
+Two mirrored rows made every battle look the same, so the composition is now rolled per
+battle (seeded off the battle seed, stable across redraws) and the era's scenery is laid
+out to suit it — the horizon itself moves:
+
+| Composition | Shape | Horizon | Used for |
+|---|---|---|---|
+| **Hàng ngũ** | two facing rows | 56% | pitched battles, big fields |
+| **Đối mặt** | you low and close, them high and far, each on their own ground | 48% | duels, boss hunts |
+| **Vây bọc** | the larger side curls around the smaller | 60% | a mob against a few |
+| **Chiếm cao điểm** | one side holds a stepped ridge | 52% | mixed |
+
+Each fighter now stands on a tinted **platform** — ally blue, enemy red — which is what
+sells the depth in the face-to-face staging.
+
+### Nothing may hide behind anything
+
+A dragon is three times the width of a rat, so dividing a band evenly hid the rat and made
+it unclickable. Layout packs by real **footprint** — the wider of the sprite and its name
+plate — and rank spacing is derived from the tallest sprite standing in front rather than a
+fixed percentage.
+
+That gets the geometry close, but only the browser knows where a glyph actually lands: the
+actor box is anchored at its name plate, not its feet, and emoji metrics differ by era. So
+the last word goes to the rendered result. After layout, every fighter's centre is tested
+with `elementFromPoint`; if it does not resolve to that fighter's own body it is not
+clickable, and it moves — sideways first, lifted clear when boxed in.
+
+Verified across 260 generated battles covering all four compositions and all 23 eras:
+**0 of 2,130 fighters had a covered centre.**
 
 ### Emoji are not all one size
 
@@ -292,23 +394,111 @@ every format and asserts median rounds land inside the bands above.
 | ★★★★ Hard | ×1.15 | 1-ply lookahead, focus fire, holds ults | +1 legend | ×1.5 |
 | ★★★★★ Very Hard | ×1.30 | 1-ply + threat/combo scoring | +1 unit, +1 legend | ×2.2 |
 
+### The console: deck left, chronicle right
+
+Below the battlefield the screen splits **two thirds / one third**. What you can do and
+what has already happened are different jobs and stopped sharing a column:
+
+- **Left — the deck.** One header row (name · HP bar · NL bar · the standing
+  instruction · the flee button, hard right), then the six move slots, then the satchel
+  along the bottom edge.
+- **Right — the chronicle.** The action log alone, newest at the top.
+
+The chronicle's contents are absolutely positioned inside its box, so a full log can
+never set the row height — the deck's fixed slot count does, and the move buttons stay
+put all battle. Below **900px** the two stack and the chronicle keeps its own scroll.
+
+The header never wraps, which makes it the row most likely to push the page sideways:
+under **700px** the numeric readouts give way (the bars stay) and the flee and cancel
+buttons drop to short forms. Measured at eight widths from 1580 down to 420 — zero deck
+movement, no horizontal scroll.
+
+Whenever the grid holds no buttons — an enemy is thinking, an action is resolving, the
+era is speaking — it keeps its height and says what it is waiting for, rather than
+leaving a tall blank panel.
+
 ### The action log
 
-Five entries, newest first, each naming the actor, the move, the target and how it
-landed — **trúng / CHÍ MẠNG / TRƯỢT**, or a tally for an area attack (`7 trúng, 1 chí
-mạng, 1 trượt`). Deaths are appended to the line that caused them. Exact numbers stay
-on the floating combat text; the log is for following the fight, not auditing it. One
-line was never enough: by the time you read it, the next unit had already acted.
+**Fifteen entries**, newest first, the oldest falling off the bottom; each names the
+actor, the move, the target and how it landed — **trúng / CHÍ MẠNG / TRƯỢT**, or a tally
+for an area attack (`7 trúng, 1 chí mạng, 1 trượt`). Deaths are appended to the line that
+caused them. Exact numbers stay on the floating combat text; the log is for following the
+fight, not auditing it. One line was never enough: by the time you read it, the next unit
+had already acted.
+
+Rows wrap to at most two lines and carry their full text as a tooltip. About ten to
+eleven are on screen at once and the rest are one scroll up — the panel is as tall as the
+deck beside it, and buying the last four rows would have meant a taller console than the
+battlefield can spare.
 
 ### Fleeing
 
-You may withdraw from any battle. Inside the first **5 turns** the era takes half of
-what a win there would have paid; after that leaving is free but pays nothing. The
+You may withdraw from any battle. Inside the first **20 turns** the era takes half of
+what a win there would have paid; after that leaving is free but pays nothing. The window
+is twenty rather than a handful because a battle is only readable once both sides have
+shown their hand — five turns let you fold before there was anything to fold on. The
 button arms on the first click and only flees on the second.
 
 The toll is derived from `winShards()` rather than its own constant, so it can never
 exceed a victory — priced independently it did, in all 25 difficulty × format
 combinations, which would have made fleeing a trap rather than a choice.
+
+### Era events
+
+A long fight settles into a rhythm. Every **30–50 turns** (rolled once per battle) the era
+itself interrupts — and it is blind to sides, because the sky does not care whose army it
+lands on. **An event may end a battle**; that is deliberate, and *Kẻ Cuối Cùng* is the
+counterweight.
+
+| Kind | Events |
+|---|---|
+| **Cataclysm** | Thiên Thạch (meteor: one unit hard, the **3 physically nearest** at half) · Nứt Đất (the front rank takes the ground giving way and loses its place in the queue) · Bão Nguyên Tố (one element floods the field: everything weak to it bleeds, everything strong against it charges) · Nhật Thực (RADIANT −30% PWR, UMBRA +30%) |
+| **Mercy** | Đường Cùng (everyone under half HP hits 40% harder) · Hồi Quang (one of the fallen returns at 40% for exactly five of its own turns) · Kẻ Cuối Cùng (a side down to one gets +50% PWR, a shield and +25 crit) · Cơn Gió Thứ Hai (everyone heals 20% and sheds a debuff) |
+| **Tempo** | Trường Năng Lượng (full energy, doubled regen) · Chân Không (half energy, halved regen) · Tiếng Gọi Nộ Khí (+40 charge to everyone — every ultimate ripens at once) · Mạch Thời Gian Đứt (the turn queue is shuffled) |
+| **Rules** | Sương Mù Dày (−25 accuracy for all) · Đất Cằn (no healing works at all) · Lưỡi Dao Cạo (+30 crit for all) · Vết Nứt (one unit gets two extra turns) |
+| **Outsider** | Kẻ Lạc Thời (a mook **from a different era** joins the outnumbered side for five turns) · Túi Rách (a consumable spills out of your satchel and fires itself) |
+
+Every event carries two lines: a **blurb** (why, in the fiction) and an **effect** (what it
+does, mechanically), and the two must not restate each other — a test measures word overlap
+between them, which caught three events saying the same thing twice.
+
+The **cut-in is three tiers**: a lead-in line, the name, then the effect.
+
+```
+        Một sự kiện diễn ra như định mệnh cho cuộc chiến:
+                        KẺ LẠC THỜI
+        🌿 Tiểu Yêu Gác Động từ TÂY DU nhập cuộc, chỉ trong 5 lượt.
+```
+
+The lead-in is drawn from a pool of six generic lines and **never repeats twice running**
+inside a battle. The flavour blurb was moved off the cut-in — four tiers needed a longer
+pause every single time — and now closes the history line instead:
+
+```
+⌛ KẺ LẠC THỜI — 🌿 Tiểu Yêu Gác Động từ TÂY DU nhập cuộc, chỉ trong 5 lượt.
+                Một kẻ từ thời đại khác rơi qua cùng một vết nứt.
+```
+
+Effect first and flavour last, so flavour is the half that clips when a row runs past its
+two lines. Each row carries the full text as a tooltip.
+
+Four events rewrite their own effect line once they have run, so it names the unit, the
+element or the era that actually turned up rather than a generic sentence.
+
+Rails: nothing fires in the first 6 turns; an event never repeats inside one battle; a
+conditional event stays out of the pool until it would actually do something, and the clock
+reschedules rather than wasting the beat. Every `run()` is also safe on its own, without its
+guard — the guard decides whether an event is *offered*, not whether it can crash.
+
+Two events change the roster mid-battle, which the engine supports through `state.spawn()`
+and a `temp` counter that ticks down on the unit's own turns. The renderer rebuilds the
+field when it sees a `spawn` event.
+
+The meteor is the one place position matters: the view publishes each fighter's stage
+coordinates back onto the unit, so "nearby" means what it looks like.
+
+Measured over 400 simulated battles: **1.23 events per battle**, all 18 types firing, and
+4 battles ended by one.
 
 ## 10. Rewards, ranking, economy
 

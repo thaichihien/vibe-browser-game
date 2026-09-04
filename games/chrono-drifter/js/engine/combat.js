@@ -6,7 +6,8 @@
 
 import { mult } from './elements.js';
 import { WAIT_KIND, DMG, HEAL, BUFF, DEBUFF, WAIT, WAIT_CHARGE, WAIT_GUARD,
-         POINT_STATS, costOf, EP_MAX, EP_REGEN, EP_WAIT } from './moves.js';
+         POINT_STATS, costOf, EP_MAX, EP_REGEN, EP_WAIT,
+         RIDER_CHANCE, CC_IMMUNE_TURNS, isControl, ridersOf } from './moves.js';
 
 export const TICK_GOAL = 1000;
 export const ULT_FULL = 100;
@@ -57,7 +58,7 @@ export function fatigueOf(state) {
   return Math.min(FATIGUE_CAP, Math.max(0, (state.turns - state.softCap) / state.softCap));
 }
 
-export function createBattle({ era, format, mine, foes, difficulty, rng, seed }) {
+export function createBattle({ era, format, mine, foes, difficulty, rng, seed, eventPeriod = 0, allEras = [] }) {
   let id = 0;
   const mk = (def, side, slot) => ({
     ...def, uid: `${side}${id++}`, side, slot,
@@ -65,14 +66,26 @@ export function createBattle({ era, format, mine, foes, difficulty, rng, seed })
     ep: EP_MAX, epMax: EP_MAX,
     charge: 0, buffs: [], dots: [], shield: 0,
     taunt: 0, stunned: 0, silenced: 0, marked: 0, ramp: 0, chargeup: 0, extraTurns: 0,
+    ccImmune: 0,
     alive: true, gauge: 0
   });
   const n = mine.length + foes.length;
-  return {
-    seed, rng, era, format, difficulty,
+  const state = {
+    seed, rng, era, format, difficulty, allEras,
     units: [...mine.map((d, i) => mk(d, 'ally', i)), ...foes.map((d, i) => mk(d, 'foe', i))],
-    round: 1, turns: 0, softCap: format.par * n, over: false, won: null, actor: null
+    round: 1, turns: 0, softCap: format.par * n, over: false, won: null, actor: null,
+    // the era interrupts on this clock; see engine/events.js
+    eventPeriod, nextEventAt: eventPeriod || Infinity, eventsFired: [],
+    epScale: null, noHeal: 0
   };
+  /** Drop a newcomer onto the field mid-battle. Used by the era events. */
+  state.spawn = (def, side, opts = {}) => {
+    const u = mk(def, side, state.units.filter(x => x.side === side).length);
+    Object.assign(u, opts);
+    state.units.push(u);
+    return u;
+  };
+  return state;
 }
 
 /* ── the tick queue ─────────────────────────────────────────────────────────
@@ -113,13 +126,30 @@ export function nextActor(state) {
 /** Tick everything that lives on the actor at the top of their turn. */
 export function openTurn(state, u) {
   const ev = [];
-  const gained = Math.min(EP_REGEN, u.epMax - u.ep);
+  const scale = (state.epScale && state.turns <= state.epScale.until) ? state.epScale.mult : 1;
+  const gained = Math.min(Math.round(EP_REGEN * scale), u.epMax - u.ep);
   if (gained > 0) { u.ep += gained; ev.push({ t: 'ep', tgt: u.uid, n: gained }); }
+
+  // a unit standing on borrowed time spends it a turn at a time
+  if (u.temp !== undefined) {
+    u.temp--;
+    if (u.temp <= 0) {
+      kill(u);
+      ev.push({ t: 'note', tgt: u.uid, text: 'HẾT THỜI GIAN' });
+      ev.push({ t: 'death', tgt: u.uid });
+      return ev;
+    }
+    ev.push({ t: 'note', tgt: u.uid, text: `CÒN ${u.temp} LƯỢT` });
+  }
   for (const b of u.buffs) b.t--;
   u.buffs = u.buffs.filter(b => b.t > 0);
   if (u.taunt > 0) u.taunt--;
   if (u.marked > 0) u.marked--;
-  if (u.silenced > 0) u.silenced--;
+  if (u.ccImmune > 0) u.ccImmune--;
+  if (u.silenced > 0 && --u.silenced === 0) {
+    u.ccImmune = CC_IMMUNE_TURNS;
+    ev.push({ t: 'note', tgt: u.uid, text: 'KHÁNG KHỐNG CHẾ' });
+  }
 
   for (const d of u.dots) {
     d.t--;
@@ -130,7 +160,7 @@ export function openTurn(state, u) {
   u.dots = u.dots.filter(d => d.t > 0);
 
   if (u.alive && u.stunned > 0) {
-    u.stunned--;
+    if (--u.stunned === 0) u.ccImmune = CC_IMMUNE_TURNS;
     ev.push({ t: 'note', tgt: u.uid, text: 'CHOÁNG' });
     ev.push({ t: 'skip', src: u.uid });
   }
@@ -166,7 +196,8 @@ export function legalMoves(state, u) {
   out.push({ ...WAIT, cost: 0 });
   for (const m of out) {
     if (m.kind === WAIT_KIND) continue;
-    if (u.silenced > 0) { m.locked = true; m.lockReason = 'silenced'; }
+    // silence takes the skills, never the ultimate — that stays earned
+    if (u.silenced > 0 && !m.isUlt) { m.locked = true; m.lockReason = 'silenced'; }
     else if (!m.isUlt && m.cost > u.ep) { m.locked = true; m.lockReason = 'ep'; }
     else if (m.isUlt && u.charge < ULT_FULL) m.lockReason = 'charge';
   }
@@ -331,12 +362,7 @@ export function resolve(state, actor, move, targetUid) {
       hop++;
       const d = damageOf(state, actor, t, swing);
       dealt += applyDamage(state, t, d.n, m.el, d, ev);
-      if (t.alive) {
-        if (m.dot) t.dots.push({ amt: m.dot, el: m.el, t: DOT_TURNS });
-        if (m.mark) t.marked = DOT_TURNS;
-        if (m.stun) t.stunned = 1;
-        if (m.silence) t.silenced = 2;
-      }
+      if (t.alive) applyRiders(state, t, m, ev);
     }
     if (m.drain && actor.alive && dealt > 0) {
       const back = Math.round(dealt * m.drain);
@@ -363,6 +389,30 @@ export function resolve(state, actor, move, targetUid) {
   return ev;
 }
 
+/**
+ * The blow landing and the rider landing are separate questions. Control effects
+ * are the least reliable, and a unit that has just shaken one off cannot be caught
+ * again straight away — otherwise a lone survivor can be held down forever.
+ */
+export function applyRiders(state, t, m, ev) {
+  for (const rider of ridersOf(m)) {
+    // a control effect cannot be refreshed on top of itself, or it never expires
+    // and the immunity that follows it never gets a chance to start
+    if (isControl(rider) && (t.ccImmune > 0 || t.silenced > 0 || t.stunned > 0)) {
+      ev.push({ t: 'note', tgt: t.uid, text: 'KHÁNG LẠI' });
+      continue;
+    }
+    if (state.rng() * 100 >= (RIDER_CHANCE[rider] ?? 100)) {
+      ev.push({ t: 'note', tgt: t.uid, text: 'HIỆU ỨNG TRƯỢT' });
+      continue;
+    }
+    if (rider === 'dot') t.dots.push({ amt: m.dot, el: m.el, t: DOT_TURNS });
+    if (rider === 'mark') t.marked = DOT_TURNS;
+    if (rider === 'stun') t.stunned = 1;
+    if (rider === 'silence') t.silenced = 2;
+  }
+}
+
 export function checkEnd(state) {
   const mine = living(state, 'ally').length;
   const foes = living(state, 'foe').length;
@@ -372,7 +422,8 @@ export function checkEnd(state) {
   return { t: 'end', won: state.won };
 }
 
-export const healScale = (state) => Math.max(0.08, 1 - fatigueOf(state) * 0.55);
+export const healScale = (state) =>
+  (state.noHeal && state.turns <= state.noHeal) ? 0 : Math.max(0.08, 1 - fatigueOf(state) * 0.55);
 
 const weakest = (arr) => arr.reduce((a, b) => (a.hp / a.max <= b.hp / b.max ? a : b), arr[0]);
 const pickFoe = (rng, arr) => arr[Math.floor(rng() * arr.length)];

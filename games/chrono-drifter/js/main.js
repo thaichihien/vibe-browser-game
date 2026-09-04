@@ -10,8 +10,10 @@ import { createBattle, nextActor, openTurn, turnOrder, resolve, legalMoves,
          hitChance, critChance } from './engine/combat.js';
 import { chooseAction } from './engine/ai.js';
 import { useItem } from './engine/items.js';
+import { due, fire, rollPeriod } from './engine/events.js';
 import { tagOf, WAIT_KIND, DMG } from './engine/moves.js';
 import * as view from './ui/battle-view.js';
+import * as vortex from './ui/vortex.js';
 import { save, flush, buy, priceOf, hasRelic, isRelic, satchelSize, SATCHEL_MAX, setSatchel, consume, recordResult, muted } from './state.js';
 import { sfx } from './audio.js';
 
@@ -20,6 +22,11 @@ const screens = ['menu', 'roll', 'battle', 'shop', 'satchel'];
 const show = (name) => {
   screens.forEach(s => { $('screen-' + s).hidden = s !== name; });
   document.body.classList.toggle('in-battle', name === 'battle');
+  // the vortex is the backdrop for both the menu and the roll — one continuous
+  // fall — and only turns while you are standing in it
+  const inVortex = name === 'menu' || name === 'roll';
+  document.body.classList.toggle('at-vortex', inVortex);
+  inVortex ? vortex.start($('vortex')) : vortex.stop();
 };
 
 let B = null;              // live battle state
@@ -35,15 +42,11 @@ function renderMenu() {
     <div><b>${save.score}</b>ĐIỂM TÍCH LUỸ</div>
     <div><b>${save.best}</b>TRẬN CAO NHẤT</div>
     <div><b>${save.wins}/${save.wins + save.losses}</b>THẮNG</div>
-    <div><b>${save.seen.length}/${ERAS.length}</b>THỜI ĐẠI ĐÃ QUA</div>`;
-  const bag = save.satchel.filter(id => (save.stock[id] || 0) > 0)
-    .map(id => { const i = byId(id); return i ? `${i.icon} ${i.name} ×${save.stock[id]}` : null; }).filter(Boolean);
-  const owned = Object.keys(save.stock).length;
-  $('menu-satchel').textContent = bag.length
-    ? `Túi đồ (${bag.length}/${satchelSize()}): ${bag.join(' · ')}`
-    : owned
-      ? `Bạn có đồ nhưng chưa xếp vào túi — bấm 🧳 SẮP TÚI.`
-      : `Túi đồ trống — thắng vài trận rồi ghé 🎒 CỬA HÀNG mua đồ.`;
+    <div class="era"><b>${save.seen.length}/${ERAS.length}</b>THỜI ĐẠI ĐÃ QUA</div>`;
+  // what is packed used to be a line of prose under the buttons; it is a count on
+  // the button that opens the bag instead
+  const packed = save.satchel.filter(id => (save.stock[id] || 0) > 0).length;
+  $('satchel-tally').textContent = packed ? `${packed}/${satchelSize()}` : '';
 }
 
 /* ── the roll ───────────────────────────────────────────────── */
@@ -73,7 +76,8 @@ async function rollAndStart() {
 /* ── battle ─────────────────────────────────────────────────── */
 function startBattle(g) {
   B = createBattle({ era: g.era, format: g.format, mine: g.mine, foes: g.foes,
-                     difficulty: g.difficulty, rng: g.rng, seed: g.seed });
+                     difficulty: g.difficulty, rng: g.rng, seed: g.seed,
+                     eventPeriod: rollPeriod(g.rng), allEras: ERAS });
   B.title = g.title; B.yourSide = g.yourSide; B.foeSide = g.foeSide;
   usedHourglass = false;
 
@@ -95,6 +99,7 @@ function startBattle(g) {
 async function turnLoop() {
   if (!B || B.over) return;
   if (checkEnd(B)) return finish();
+  if (due(B)) { await eraEvent(); if (B.over) return finish(); }
 
   const actor = nextActor(B);
   if (!actor) return finish();
@@ -148,17 +153,39 @@ function padSlots(box) {
   }
 }
 
+/** The acting unit's own health, at the one place you are looking when you choose:
+    the same reading as the name plate under the sprite, spelled out. */
+function hpPip(u) {
+  const pct = Math.max(0, u.hp / u.max) * 100;
+  const tier = pct <= 25 ? ' low' : pct <= 55 ? ' mid' : '';
+  const shield = u.shield > 0 ? ` <span class="sh">+🛡️${Math.round(u.shield)}</span>` : '';
+  return `<span class="hp-pip"><i class="${tier.trim()}" style="width:${pct}%"></i></span>`
+       + `<span class="hp-num${tier}">${Math.max(0, Math.round(u.hp))}/${u.max} HP${shield}</span>`;
+}
+
+/* Whenever the grid holds no buttons — an enemy is thinking, an action is
+   resolving, the era is speaking — it keeps its full height and says what it is
+   waiting for, rather than leaving a tall blank panel where the buttons were. */
+function deckWait(text) {
+  const box = $('moves');
+  box.innerHTML = ''; padSlots(box);
+  box.setAttribute('data-wait', text);
+  $('deck-hint').textContent = '';
+}
+
 function showDeck(actor, msg) {
   const box = $('moves');
   box.innerHTML = '';
   $('deck-who').textContent = actor ? actor.n : (B.actorName || '—');
+  $('deck-hp').innerHTML = actor ? hpPip(actor) : '';
   $('deck-ep').innerHTML = actor
     ? `<span class="ep-pip"><i style="width:${(actor.ep / actor.epMax) * 100}%"></i></span>`
       + `<span class="ep-num">${Math.round(actor.ep)}/${actor.epMax} NL</span>` : '';
-  $('deck-hint').textContent = actor ? 'Chọn chiêu, rồi chọn mục tiêu.' : (msg || '');
+  $('deck-hint').textContent = actor ? 'Chọn chiêu, rồi chọn mục tiêu.' : '';
+  if (actor) box.removeAttribute('data-wait'); else box.setAttribute('data-wait', msg || '…');
   renderSatchel(actor);
   renderFlee(actor);
-  if (!actor) { padSlots(box); return; }
+  if (!actor) { padSlots(box); setTargeting(false, actor); return; }
   B.actorName = actor.n;
 
   legalMoves(B, actor).forEach((m, i) => {
@@ -176,11 +203,33 @@ function showDeck(actor, msg) {
     const cost = m.cost > 0 ? `<span class="cost">${m.cost} NL</span>` : '';
     b.title = `${m.name} — ${sub}${m.cost ? ` · ${m.cost} năng lượng` : ''}`;
     b.innerHTML = moveHTML({ key, name: m.isUlt ? '★ ' + m.name : m.name, cost, sub, odds });
-    b.onclick = () => pickMove(actor, m);
+    b.onclick = () => pickMove(actor, m, b);
     box.appendChild(b);
   });
   padSlots(box);
+  setTargeting(false, actor);   // a freshly drawn deck is never mid-targeting
 }
+
+/* While you are picking a target the deck is not a menu any more, so it stops
+   looking like one: the chosen move stays lit, the rest dim, and the header swaps
+   its flee button for a cancel. Both buttons keep their slot so nothing shifts. */
+function setTargeting(on, actor, chosen) {
+  $('btn-cancel').style.visibility = on ? 'visible' : 'hidden';
+  $('btn-cancel').disabled = !on;
+  $('btn-flee').style.visibility = on ? 'hidden' : ($('btn-flee').disabled ? 'hidden' : 'visible');
+  for (const b of $('moves').querySelectorAll('.move:not(.ghost)')) {
+    b.classList.toggle('dim', on && b !== chosen);
+    b.classList.toggle('chosen', on && b === chosen);
+    if (on) b.disabled = true;
+  }
+  for (const b of $('satchel-row').querySelectorAll('.sat')) {
+    b.classList.toggle('dim', on && b !== chosen);
+    b.classList.toggle('chosen', on && b === chosen);
+    if (on) b.disabled = true;
+  }
+}
+
+const cancelTargeting = () => { if (view.askTarget.cancel) view.askTarget.cancel(); };
 
 let fleeArmed = false;
 
@@ -193,9 +242,12 @@ function renderFlee(actor) {
   if (!live) { fleeArmed = false; return; }
   const cost = Math.min(save.shards, fleeCost(B.difficulty, B.format, B.turns));
   b.className = 'ctl flee' + (fleeArmed ? ' armed' : '') + (cost ? ' costly' : '');
-  b.textContent = fleeArmed
-    ? 'BẤM LẦN NỮA ĐỂ CHẠY'
-    : cost ? `🏳️ BỎ CHẠY (−${cost} ⧗)` : '🏳️ BỎ CHẠY';
+  // the header never wraps, so on a narrow screen the button drops to its short
+  // form rather than pushing the whole row off the side of the page
+  const wide = fleeArmed ? 'BẤM LẦN NỮA ĐỂ CHẠY'
+             : cost ? `🏳️ BỎ CHẠY (−${cost} ⧗)` : '🏳️ BỎ CHẠY';
+  const abbr = fleeArmed ? 'CHẠY?' : cost ? `🏳️ −${cost}⧗` : '🏳️';
+  b.innerHTML = `<span class="lbl">${wide}</span><span class="abbr">${abbr}</span>`;
   b.title = cost
     ? `Bỏ chạy trong ${FLEE_GRACE_TURNS} lượt đầu phải trả ${cost} ⧗ mảnh thời gian.`
     : `Sau lượt ${FLEE_GRACE_TURNS} thì bỏ chạy không mất phí, nhưng cũng không có thưởng.`;
@@ -209,6 +261,33 @@ function onFlee() {
   B.over = true;
   B.won = false;
   finish();
+}
+
+/* The era interrupting. It may kill, and killing the last unit of a side ends the
+   battle — that is deliberate; "Kẻ Cuối Cùng" is what balances it. */
+async function eraEvent() {
+  const fired = fire(B);
+  if (!fired) return;
+  busy = true;
+  showDeck(null, 'Thời đại lên tiếng…');
+  view.record(null, fired.event.name, fired.ev,
+    { era: true, effect: fired.ev[0].effect, blurb: fired.ev[0].blurb });
+  await view.play(fired.ev);
+
+  // "Túi Rách" spills a consumable: the shell owns the bag, so it spends it here
+  if (B.spilled) {
+    const item = byId(B.spilled);
+    const target = living(B, 'ally').reduce((a, b) => (a.hp / a.max <= b.hp / b.max ? a : b), living(B, 'ally')[0]);
+    const ev = item && target ? useItem(B, target, item, target.uid) : null;
+    if (ev) {
+      consume(item.id);
+      B.bag = B.bag.filter(id => id !== item.id || (save.stock[id] || 0) > 0);
+      view.record(null, `${item.icon} ${item.name}`, ev, { era: true, effect: 'Món đồ rơi ra tự dùng.' });
+      await view.play(ev);
+    }
+    B.spilled = null;
+  }
+  busy = false;
 }
 
 /** Show the odds against the likeliest target, so the number means something. */
@@ -242,27 +321,29 @@ function renderSatchel(actor) {
     b.title = item.desc;
     b.innerHTML = `<span class="k">${keys[i]}</span>${item.icon} ${item.name}`
       + `<span class="n">×${save.stock[item.id] || 0}</span>`;
-    b.onclick = () => pickItem(actor, item);
+    b.onclick = () => pickItem(actor, item, b);
     row.appendChild(b);
   });
 }
 
-async function pickMove(actor, m) {
+async function pickMove(actor, m, btn) {
   if (busy || B.over || m.locked) return;
   sfx.select();
   let tgt = null;
   if (needsTarget(m)) {
     const ids = targetsFor(B, actor, m);
     if (!ids.length) return;
-    $('deck-hint').textContent = m.kind === 'heal' ? 'Chọn đồng đội.' : 'Chọn mục tiêu.';
+    $('deck-hint').textContent = (m.kind === 'heal' ? 'Chọn đồng đội' : 'Chọn mục tiêu')
+      + ' — hoặc ✕ HUỶ CHỌN / Esc để chọn lại.';
     pending = { kind: 'move' };
+    setTargeting(true, actor, btn);
     tgt = await view.askTarget(ids);
     pending = null;
+    setTargeting(false, actor);
     if (!tgt) return showDeck(actor);
   }
   busy = true;
-  $('moves').innerHTML = ''; padSlots($('moves'));
-  $('deck-hint').textContent = 'đang xử lý…';
+  deckWait('đang xử lý…');
   sfx.confirm();
   const ev = resolve(B, actor, m, tgt);
   view.record(actor, m.kind === WAIT_KIND ? null : m.name, ev);
@@ -271,15 +352,17 @@ async function pickMove(actor, m) {
   afterAction(actor);
 }
 
-async function pickItem(actor, item) {
+async function pickItem(actor, item, btn) {
   if (busy || B.over) return;
   let tgt = null;
   if (item.target) {
     const side = item.target === 'ally' ? 'ally' : 'foe';
     const ids = living(B, actor.side === 'ally' ? (side === 'ally' ? 'ally' : 'foe') : side).map(u => u.uid);
     if (!ids.length) return;
-    $('deck-hint').textContent = 'Chọn mục tiêu cho vật phẩm.';
+    $('deck-hint').textContent = 'Chọn mục tiêu cho vật phẩm — hoặc ✕ HUỶ CHỌN / Esc.';
+    setTargeting(true, actor, btn);
     tgt = await view.askTarget(ids);
+    setTargeting(false, actor);
     if (!tgt) return showDeck(actor);
   }
   const ev = useItem(B, actor, item, tgt);
@@ -431,6 +514,7 @@ $('btn-satchel-back').onclick = renderMenu;
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => { shopTab = t.dataset.tab; renderShop(); });
 $('ov-again').onclick = () => { $('overlay').hidden = true; rollAndStart(); };
 $('ov-menu').onclick = () => { $('overlay').hidden = true; renderMenu(); };
+$('btn-cancel').onclick = cancelTargeting;
 $('btn-flee').onclick = onFlee;
 $('btn-rules').onclick = () => { $('rules').hidden = false; };
 $('rules-close').onclick = () => { $('rules').hidden = true; };
@@ -443,7 +527,7 @@ paintMute();
 addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (!$('rules').hidden) return void ($('rules').hidden = true);
-    if (view.askTarget.cancel) { view.askTarget.cancel(); return; }
+    if (view.askTarget.cancel) { cancelTargeting(); return; }
     view.resetInspect();
     return;
   }
@@ -459,6 +543,7 @@ addEventListener('keydown', (e) => {
 });
 
 // expose a little surface for the verification harness
-window.CD = { get battle() { return B; }, ERAS, save, generate, renderMenu, view, satchelSize };
+window.CD = { get battle() { return B; }, ERAS, save, generate, renderMenu, view, vortex, satchelSize,
+  startBattleForTest: (g) => { show('battle'); startBattle(g); } };
 
 renderMenu();

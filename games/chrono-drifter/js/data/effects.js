@@ -15,7 +15,9 @@ export const EFFECTS = {
   extra:     { icon: '⏩', name: 'Thêm lượt',     desc: 'Sẽ được hành động thêm ngay sau lượt này.' },
   ramp:      { icon: '📈', name: 'Tăng dần',     desc: 'Chiêu tăng dần đang cộng dồn — đổi chiêu khác là mất.' },
   buff:      { icon: '🔼', name: 'Tăng chỉ số',  desc: 'Một chỉ số đang được cộng thêm.' },
-  debuff:    { icon: '🔽', name: 'Giảm chỉ số',  desc: 'Một chỉ số đang bị trừ đi.' }
+  debuff:    { icon: '🔽', name: 'Giảm chỉ số',  desc: 'Một chỉ số đang bị trừ đi.' },
+  ccImmune:  { icon: '🧿', name: 'Kháng khống chế',
+               desc: 'Vừa thoát khỏi choáng hoặc câm lặng nên tạm thời miễn nhiễm với cả hai. Không thể bị khoá liên tục.' }
 };
 
 /** The status chips a unit is currently carrying, ready to render. */
@@ -31,6 +33,7 @@ export function effectsOf(u) {
   if (u.chargeup > 0) push('chargeup', { label: 'Dồn lực' });
   if (u.extraTurns > 0) push('extra', { label: `Thêm ${u.extraTurns} lượt` });
   if (u.ramp > 0) push('ramp', { label: `Tăng dần +${Math.round(u.ramp * 100)}%` });
+  if (u.ccImmune > 0) push('ccImmune', { label: `Kháng khống chế ${u.ccImmune}` });
 
   for (const d of u.dots) {
     push('dot', { label: `Mất ${d.amt}/lượt`, desc: `${EFFECTS.dot.desc} Mất ${d.amt} máu mỗi lượt, còn ${d.t} lượt.` });

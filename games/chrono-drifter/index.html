@@ -9,6 +9,10 @@
 </head>
 <body>
 
+<!-- the time vortex: a fixed backdrop for the menu, outside .machine so it cannot
+     widen the document it sits behind -->
+<canvas class="vortex" id="vortex" aria-hidden="true"></canvas>
+
 <div class="machine">
 
   <header class="topbar">
@@ -23,18 +27,19 @@
   <!-- ── menu ───────────────────────────────────────────────── -->
   <section class="screen" id="screen-menu">
     <div class="title-block">
-      <div class="glyph">⏳</div>
-      <h1>KẺ TRÔI THỜI GIAN</h1>
-      <p class="tagline">Bạn bị bật ra khỏi dòng thời gian. Bấm CHƠI là rơi thẳng vào cuộc chiến
-        của người khác, đang giữa chừng, và chỉ huy bất kỳ ai đang đứng cạnh mình.
-        Một nửa số lần, đó là phe "xấu".</p>
-      <div class="stat-row" id="menu-stats"></div>
-      <div class="menu-actions">
-        <button class="big" id="btn-play">▶ CHƠI</button>
-        <button class="ctl" id="btn-shop">🎒 CỬA HÀNG</button>
-        <button class="ctl" id="btn-satchel">🧳 SẮP TÚI</button>
+      <div class="menu-stats" id="menu-stats"></div>
+
+      <div class="title-core">
+        <div class="glyph">⏳</div>
+        <h1>KẺ TRÔI THỜI GIAN</h1>
+        <p class="tagline">Bấm CHƠI và dòng thời gian ném bạn vào trận đánh của người khác —
+          thời đại khác, phe khác, người khác.</p>
+        <button class="big play" id="btn-play">▶ CHƠI</button>
+        <div class="menu-actions">
+          <button class="ctl wide" id="btn-shop">🎒 CỬA HÀNG</button>
+          <button class="ctl wide" id="btn-satchel">🧳 SẮP TÚI<span class="tally" id="satchel-tally"></span></button>
+        </div>
       </div>
-      <p class="note" id="menu-satchel"></p>
     </div>
   </section>
 
@@ -73,16 +78,28 @@
     <aside class="inspect foe" id="inspect-foe" hidden></aside>
     </div>
 
-    <div class="deck">
-      <div class="deck-hd">
-        <span class="who" id="deck-who">—</span>
-        <span class="deck-ep" id="deck-ep"></span>
-        <span class="hint" id="deck-hint"></span>
-        <button class="ctl flee" id="btn-flee" hidden>🏳️ BỎ CHẠY</button>
+    <!-- the console: what you can do on the left, what has happened on the right -->
+    <div class="console">
+      <div class="deck">
+        <div class="deck-hd">
+          <span class="who" id="deck-who">—</span>
+          <span class="deck-hp" id="deck-hp"></span>
+          <span class="deck-ep" id="deck-ep"></span>
+          <span class="hint" id="deck-hint"></span>
+          <button class="ctl cancel" id="btn-cancel">✕<span class="lbl"> HUỶ CHỌN</span></button>
+          <button class="ctl flee" id="btn-flee" hidden>🏳️ BỎ CHẠY</button>
+        </div>
+        <div class="moves" id="moves"></div>
+        <div class="satchel-row" id="satchel-row"></div>
       </div>
-      <div class="moves" id="moves"></div>
-      <div class="satchel-row" id="satchel-row"></div>
-      <div class="log" id="log"></div>
+
+      <aside class="chronicle">
+        <div class="chronicle-in">
+          <div class="chronicle-hd"><span>NHẬT KÝ TRẬN</span><span class="ct" id="log-count"></span></div>
+          <div class="log-notice" id="log-notice">&nbsp;</div>
+          <div class="log" id="log"></div>
+        </div>
+      </aside>
     </div>
 
     <div class="legend">
@@ -143,6 +160,11 @@
         <p><b>Chờ là một nước đi thật.</b> Bỏ lượt để nhận +25 nộ, +30 NL và +20% phòng thủ. Nhịn
           một vòng cho huyền thoại kịp nạp tuyệt kỹ, hoặc để nạp lại bể năng lượng, thường là nước
           đi đúng. Chờ luôn miễn phí nên bạn không bao giờ bị kẹt.</p>
+        <p><b>Hiệu ứng đi kèm có xác suất riêng.</b> Đòn đánh trúng không có nghĩa hiệu ứng của nó
+          cũng dính: bỏng và đánh dấu 85%, còn <b>choáng 55% và câm lặng 50%</b>. Quan trọng hơn,
+          khống chế <b>không thể chồng lên chính nó</b> và ngay sau khi hết, mục tiêu miễn nhiễm
+          choáng lẫn câm lặng trong 3 lượt — nên không ai bị khoá cứng mãi. Câm lặng cũng chỉ khoá
+          chiêu thức, <b>không khoá tuyệt kỹ</b> đã nạp đầy.</p>
         <p><b>Trúng và chí mạng.</b> Đòn đánh có thể <b>TRƯỢT</b>. Cơ hội trúng bắt đầu ở 92% và
           giảm khi mục tiêu nhanh hơn bạn hoặc khi bạn bị làm loá mắt; chí mạng bắt đầu ở 8% và
           nhân sát thương lên 1.5 lần. Chiêu ngắm bắn cộng thẳng vào tỉ lệ đó. Cả hai con số đều
@@ -153,9 +175,15 @@
           cho một đòn không tưởng.</p>
         <p><b>Thứ tự lượt</b> chạy theo SPD tích luỹ, nên tăng/giảm tốc làm dòng lượt đảo ngay
           trước mắt bạn.</p>
-        <p><b>Nhật ký trận</b> giữ lại năm nước đi gần nhất: ai dùng chiêu gì, lên ai, trúng, trượt
-          hay chí mạng. Dòng trên cùng là nước vừa xảy ra.</p>
-        <p><b>Bỏ chạy.</b> Bạn được rút khỏi bất kỳ trận nào. Nhưng rút trong <b>5 lượt đầu</b> thì
+        <p><b>Thời đại tự lên tiếng.</b> Cứ mỗi 30–50 lượt, thời đại xen vào trận bằng một sự
+          kiện: thiên thạch rơi, sương mù dày đặc, đất cằn không cho vết thương nào lành, một kẻ
+          lạc thời rơi vào từ thời đại khác. Sự kiện không đứng về phe nào — bầu trời không quan
+          tâm nó rơi xuống đầu ai — và nó <b>có thể kết liễu một trận</b>. Có 18 sự kiện, mỗi
+          trận không lặp lại cái nào.</p>
+        <p><b>Nhật ký trận</b> nằm ở cột bên phải và giữ lại mười lăm nước đi gần nhất: ai dùng chiêu
+          gì, lên ai, trúng, trượt hay chí mạng. Dòng trên cùng là nước vừa xảy ra; cái cũ nhất rơi
+          khỏi đáy.</p>
+        <p><b>Bỏ chạy.</b> Bạn được rút khỏi bất kỳ trận nào. Nhưng rút trong <b>20 lượt đầu</b> thì
           thời đại lấy đi một nửa số ⧗ mà trận đó đáng lẽ trả cho bạn; sau đó thì đi không mất phí,
           chỉ là không mang được gì về. Nút bỏ chạy phải bấm hai lần.</p>
         <p><b>Túi đồ</b> là đồ hiện đại mang qua thời gian. Dùng một món tốn nguyên lượt của nhân

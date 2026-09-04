@@ -104,6 +104,24 @@ const BASE_COST = {
   WAIT: 0
 };
 
+/* ── riders ───────────────────────────────────────────────────────────────
+   A move's damage and its rider are two different questions. The blow can land
+   and the effect still fail — which is what stops a lock like Câm Lặng from being
+   a guaranteed answer to a lone survivor. Control is the least reliable of them. */
+export const RIDER_CHANCE = {
+  dot: 85, mark: 85, stun: 55, silence: 50
+};
+/** Turns of immunity to stun and silence after one of them wears off. */
+export const CC_IMMUNE_TURNS = 3;
+export const isControl = (rider) => rider === 'stun' || rider === 'silence';
+
+/** The riders a move carries, in the order they are rolled. */
+export function ridersOf(m) {
+  const out = [];
+  for (const k of ['dot', 'mark', 'stun', 'silence']) if (m[k]) out.push(k);
+  return out;
+}
+
 /** What a move costs to cast. Ultimates are free; raw power nudges the rest. */
 export function costOf(m) {
   if (!m) return 0;
@@ -160,9 +178,9 @@ export function tagOf(m, era) {
   if (m.ramp) bits.push('tăng dần');
   if (m.chain) bits.push(`mỗi lần dội +${Math.round(m.chain * 100)}%`);
   if (m.sacrifice) bits.push(`trả ${Math.round(m.sacrifice * 100)}% máu bản thân`);
-  if (m.dot) bits.push(`bỏng ${m.dot}/lượt`);
-  if (m.mark) bits.push('đánh dấu');
-  if (m.stun) bits.push('choáng');
-  if (m.silence) bits.push('câm lặng');
+  if (m.dot) bits.push(`bỏng ${m.dot}/lượt ${RIDER_CHANCE.dot}%`);
+  if (m.mark) bits.push(`đánh dấu ${RIDER_CHANCE.mark}%`);
+  if (m.stun) bits.push(`choáng ${RIDER_CHANCE.stun}%`);
+  if (m.silence) bits.push(`câm lặng ${RIDER_CHANCE.silence}%`);
   return bits.join(' · ');
 }

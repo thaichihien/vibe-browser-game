@@ -64,6 +64,8 @@ export function chooseAction(state, actor) {
       }
       if (tier >= 4 && t.hp / t.max < .4 && m.execute) sc *= 1.4;
       if (tier >= 3) sc /= 1 + costOf(m) / 90;               // value energy, not just damage
+      // a lock aimed at someone already locked or still resisting is a wasted turn
+      if ((m.stun || m.silence) && (t.ccImmune > 0 || t.stunned > 0 || t.silenced > 0)) sc *= .25;
       if (sc > (best?.sc ?? -1)) best = { move: m, tgt: (m.all || m.arc) ? null : t, sc };
     }
   }

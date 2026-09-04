@@ -30,10 +30,12 @@ export function winShards(difficulty, format) {
 /** What losing pays — the consolation of a witness. */
 export const lossShards = (difficulty, format) => Math.round(winShards(difficulty, format) * 0.25);
 
-/* Bail out in the first few turns and the era takes its toll. Priced off the same
-   payout table, at half a win: enough to make running hurt, never so much that
-   fleeing digs a hole a win cannot fill. */
-export const FLEE_GRACE_TURNS = 5;
+/* Bail out early and the era takes its toll. The window is twenty turns, not a
+   handful: a battle is only readable once both sides have shown their hand, and a
+   five-turn window let you fold before you had seen anything worth folding on.
+   Priced off the same payout table, at half a win: enough to make running hurt,
+   never so much that fleeing digs a hole a win cannot fill. */
+export const FLEE_GRACE_TURNS = 20;
 export function fleeCost(difficulty, format, turns) {
   if (turns > FLEE_GRACE_TURNS) return 0;
   return Math.max(5, Math.round(winShards(difficulty, format) * 0.5));

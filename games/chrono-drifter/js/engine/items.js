@@ -2,7 +2,7 @@
    why the shop sells an energy drink into a dragon fight. Using one costs the
    unit's turn — that is the price. DOM-free. */
 
-import { living, ULT_FULL } from './combat.js';
+import { living, ULT_FULL, healScale } from './combat.js';
 
 /**
  * Apply a consumable. Returns the events to animate, or null if it cannot be used.
@@ -19,14 +19,14 @@ export function useItem(state, actor, item, targetUid) {
   state.turns++;
 
   switch (item.id) {
-    case 'noodles':   for (const a of allies) heal(a, Math.round(a.max * .15), ev); break;
+    case 'noodles':   for (const a of allies) heal(a, Math.round(a.max * .15 * healScale(state)), ev); break;
     case 'paperclip': { const f = t || foes[0]; const n = Math.min(f.charge, 30); f.charge -= n;
                         actor.charge = Math.min(ULT_FULL, actor.charge + n);
                         ev.push({ t: 'note', tgt: f.uid, text: `−${n} NỘ` }); break; }
-    case 'energy':    heal(t, Math.round(t.max * .35), ev); break;
+    case 'energy':    heal(t, Math.round(t.max * .35 * healScale(state)), ev); break;
     case 'extinguisher': for (const a of allies) { a.dots = []; a.buffs.push({ stat: 'wrd', pct: 30, t: 3 }); ev.push({ t: 'note', tgt: a.uid, text: 'DẬP LỬA' }); } break;
     case 'ducttape':  t.buffs = t.buffs.filter(b => b.pct > 0); t.dots = []; t.marked = 0;
-                      heal(t, Math.round(t.max * .15), ev); ev.push({ t: 'note', tgt: t.uid, text: 'GIẢI TRẠNG THÁI' }); break;
+                      heal(t, Math.round(t.max * .15 * healScale(state)), ev); ev.push({ t: 'note', tgt: t.uid, text: 'GIẢI TRẠNG THÁI' }); break;
     case 'gel':       t.buffs.push({ stat: 'pwr', pct: 30, t: 4 }); ev.push({ t: 'buff', tgt: t.uid, label: 'Gel năng lượng' }); break;
     case 'icepack':   { const fallen = state.units.find(u => u.side === actor.side && !u.alive);
                         if (!fallen) return null;

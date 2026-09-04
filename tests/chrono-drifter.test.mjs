@@ -20,7 +20,13 @@ import { createBattle, nextActor, openTurn, resolve, legalMoves, targetsFor,
          turnOrder, living, statOf, damageOf, checkEnd, hitChance, critChance,
          pointStat, canAfford, BASE_ACC, BASE_CRIT } from '../games/chrono-drifter/js/engine/combat.js';
 import { chooseAction } from '../games/chrono-drifter/js/engine/ai.js';
+import { EVENTS, eligible, due, fire, rollPeriod, byId as eventById, LEADINS,
+         PERIOD_MIN, PERIOD_MAX, GRACE_TURNS } from '../games/chrono-drifter/js/engine/events.js';
+import { RIDER_CHANCE, CC_IMMUNE_TURNS, ridersOf } from '../games/chrono-drifter/js/engine/moves.js';
+import { applyRiders } from '../games/chrono-drifter/js/engine/combat.js';
 import { mulberry32 } from '../games/chrono-drifter/js/engine/rng.js';
+import { layout, separate, pickComposition, COMPOSITION_KEYS, BASE_PX }
+  from '../games/chrono-drifter/js/ui/stage.js';
 
 const ENGINE_DIR = 'games/chrono-drifter/js/engine';
 const DATA_DIR = 'games/chrono-drifter/js/data';
@@ -608,6 +614,326 @@ test('every difficulty is playable and the hard ones bite', () => {
     return w;
   });
   assert.equal(wins.length, 5);
+});
+
+/* ── control effects ────────────────────────────────────────── */
+
+test('a rider is a separate question from the blow that carries it', () => {
+  for (const r of ['dot', 'mark', 'stun', 'silence']) {
+    assert.ok(RIDER_CHANCE[r] > 0 && RIDER_CHANCE[r] < 100, `${r} is not a real roll`);
+  }
+  // control should be the least reliable of them, by a clear margin
+  assert.ok(RIDER_CHANCE.stun < RIDER_CHANCE.dot, 'stun is as reliable as a burn');
+  assert.ok(RIDER_CHANCE.silence < RIDER_CHANCE.dot, 'silence is as reliable as a burn');
+  assert.deepEqual(ridersOf({ dot: 30, silence: true }), ['dot', 'silence']);
+  assert.deepEqual(ridersOf({ pow: 1 }), []);
+});
+
+test('silence takes the skills but never the earned ultimate', () => {
+  const s = fixture({ formatKey: 'even' });
+  const [a] = living(s, 'ally');
+  const legend = living(s).find(u => u.ult) || a;
+  legend.silenced = 2;
+  legend.charge = 100;
+  const moves = legalMoves(s, legend);
+  assert.ok(moves.filter(m => m.kind === DMG && !m.isUlt).every(m => m.locked), 'a skill slipped past the silence');
+  const ult = moves.find(m => m.isUlt);
+  assert.equal(ult.locked, false, 'silence swallowed a fully charged ultimate');
+  assert.ok(moves.some(m => m.kind === 'wait' && !m.locked), 'a silenced unit must still be able to wait');
+});
+
+test('control cannot be stacked on itself, nor re-applied straight after', () => {
+  const s = fixture({ formatKey: 'even' });
+  s.rng = () => 0;                              // every roll succeeds, so only the rules matter
+  const t = living(s, 'foe')[0];
+
+  applyRiders(s, t, { silence: true }, []);
+  assert.equal(t.silenced, 2, 'the first silence did not land');
+
+  applyRiders(s, t, { silence: true }, []);
+  assert.equal(t.silenced, 2, 'silence was refreshed on top of itself');
+
+  openTurn(s, t);                                // ticks to 1, still silenced
+  openTurn(s, t);                                // ticks to 0 and grants immunity
+  assert.equal(t.silenced, 0);
+  assert.equal(t.ccImmune, CC_IMMUNE_TURNS, 'shaking off a lock granted no respite');
+
+  applyRiders(s, t, { silence: true }, []);
+  assert.equal(t.silenced, 0, 'a lock landed during the immunity window');
+  applyRiders(s, t, { stun: true }, []);
+  assert.equal(t.stunned, 0, 'the immunity should cover stun as well as silence');
+});
+
+test('a lone survivor can never be held down indefinitely', () => {
+  const s = fixture({ formatKey: 'duel' });
+  s.rng = () => 0;                              // best case for the attacker: nothing ever fizzles
+  const t = living(s, 'foe')[0];
+  t.hp = t.max * 50;                            // measure the lock, not the kill
+  let lost = 0;
+  for (let turn = 0; turn < 40; turn++) {
+    applyRiders(s, t, { silence: true }, []);   // spam it every single turn
+    const ev = openTurn(s, t);
+    const free = legalMoves(s, t).filter(m => !m.locked && m.kind !== 'wait');
+    if (ev.some(e => e.t === 'skip') || !free.length) lost++;
+  }
+  assert.ok(lost / 40 < 0.4,
+    `a lone target lost ${Math.round(lost / 40 * 100)}% of its turns to an unlimited lock`);
+  assert.ok(lost > 0, 'the lock should still do something');
+});
+
+test('minor riders stay reliable — only control is throttled', () => {
+  const s = fixture({ formatKey: 'even' });
+  s.rng = () => 0;
+  const t = living(s, 'foe')[0];
+  applyRiders(s, t, { dot: 30, el: 'EMBER' }, []);
+  assert.equal(t.dots.length, 1, 'a burn should land when the roll succeeds');
+  applyRiders(s, t, { dot: 30, el: 'EMBER' }, []);
+  assert.equal(t.dots.length, 2, 'burns are allowed to stack; only control is not');
+});
+
+/* ── era events ─────────────────────────────────────────────── */
+
+function battleWithEvents(opts = {}) {
+  const g = generate(ERAS, { seed: opts.seed ?? 5, ...opts });
+  const s = createBattle({ era: g.era, format: g.format, mine: g.mine, foes: g.foes,
+                           difficulty: g.difficulty, rng: g.rng, seed: g.seed,
+                           eventPeriod: opts.period ?? 30, allEras: ERAS });
+  s.title = g.title; s.yourSide = g.yourSide; s.foeSide = g.foeSide; s.bag = ['energy'];
+  return s;
+}
+
+test('eighteen era events, each with a name, a reason and something to do', () => {
+  assert.equal(EVENTS.length, 18);
+  assert.equal(new Set(EVENTS.map(e => e.id)).size, EVENTS.length, 'duplicate event id');
+  for (const e of EVENTS) {
+    assert.ok(e.name && e.name.length, `${e.id} has no name`);
+    assert.ok(e.blurb && e.blurb.length > 12, `${e.id} has no explanation`);
+    assert.ok(e.effect && e.effect.length > 20, `${e.id} never says what it does`);
+    // both lines now sit in the log together, so they must not restate each other
+    const words = (t) => new Set(t.toLowerCase().replace(/[.,;—:]/g, '').split(/\s+/).filter(w => w.length > 2));
+    const a = words(e.blurb), b = words(e.effect);
+    const shared = [...a].filter(w => b.has(w)).length / Math.min(a.size, b.size);
+    assert.ok(shared < 0.6, `${e.id}: flavour and effect say the same thing (${Math.round(shared * 100)}% shared)`);
+    assert.equal(typeof e.run, 'function', `${e.id} does nothing`);
+    assert.ok(['cataclysm', 'mercy', 'tempo', 'rule', 'outsider'].includes(e.kind), `${e.id}: odd kind`);
+  }
+  // the roster should not collapse into one flavour
+  const kinds = {};
+  for (const e of EVENTS) kinds[e.kind] = (kinds[e.kind] || 0) + 1;
+  assert.ok(Object.keys(kinds).length >= 5, 'events lack variety');
+  assert.ok(Math.max(...Object.values(kinds)) <= 6, 'one kind of event dominates');
+});
+
+test('every interruption is introduced, and never by the same line twice running', () => {
+  assert.ok(LEADINS.length >= 6, `only ${LEADINS.length} lead-in lines`);
+  assert.equal(new Set(LEADINS).size, LEADINS.length, 'a lead-in is duplicated');
+  for (const l of LEADINS) {
+    assert.ok(l.endsWith(':'), `"${l}" does not hand over to the event name`);
+    assert.ok(l.length > 20, `"${l}" is too thin to set anything up`);
+  }
+
+  const s = battleWithEvents({ period: 10 });
+  s.turns = 40;
+  let last = null, seen = new Set();
+  for (let i = 0; i < 30; i++) {
+    const r = fire(s);
+    if (!r) { s.turns += 10; continue; }
+    const lead = r.ev[0].leadIn;
+    assert.ok(LEADINS.includes(lead), 'an unknown lead-in appeared');
+    assert.notEqual(lead, last, 'the same lead-in ran twice in a row');
+    last = lead; seen.add(lead);
+    s.turns += 10;
+  }
+  assert.ok(seen.size >= 4, `only ${seen.size} distinct lead-ins across a whole battle`);
+});
+
+test('the clock waits out the grace window and stops once a side is gone', () => {
+  const rng = mulberry32(4);
+  for (let i = 0; i < 50; i++) {
+    const p = rollPeriod(rng);
+    assert.ok(p >= PERIOD_MIN && p <= PERIOD_MAX, `period ${p} out of range`);
+  }
+  const s = battleWithEvents({ period: 1 });
+  s.turns = GRACE_TURNS - 1;
+  assert.equal(due(s), false, 'an event fired inside the grace window');
+  s.turns = GRACE_TURNS + 1;
+  assert.equal(due(s), true);
+  for (const u of living(s, 'foe')) { u.alive = false; u.hp = 0; }
+  assert.equal(due(s), false, 'an event fired after the battle was decided');
+});
+
+test('an event never repeats inside one battle, and the clock advances even when nothing is eligible', () => {
+  const s = battleWithEvents({ period: 10 });
+  s.turns = 40;
+  const seen = new Set();
+  for (let i = 0; i < 24; i++) {
+    const r = fire(s);
+    // firing always reschedules, whether or not anything was eligible
+    assert.equal(s.nextEventAt, s.turns + s.eventPeriod, 'the clock was not rewound');
+    if (!r) continue;
+    assert.equal(seen.has(r.event.id), false, `${r.event.id} fired twice`);
+    seen.add(r.event.id);
+    s.turns += 10;
+  }
+  assert.ok(seen.size > 6, `only ${seen.size} distinct events across 24 rolls`);
+});
+
+test('conditional events stay out of the pool until they would do something', () => {
+  const s = battleWithEvents();
+  s.bag = [];
+  for (const u of s.units) { u.alive = true; u.hp = u.max; }
+  const ids = eligible(s).map(e => e.id);
+  assert.ok(!ids.includes('lastlight'), 'a revival offered with nobody fallen');
+  assert.ok(!ids.includes('cornered'), 'a desperation buff offered with nobody hurt');
+  assert.ok(!ids.includes('satchel'), 'the satchel spilled with an empty bag');
+
+  s.units[1].alive = false; s.units[1].hp = 0;
+  s.units[2].hp = s.units[2].max * .3;
+  s.bag = ['energy'];
+  const ids2 = eligible(s).map(e => e.id);
+  assert.ok(ids2.includes('lastlight') && ids2.includes('cornered') && ids2.includes('satchel'));
+});
+
+test('no event leaves the board in an impossible state', () => {
+  for (const def of EVENTS) {
+    for (let seed = 1; seed <= 12; seed++) {
+      const s = battleWithEvents({ seed });
+      s.units[1].hp = Math.round(s.units[1].max * .3);
+      const spare = living(s, 'foe');
+      if (spare.length > 2) { spare.at(-1).alive = false; spare.at(-1).hp = 0; }
+      const before = s.units.length;
+      def.run(s, []);
+      for (const u of s.units) {
+        assert.ok(u.hp >= 0, `${def.id}: negative HP on ${u.n}`);
+        assert.ok(u.hp <= u.max, `${def.id}: HP above maximum on ${u.n}`);
+        assert.ok(!u.alive || u.hp > 0, `${def.id}: ${u.n} is alive at zero HP`);
+      }
+      assert.ok(s.units.length >= before, `${def.id} removed a unit outright`);
+    }
+  }
+});
+
+test('barren ground really does stop every heal', () => {
+  const s = battleWithEvents();
+  const [a] = living(s, 'ally');
+  a.hp = Math.round(a.max * .4);
+  eventById('barren').run(s, []);
+  const before = a.hp;
+  resolve(s, a, { id: 'HEAL', name: 'x', kind: 'heal', amt: 400 }, a.uid);
+  assert.equal(a.hp, before, 'a heal landed on barren ground');
+});
+
+test('a unit on borrowed time falls when its five turns are up', () => {
+  const s = battleWithEvents();
+  const victim = s.units[1];
+  victim.alive = false; victim.hp = 0;
+  eventById('lastlight').run(s, []);
+  const u = s.units.find(x => x.temp !== undefined);
+  assert.ok(u && u.alive && u.hp > 0, 'nobody came back');
+  assert.equal(u.temp, 5);
+  for (let i = 0; i < 5; i++) openTurn(s, u);
+  assert.equal(u.alive, false, 'borrowed time never ran out');
+});
+
+test('a drifter from another era arrives on the outnumbered side and is temporary', () => {
+  const s = battleWithEvents({ formatKey: 'horde' });
+  const before = s.units.length;
+  const thin = living(s, 'ally').length < living(s, 'foe').length ? 'ally' : 'foe';
+  eventById('drifter').run(s, []);
+  assert.equal(s.units.length, before + 1, 'nobody arrived');
+  const guest = s.units.at(-1);
+  assert.equal(guest.side, thin, 'the newcomer joined the wrong side');
+  assert.equal(guest.temp, 5);
+  assert.ok(guest.uid && guest.hp > 0 && guest.mv.length === 4);
+  assert.notEqual(guest.fromEra, s.era.name, 'the stranger came from this era');
+});
+
+test('the meteor splashes onto whoever is standing nearby, either side', () => {
+  const s = battleWithEvents({ formatKey: 'war' });
+  // publish a field so "nearby" means something
+  s.units.forEach((u, i) => { u.pos = { x: (i % 4) * 20 + 10, y: 90 - Math.floor(i / 4) * 10 }; });
+  const hp = new Map(s.units.map(u => [u.uid, u.hp]));
+  eventById('meteor').run(s, []);
+  const hurt = s.units.filter(u => u.hp < hp.get(u.uid));
+  assert.ok(hurt.length >= 2 && hurt.length <= 4, `meteor hit ${hurt.length} units`);
+});
+
+/* ── staging ────────────────────────────────────────────────── */
+
+test('every battle format resolves to a real composition', () => {
+  const rng = mulberry32(11);
+  for (const f of FORMATS) {
+    for (let i = 0; i < 40; i++) {
+      const key = pickComposition(rng, f.key, { ally: 1 + (i % 8), foe: 1 + ((i * 3) % 8) });
+      assert.ok(COMPOSITION_KEYS.includes(key), `${f.key} produced unknown composition ${key}`);
+    }
+  }
+  assert.ok(COMPOSITION_KEYS.length >= 4, 'battles would all look the same');
+});
+
+test('a duel or a boss hunt is staged face to face, not as two rows', () => {
+  const rng = mulberry32(3);
+  let faced = 0;
+  for (let i = 0; i < 60; i++) if (pickComposition(rng, 'duel', { ally: 1, foe: 1 }) === 'duel') faced++;
+  assert.ok(faced > 30, 'duels should usually get the face-to-face staging');
+});
+
+test('layout places every unit on the stage, and packs a rank without self-overlap', () => {
+  const W = 900, H = 420;
+  for (const key of COMPOSITION_KEYS) {
+    for (const era of ERAS.slice(0, 6)) {
+      for (const n of [1, 2, 3, 4, 6, 8]) {
+        const units = [...era.units.slice(0, n - 1), era.boss].slice(0, n);
+        for (const side of ['ally', 'foe']) {
+          const slots = layout(units, side, key, W, H);
+          assert.equal(slots.length, n, `${key}/${side}/${n}: wrong slot count`);
+          for (const sl of slots) {
+            assert.ok(sl.x >= 0 && sl.x <= 100, `${key}: x off stage (${sl.x})`);
+            assert.ok(sl.y >= 20 && sl.y <= 100, `${key}: y off stage (${sl.y})`);
+            assert.ok(sl.px > 8, `${key}: sprite collapsed to ${sl.px}px`);
+          }
+          // within one rank, footprints must not overlap
+          const byRank = {};
+          for (const sl of slots) (byRank[sl.y] ??= []).push(sl);
+          for (const rank of Object.values(byRank)) {
+            const sorted = [...rank].sort((a, b) => a.x - b.x);
+            for (let i = 1; i < sorted.length; i++) {
+              const gap = ((sorted[i].x - sorted[i - 1].x) / 100) * W;
+              const need = (sorted[i].px + sorted[i - 1].px) / 2;
+              assert.ok(gap >= need * 0.6,
+                `${key}/${side}/${n}: two sprites in a rank are ${Math.round(gap)}px apart but need ~${Math.round(need)}`);
+            }
+          }
+        }
+      }
+    }
+  }
+});
+
+test('a huge unit and a tiny one still get separate ground', () => {
+  const W = 900, H = 420;
+  const dragon = ERAS[0].units.find(u => u.sz >= 1.4) || ERAS[0].boss;
+  const rat = ERAS[0].mooks.reduce((a, b) => (a.sz <= b.sz ? a : b));
+  const slots = layout([dragon, rat, rat, rat], 'ally', 'ranks', W, H);
+  const big = slots.find(s => s.unit === dragon);
+  for (const sl of slots) {
+    if (sl === big) continue;
+    if (sl.y !== big.y) continue;
+    const gap = Math.abs(sl.x - big.x) / 100 * W;
+    assert.ok(gap >= (sl.px + big.px) / 2 * 0.6,
+      `the small unit sits ${Math.round(gap)}px from a ${big.px}px sprite`);
+  }
+});
+
+test('separation never throws a unit off the stage', () => {
+  const W = 900, H = 420;
+  const units = [...ERAS[0].units.slice(0, 7), ERAS[0].boss];
+  const slots = [...layout(units, 'ally', 'ranks', W, H), ...layout(units, 'foe', 'ranks', W, H)];
+  separate(slots, W, H);
+  for (const sl of slots) {
+    assert.ok(sl.x >= 0 && sl.x <= 100, `x escaped: ${sl.x}`);
+    assert.ok(sl.y >= 20 && sl.y <= 100, `y escaped: ${sl.y}`);
+  }
 });
 
 /* ── the DOM-free contract ──────────────────────────────────── */
