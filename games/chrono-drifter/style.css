@@ -314,6 +314,22 @@ body.at-vortex .roll-card {
 .plate .num { font-size: 8px; color: var(--ink-dim); margin-top: 2px; font-variant-numeric: tabular-nums; }
 .plate .sts { display: flex; gap: 3px; justify-content: center; flex-wrap: wrap; margin-top: 2px; }
 .plate .sts span { font-size: 9px; line-height: 1; }
+/* the direction rides in the corner of the stat's own icon, so two chips are never
+   the same picture — and it is legible at 8px because the arrow carries colour */
+.st { position: relative; display: inline-block; }
+.st.dir-up::after, .st.dir-down::after {
+  position: absolute; right: -3px; bottom: -3px; font-size: 7px; line-height: 1;
+  text-shadow: 0 0 2px #000, 0 0 2px #000;
+}
+.st.dir-up::after   { content: '▲'; color: var(--heal); }
+.st.dir-down::after { content: '▼'; color: var(--foe); }
+.fx.dir-up i, .fx.dir-down i { position: relative; display: inline-block; }
+.fx.dir-up i::after, .fx.dir-down i::after {
+  position: absolute; right: -4px; bottom: -3px; font-size: 8px; line-height: 1;
+  text-shadow: 0 0 2px #000, 0 0 2px #000;
+}
+.fx.dir-up i::after   { content: '▲'; color: var(--heal); }
+.fx.dir-down i::after { content: '▼'; color: var(--foe); }
 .plate .el { font-size: 7.5px; color: var(--gold-deep); letter-spacing: .08em; }
 .ultpip { margin-top: 3px; height: 3px; background: rgba(255,255,255,.13); border-radius: 2px; overflow: hidden; }
 .ultpip i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .35s ease; }

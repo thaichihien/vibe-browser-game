@@ -16,8 +16,9 @@ const STATS = [
 ];
 
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const chip = (icon, label, desc) =>
-  `<span class="fx" data-tip="${esc(desc)}" title="${esc(desc)}"><i>${icon}</i>${esc(label)}</span>`;
+const chip = (f) =>
+  `<span class="fx${f.dir ? ' dir-' + f.dir : ''}" data-tip="${esc(f.desc)}" title="${esc(f.desc)}">`
+  + `<i>${f.icon}</i>${esc(f.label)}</span>`;
 
 function elBlock(era, u) {
   if (!u.el) return '';
@@ -66,7 +67,7 @@ export function renderInspect(el, u, era) {
 
     <div class="sec">
       <div class="sec-hd">TRẠNG THÁI</div>
-      ${fx.length ? `<div class="fx-row">${fx.map(f => chip(f.icon, f.label, f.desc)).join('')}</div>`
+      ${fx.length ? `<div class="fx-row">${fx.map(chip).join('')}</div>`
                   : `<div class="ins-none">Không có hiệu ứng nào.</div>`}
     </div>
 

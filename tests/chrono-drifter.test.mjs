@@ -10,7 +10,7 @@ import { ERAS } from '../games/chrono-drifter/js/data/themes.js';
 import { CONSUMABLES, RELICS, SHOP } from '../games/chrono-drifter/js/data/shop.js';
 import { mult, RING, ELEMENTS, STRONG, WEAK, EL_ICON, weakTo, strongAgainst, resists }
   from '../games/chrono-drifter/js/engine/elements.js';
-import { EFFECTS, effectsOf } from '../games/chrono-drifter/js/data/effects.js';
+import { EFFECTS, effectsOf, STAT_ICON } from '../games/chrono-drifter/js/data/effects.js';
 import { ARCHETYPES, tagOf, WAIT, costOf, EP_MAX, EP_REGEN, EP_WAIT, DMG, X, XALL }
   from '../games/chrono-drifter/js/engine/moves.js';
 import { FORMATS, DIFFICULTIES, fleeCost, FLEE_GRACE_TURNS, FORMAT_WORTH, winShards, lossShards }
@@ -80,6 +80,34 @@ test('every era carries 20+ characters across three factions', () => {
    Forty-eight moves across eleven eras were written with a minus, which negated
    twice: the button read "−-24đ chính xác" and the enemy walked away with +24
    accuracy. The constructor now strips the sign; these lock both halves down. */
+/* Six identical 🔼 chips told you something was up but never what. Every stat has
+   its own face now, with the direction as a corner badge. */
+test('every stat has its own icon, and none of them is already taken', () => {
+  const stats = ['pwr', 'grd', 'wrd', 'spd', 'acc', 'crt'];
+  for (const k of stats) assert.ok(STAT_ICON[k], `${k} has no icon`);
+  assert.equal(new Set(stats.map(k => STAT_ICON[k])).size, stats.length, 'two stats share an icon');
+
+  // the status chips that are not stats keep their own pictures
+  const taken = new Set(Object.entries(EFFECTS)
+    .filter(([k]) => k !== 'buff' && k !== 'debuff').map(([, v]) => v.icon));
+  for (const k of stats) {
+    assert.ok(!taken.has(STAT_ICON[k]), `${k} uses ${STAT_ICON[k]}, which already means something else`);
+  }
+});
+
+test('a chip says which stat and which way', () => {
+  const u = { hp: 10, max: 10, shield: 0, taunt: 0, marked: 0, stunned: 0, silenced: 0,
+              chargeup: 0, extraTurns: 0, ramp: 0, ccImmune: 0, dots: [],
+              buffs: [{ stat: 'pwr', pct: 30, t: 4 }, { stat: 'spd', pct: -28, t: 4 }] };
+  const [up, down] = effectsOf(u);
+  assert.equal(up.icon, STAT_ICON.pwr);
+  assert.equal(up.dir, 'up');
+  assert.match(up.label, /Sức mạnh \+30%/);
+  assert.equal(down.icon, STAT_ICON.spd);
+  assert.equal(down.dir, 'down');
+  assert.match(down.label, /Tốc độ -28%/);
+});
+
 /* An item is help, not a turn. It used to cost the whole action, which meant a heal
    was only affordable on a turn you could spare — and a boss acting once every five
    enemy turns can never spare one. The satchel no longer moves the battle clock, so

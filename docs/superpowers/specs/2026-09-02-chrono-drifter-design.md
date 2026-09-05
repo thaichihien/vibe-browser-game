@@ -165,6 +165,25 @@ cannot see are not a decision.
 
 Measured over 600 simulated battles: **7.7% miss rate, 9.1% crit rate.**
 
+### A chip says which stat, and which way
+
+Every stat modifier used to render as one of two pictures — 🔼 or 🔽 — so a name
+plate showing 🔽🔽 could have been any two of six things. Each stat carries its own
+face now, and the direction rides in the corner as a small ▲/▼ badge rather than a
+seventh emoji:
+
+| 💪 pwr | 🧱 grd | 🔮 wrd | 👟 spd | 👁️ acc | 💥 crt |
+|---|---|---|---|---|---|
+
+The icons steer clear of the ones already spoken for — 🛡️ is the shield status, 🎯
+the mark — which a test asserts, along with all six being distinct. `effectsOf()`
+returns `icon` and `dir`; the name plate and the dossier both render the badge from
+those, so the two never drift apart.
+
+The tutorial's counter ring names its elements with the same icons the battlefield
+uses (⚡ STORM → 🌊 TIDE → 🔥 EMBER → 🌿 VERDANT → ⚙️ FORGE → ❄️ FROST), so the
+sentence and the sprite agree.
+
 ### An item is help, not a turn
 
 Using a satchel item no longer ends your turn — you use it and still act. It used to

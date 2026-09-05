@@ -6,6 +6,13 @@ import { POINT_STATS } from '../engine/moves.js';
 const STAT_VI = { pwr: 'Sức mạnh', grd: 'Giáp vật lý', wrd: 'Kháng nguyên tố', spd: 'Tốc độ',
                   acc: 'Chính xác', crt: 'Chí mạng' };
 
+/* Every stat carries its own face. Six identical 🔼 chips told you something was
+   up but never what, and a plate showing 🔽🔽 could have been any two of six.
+   Icons steer clear of the ones already spoken for — 🛡️ is the shield status and
+   🎯 the mark — and the direction rides along as a small ▲/▼ badge in the corner
+   rather than a seventh emoji. */
+export const STAT_ICON = { pwr: '💪', grd: '🧱', wrd: '🔮', spd: '👟', acc: '👁️', crt: '💥' };
+
 export const EFFECTS = {
   shield:    { icon: '🛡️', name: 'Khiên',        desc: 'Hấp thụ sát thương trước khi máu bị trừ. Vỡ khi hết điểm khiên.' },
   taunt:     { icon: '🚩', name: 'Khiêu khích',  desc: 'Mọi đòn đơn mục tiêu của địch bị hút về đơn vị này. Đòn diện rộng thì không.' },
@@ -49,6 +56,8 @@ export function effectsOf(u) {
     // acc and crt move in percentage POINTS; saying % here contradicted the button
     const unit = POINT_STATS.includes(b.stat) ? 'đ' : '%';
     push(up ? 'buff' : 'debuff', {
+      icon: STAT_ICON[b.stat] || EFFECTS[up ? 'buff' : 'debuff'].icon,
+      dir: up ? 'up' : 'down',
       label: `${name} ${up ? '+' : ''}${b.pct}${unit}`,
       desc: `${name} đang ${up ? 'tăng' : 'giảm'} ${Math.abs(b.pct)}${unit} trong ${b.t} lượt nữa.`
     });

@@ -6,6 +6,7 @@ import { statOf, living, ULT_FULL } from '../engine/combat.js';
 import { tagOf } from '../engine/moves.js';
 import { buildScenery, layout, separate, pickComposition, REDUCED } from './stage.js';
 import { mulberry32 } from '../engine/rng.js';
+import { STAT_ICON } from '../data/effects.js';
 import { hasRelic } from '../state.js';
 import { renderInspect } from './inspect.js';
 import { sfx } from '../audio.js';
@@ -140,14 +141,16 @@ export function paint(u) {
   u.node.querySelector('.epfill').style.width = Math.max(0, u.ep / u.epMax) * 100 + '%';
   u.node.querySelector('.num').textContent = `${Math.max(0, Math.round(u.hp))}/${u.max}`;
   const sts = [];
-  if (u.shield > 0) sts.push('🛡️');
-  if (u.taunt > 0) sts.push('🚩');
-  if (u.marked > 0) sts.push('🎯');
-  if (u.stunned > 0) sts.push('💫');
-  if (u.silenced > 0) sts.push('🔇');
-  if (u.dots.length) sts.push('☠️');
-  for (const b of u.buffs) if (b.stat) sts.push(b.pct > 0 ? '🔼' : '🔽');
-  u.node.querySelector('.sts').innerHTML = sts.slice(0, 5).map(s => `<span>${s}</span>`).join('');
+  if (u.shield > 0) sts.push({ icon: '🛡️' });
+  if (u.taunt > 0) sts.push({ icon: '🚩' });
+  if (u.marked > 0) sts.push({ icon: '🎯' });
+  if (u.stunned > 0) sts.push({ icon: '💫' });
+  if (u.silenced > 0) sts.push({ icon: '🔇' });
+  if (u.dots.length) sts.push({ icon: '☠️' });
+  // the stat's own face, with the direction as a corner badge
+  for (const b of u.buffs) if (b.stat) sts.push({ icon: STAT_ICON[b.stat] || '🔼', dir: b.pct > 0 ? 'up' : 'down' });
+  u.node.querySelector('.sts').innerHTML = sts.slice(0, 5)
+    .map(s => `<span class="st${s.dir ? ' dir-' + s.dir : ''}">${s.icon}</span>`).join('');
   if (u.ult) {
     const pip = u.node.querySelector('.ultpip');
     pip.querySelector('i').style.width = u.charge + '%';
