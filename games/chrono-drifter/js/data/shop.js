@@ -1,5 +1,6 @@
 /* Twenty-six anachronisms. Consumables load into satchel slots before a battle and
-   cost the unit's turn to use; relics are permanent and always on.
+   cost no turn to use — one per turn, and you still get your move; relics are
+   permanent and always on.
    Prices run 190–5000 ⧗ against 12–70 a win, so the shop is a long game. */
 
 export const CONSUMABLES = [

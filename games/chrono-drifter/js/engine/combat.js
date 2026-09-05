@@ -205,7 +205,6 @@ export function targetsFor(state, u, m) {
   if (!needsTarget(m)) return [];
   const side = (m.kind === HEAL) ? u.side : (u.side === 'ally' ? 'foe' : 'ally');
   let list = living(state, side);
-  if (m.revive) list = state.units.filter(x => x.side === u.side && !x.alive);
   // a taunting defender soaks every single-target attack aimed at their side
   if (m.kind === DMG || m.kind === DEBUFF) {
     const wall = list.filter(x => x.taunt > 0);
@@ -315,16 +314,7 @@ export function resolve(state, actor, move, targetUid) {
     }
 
   } else if (m.kind === HEAL) {
-    let list = m.all ? allies : [byId(targetUid) || weakest(allies)];
-    if (m.revive) {
-      const fallen = state.units.filter(u => u.side === actor.side && !u.alive);
-      const t = byId(targetUid) || fallen[0];
-      if (t) {
-        t.alive = true; t.hp = Math.round(t.max * m.revive);
-        ev.push({ t: 'revive', tgt: t.uid, n: t.hp });
-      }
-      list = [];
-    }
+    const list = m.all ? allies : [byId(targetUid) || weakest(allies)];
     for (const t of list) {
       if (!t) continue;
       if (m.cleanse) { t.buffs = t.buffs.filter(b => b.pct > 0); t.dots = []; t.marked = 0; ev.push({ t: 'note', tgt: t.uid, text: 'GIẢI TRẠNG THÁI' }); }

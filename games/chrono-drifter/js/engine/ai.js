@@ -40,9 +40,6 @@ export function chooseAction(state, actor) {
     const heal = moves.find(m => m.kind === HEAL && m.amt);
     const hurt = allies.filter(a => a.hp / a.max < .45).sort((a, b) => a.hp / a.max - b.hp / b.max)[0];
     if (heal && hurt && rng() < (tier >= 3 ? .9 : .7)) return { move: heal, targetUid: hurt.uid };
-    const revive = moves.find(m => m.revive);
-    const fallen = state.units.find(u => u.side === actor.side && !u.alive);
-    if (revive && fallen) return { move: revive, targetUid: fallen.uid };
   }
 
   // score every damaging option against every reachable target
