@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -86,7 +86,7 @@ export default {
     u('Kẻ Ghép Chi', '🦿', 'chrome', 'elite', 'FORGE', 1.05, 520, 88, 44, 30, 92,
       [S('Chân Máy Đá', 'FORGE', 1.2), B('Lắp Thêm', 'grd', 35), RAMP('Nâng Cấp Liên Tục', 'FORGE', .95), H('Tự Hàn', 105)]),
     u('Nữ Tu Cáp Quang', '🔌', 'chrome', 'elite', 'RADIANT', .95, 310, 82, 26, 46, 104,
-      [S('Dòng Điện Thánh', 'RADIANT', 1.1), HALL('Đồng Bộ', 85), REVIVE('Khởi Động Lại', .35), R('Nối Mạng', 'wrd', 30)]),
+      [S('Dòng Điện Thánh', 'RADIANT', 1.1), HALL('Đồng Bộ', 85), CLEANSE('Khởi Động Lại', 90), R('Nối Mạng', 'wrd', 30)]),
     u('Xác Máy Lang Thang', '🦾', 'chrome', 'grunt', 'FORGE', 1.0, 430, 70, 42, 26, 76,
       [S('Đấm Thuỷ Lực', 'FORGE', 1.1), B('Khoá Khớp', 'grd', 32), STUN('Đè Nghiến', 'FORGE', .85), X('Rỉ Sét', 'grd', 25)]),
     u('Ống Kính Do Thám', '📷', 'chrome', 'grunt', 'RADIANT', .8, 300, 74, 24, 36, 116,

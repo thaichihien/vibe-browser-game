@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -51,7 +51,7 @@ export default {
       [S('Sáu Viên', 'EMBER', 1.3), ARC('Bắn Kép', 'EMBER', .9), B('Nạp Vội', 'spd', 35), EXEC('Viên Cuối', 'EMBER', 1.15)],
       UNUKE('CẢ Ổ ĐẠN', 'EMBER', 3.4)),
     u('Bác Sĩ Thị Trấn', '💊', 'marshal', 'elite', 'RADIANT', .95, 340, 74, 30, 46, 92,
-      [S('Dao Mổ', 'RADIANT', 1.05), H('Khâu Nhanh', 130), REVIVE('Cứu Sống', .4), CLEANSE('Cồn Sát Trùng', 85)]),
+      [S('Dao Mổ', 'RADIANT', 1.05), H('Khâu Nhanh', 130), REGEN('Băng Bó Kỹ', 44), CLEANSE('Cồn Sát Trùng', 85)]),
     u('Thợ Săn Tiền Thưởng', '🤠', 'marshal', 'elite', 'STEEL', 1.0, 440, 96, 34, 30, 108,
       [SNIPE('Súng Trường Dài', 'STEEL', 1.25), MARK('Ảnh Truy Nã', 'STEEL', .85), B('Ngồi Rình', 'pwr', 32), X('Bắn Ngựa', 'spd', 28)]),
     u('Người Đánh Điện Tín', '📯', 'marshal', 'grunt', 'STORM', .9, 310, 76, 24, 34, 110,

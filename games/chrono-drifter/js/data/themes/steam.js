@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';

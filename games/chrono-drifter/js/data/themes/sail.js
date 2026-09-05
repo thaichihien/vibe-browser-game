@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -52,7 +52,7 @@ export default {
     u('Phó Thuốc Súng', '💣', 'crown', 'elite', 'EMBER', .9, 320, 106, 26, 32, 108,
       [S('Ném Ngòi Nổ', 'EMBER', 1.3), DOT('Bỏng Thuốc Súng', 'EMBER', .65, 34), B('Tay Vững', 'crt', 30), AOE('Đạn Xích', 'STEEL', .7)]),
     u('Cha Xứ Trên Tàu', '⛪', 'crown', 'elite', 'RADIANT', .95, 340, 72, 30, 48, 90,
-      [S('Lời Nguyện', 'RADIANT', 1.1), HALL('Ban Phép', 95), REVIVE('Gọi Về', .4), CLEANSE('Nước Thánh', 90)]),
+      [S('Lời Nguyện', 'RADIANT', 1.1), HALL('Ban Phép', 95), BARRIER('Lời Chở Che', 150), CLEANSE('Nước Thánh', 90)]),
     u('Lính Thuỷ Đánh Bộ', '🪖', 'crown', 'grunt', 'STEEL', .95, 400, 68, 40, 30, 88,
       [S('Hàng Súng Hoả Mai', 'STEEL', 1.1), R('Chống Đỡ', 'grd', 30), X('Bắn Cảnh Cáo', 'pwr', 25), H('Khẩu Phần Rượu', 100)]),
     u('Thợ Mộc Tàu', '🪚', 'crown', 'grunt', 'FORGE', .95, 440, 66, 46, 28, 76,
@@ -81,7 +81,7 @@ export default {
       [S('Quăng Mỏ Neo', 'TIDE', 1.25), AOE('Dòng Xoáy Ngầm', 'TIDE', .7), B('Da Hà Bám', 'grd', 40), DRAIN('Tay Dìm Chết', 'TIDE', 1.0)],
       UDRAIN('XOÁY NƯỚC TỬ THẦN', 'TIDE', 1.9)),
     u('Thuyền Ma Không Đáy', '⛵', 'drowned', 'legend', 'UMBRA', 1.45, 760, 86, 56, 48, 62,
-      [AOE('Sương Mù Tử Khí', 'UMBRA', .8), TAUNT('Vỏ Tàu Mục', 170), REVIVE('Kéo Xác Lên Boong', .4), DOT('Nước Mặn', 'TIDE', .7, 40)],
+      [AOE('Sương Mù Tử Khí', 'UMBRA', .8), TAUNT('Vỏ Tàu Mục', 170), DRAIN('Kéo Xác Lên Boong', 'TIDE', 1.05), DOT('Nước Mặn', 'TIDE', .7, 40)],
       UMEND('CẢ ĐOÀN TRỞ LẠI', 270)),
     u('Mỹ Nhân Ngư Rạn', '🧜‍♀️', 'drowned', 'elite', 'UMBRA', 1.0, 290, 80, 26, 44, 114,
       [S('Khúc Ca Nguyền', 'UMBRA', 1.15), X('Dụ Dỗ', 'spd', 30), H('Gọi Triều', 125), DOT('Rữa Biển', 'VERDANT', .6, 32)]),

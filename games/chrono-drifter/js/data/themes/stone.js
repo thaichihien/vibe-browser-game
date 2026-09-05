@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -50,7 +50,7 @@ export default {
       [SNIPE('Lao Đá', 'FORGE', 1.28), MARK('Dấu Chân', 'FORGE', .88), EXEC('Đâm Chí Mạng', 'FORGE', 1.18), B('Nín Thở Rình', 'pwr', 32)],
       UEXEC('CUỘC SĂN LỚN', 'FORGE', 1.5)),
     u('Bà Đỡ Của Bộ Tộc', '🌿', 'tribe', 'elite', 'VERDANT', .95, 350, 74, 30, 46, 92,
-      [S('Cành Gai', 'VERDANT', 1.08), H('Lá Đắp', 132), REVIVE('Gọi Về Từ Cõi Mơ', .4), CLEANSE('Xông Khói', 88)]),
+      [S('Cành Gai', 'VERDANT', 1.08), H('Lá Đắp', 132), REGEN('Nhựa Cây Ấm', 44), CLEANSE('Xông Khói', 88)]),
     u('Chiến Binh Chuỳ Đá', '🪨', 'tribe', 'elite', 'STEEL', 1.05, 500, 90, 46, 28, 84,
       [S('Chuỳ Nện', 'STEEL', 1.25), STUN('Đập Đầu Gối', 'STEEL', .9), TAUNT('Đứng Trước Lửa', 135), B('Da Chai', 'grd', 34)]),
     u('Người Vẽ Hang', '🖐️', 'tribe', 'grunt', 'RADIANT', .9, 320, 76, 26, 38, 98,
@@ -78,7 +78,7 @@ export default {
       [S('Ném Đá', 'STEEL', 1.1), ARC('Ném Loạn', 'STEEL', .85), B('Đấm Ngực', 'pwr', 30), X('Hú Doạ', 'pwr', 24)]),
 
     u('Pháp Sư Sọ Voi', '💀', 'bone', 'legend', 'UMBRA', 1.15, 600, 100, 46, 46, 84,
-      [S('Trượng Xương', 'UMBRA', 1.28), AOE('Gió Từ Cõi Chết', 'UMBRA', .85), REVIVE('Gọi Tổ Tiên', .45), X('Nguyền Săn Trượt', 'pwr', 32)],
+      [S('Trượng Xương', 'UMBRA', 1.28), AOE('Gió Từ Cõi Chết', 'UMBRA', .85), DRAIN('Gọi Tổ Tiên', 'UMBRA', 1.0), X('Nguyền Săn Trượt', 'pwr', 32)],
       URAISE('TỔ TIÊN TRỖI DẬY', .5)),
     u('Người Đeo Mặt Nạ Xương', '🎭', 'bone', 'legend', 'STORM', 1.0, 380, 104, 28, 46, 110,
       [S('Sấm Gọi', 'STORM', 1.3), SILENCE('Cấm Khẩu', 'STORM', .9), MARK('Vẽ Dấu Tế', 'STORM', .9), HALL('Nhịp Trống Lành', 92)],

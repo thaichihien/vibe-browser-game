@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -50,13 +50,13 @@ export default {
       [S('Kim Đan Dài', 'TIDE', 1.25), HALL('Nối Lại Chỗ Đứt', 96), REGEN('Đan Thêm Từng Hàng', 44), X('Rút Một Sợi', 'grd', 28)],
       UMEND('DỆT LẠI CẢ ĐÊM NAY', 285)),
     u('Kẻ Thắp Đèn Ngủ', '💡', 'gac', 'elite', 'EMBER', 1.0, 470, 92, 36, 42, 96,
-      [S('Bóng Đèn Nóng', 'EMBER', 1.25), H('Để Đèn Cho Đứa Nhỏ', 108), X('Chiếu Thẳng Vào Mắt', 'acc', -26), B('Đèn Không Bao Giờ Tắt Hẳn', 'wrd', 32)]),
+      [S('Bóng Đèn Nóng', 'EMBER', 1.25), H('Để Đèn Cho Đứa Nhỏ', 108), X('Chiếu Thẳng Vào Mắt', 'acc', 26), B('Đèn Không Bao Giờ Tắt Hẳn', 'wrd', 32)]),
     u('Thợ Vá Ký Ức', '🧵', 'gac', 'elite', 'STEEL', .95, 450, 94, 34, 44, 98,
       [PIERCE('Xâu Kim Qua', 'STEEL', 1.25), MARK('Đánh Dấu Chỗ Sờn', 'STEEL', .9), X('Vá Bằng Chỉ Khác Màu', 'wrd', 30), B('Tay Rất Chắc', 'acc', 26)]),
     u('Con Cừu Đếm Số', '🐑', 'gac', 'grunt', 'VERDANT', 1.0, 430, 74, 42, 30, 84,
       [S('Húc Bằng Đầu Cứng', 'VERDANT', 1.1), R('Đếm Cho Cả Phe', 'spd', 26), B('Lông Dày Bốn Nghìn Lớp', 'grd', 34), X('Đếm Sai Cố Ý', 'pwr', 22)]),
     u('Cái Đồng Hồ Báo Thức', '⏰', 'gac', 'grunt', 'STORM', .85, 360, 84, 26, 34, 114,
-      [S('Reo Sát Tai', 'STORM', 1.15), STUN('Reo Đúng Lúc', 'STORM', .9), B('Lên Dây Sẵn', 'spd', 32), X('Báo Sai Giờ', 'acc', -22)]),
+      [S('Reo Sát Tai', 'STORM', 1.15), STUN('Reo Đúng Lúc', 'STORM', .9), B('Lên Dây Sẵn', 'spd', 32), X('Báo Sai Giờ', 'acc', 22)]),
     u('Người Ghi Nhật Ký Mộng', '📔', 'gac', 'grunt', 'FROST', .9, 380, 76, 30, 40, 96,
       [S('Đập Sổ Ẩm', 'FROST', 1.1), MARK('Ghi Lại Hình Dạng Ngươi', 'FROST', .9), X('Đọc To Trang Cũ', 'wrd', 26), B('Không Hiểu Chữ Mình', 'grd', 30)]),
 
@@ -71,7 +71,7 @@ export default {
     u('Tiếng Gọi Tên Nửa Đêm', '📢', 'bongde', 'elite', 'STORM', .95, 440, 98, 28, 46, 108,
       [S('Gọi Sát Vành Tai', 'STORM', 1.25), SILENCE('Nói Bằng Giọng Người Thân', 'STORM', .95), X('Gọi Sai Tên', 'wrd', 30), MARK('Biết Tên Thật', 'STORM', .9)]),
     u('Bóng Trên Trần Nhà', '🕷️', 'bongde', 'grunt', 'UMBRA', .9, 380, 82, 28, 36, 110,
-      [S('Rơi Xuống Mặt', 'UMBRA', 1.15), X('Không Có Gì Đổ Bóng', 'acc', -24), B('Ở Nguyên Trên Trần', 'wrd', 32), ARC('Trải Kín Trần', 'UMBRA', .85)]),
+      [S('Rơi Xuống Mặt', 'UMBRA', 1.15), X('Không Có Gì Đổ Bóng', 'acc', 24), B('Ở Nguyên Trên Trần', 'wrd', 32), ARC('Trải Kín Trần', 'UMBRA', .85)]),
     u('Hơi Lạnh Sau Cổ', '🌬️', 'bongde', 'grunt', 'FROST', .85, 350, 84, 24, 38, 118,
       [S('Thổi Sau Cổ', 'FROST', 1.15), X('Dựng Hết Tóc Gáy', 'grd', 26), B('Theo Vào Trong Phòng', 'spd', 32), DRAIN('Lấy Hơi Ấm', 'FROST', .95)]),
     u('Cơn Rơi Không Đáy', '🪂', 'bongde', 'grunt', 'TIDE', 1.0, 400, 80, 32, 32, 112,
@@ -90,13 +90,13 @@ export default {
     u('Đàn Bướm Ăn Ký Ức', '🦋', 'thu', 'grunt', 'VERDANT', .85, 350, 80, 24, 38, 116,
       [DRAIN('Ăn Một Ký Ức Cũ', 'VERDANT', .95), S('Bụi Cánh', 'VERDANT', 1.1), X('Quên Mất Tên Đồ Vật', 'wrd', 26), B('Bay Tản Ra', 'spd', 32)]),
     u('Con Sâu Trong Gối', '🐛', 'thu', 'grunt', 'FROST', .8, 370, 76, 34, 30, 96,
-      [DOT('Bò Vào Trong Tai', 'FROST', .8, 40), S('Ngoạm Nhỏ', 'FROST', 1.05), B('Ở Đúng Chỗ Áp Má', 'grd', 30), X('Nghe Thấy Tiếng Nhai', 'acc', -22)]),
+      [DOT('Bò Vào Trong Tai', 'FROST', .8, 40), S('Ngoạm Nhỏ', 'FROST', 1.05), B('Ở Đúng Chỗ Áp Má', 'grd', 30), X('Nghe Thấy Tiếng Nhai', 'acc', 22)]),
     u('Cái Bóng Của Chính Ngươi', '👤', 'thu', 'grunt', 'UMBRA', 1.0, 420, 84, 32, 34, 104,
       [S('Đánh Đúng Đòn Ngươi Vừa Đánh', 'UMBRA', 1.15), X('Chậm Hơn Nửa Nhịp', 'spd', 26), B('Học Rất Nhanh', 'pwr', 30), RAMP('Càng Giống Càng Mạnh', 'UMBRA', 1.0)])
   ],
   mooks: [
     mook('Mảnh Giấc Vụn', '🧩', 'STEEL', .6, 145, 48, 20, 20, 108,
-      [S('Cạnh Sắc', 'STEEL', 1.05), X('Ghép Sai Chỗ', 'acc', -20), B('Rơi Ra Từ Giấc Khác', 'spd', 26), S('Đè Lên', 'FORGE', .85)]),
+      [S('Cạnh Sắc', 'STEEL', 1.05), X('Ghép Sai Chỗ', 'acc', 20), B('Rơi Ra Từ Giấc Khác', 'spd', 26), S('Đè Lên', 'FORGE', .85)]),
     mook('Tiếng Ù Trong Tai', '🔊', 'STORM', .55, 135, 50, 16, 24, 120,
       [S('Ù Sát Màng Nhĩ', 'STORM', 1.05), X('Không Nghe Được Gì Khác', 'wrd', 20), B('Chỉ Có Khi Im Lặng', 'spd', 28), S('Rít Lên', 'FROST', .85)])
   ],

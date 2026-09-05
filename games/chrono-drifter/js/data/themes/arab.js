@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -69,13 +69,13 @@ export default {
     u('Marid Của Giếng Sâu', '🌀', 'djinn', 'elite', 'TIDE', 1.3, 620, 94, 50, 42, 78,
       [S('Cột Nước Dựng Đứng', 'TIDE', 1.3), AOE('Giếng Trào', 'TIDE', .9), DRAIN('Đòi Tiền Nước', 'TIDE', 1.0), B('Đáy Giếng Là Nhà', 'grd', 34)]),
     u('Ghoul Bãi Mộ Cát', '🦴', 'djinn', 'elite', 'UMBRA', 1.15, 540, 98, 40, 32, 104,
-      [EXEC('Rỉa Phần Cát Trả Lại', 'UMBRA', 1.2), S('Vuốt Khô', 'UMBRA', 1.25), B('Ăn Đêm Rất Khoẻ', 'crt', 28), X('Mùi Mộ Cũ', 'acc', -24)]),
+      [EXEC('Rỉa Phần Cát Trả Lại', 'UMBRA', 1.2), S('Vuốt Khô', 'UMBRA', 1.25), B('Ăn Đêm Rất Khoẻ', 'crt', 28), X('Mùi Mộ Cũ', 'acc', 24)]),
     u('Peri Cánh Mỏng', '🧚', 'djinn', 'grunt', 'RADIANT', .8, 330, 84, 22, 40, 122,
       [S('Bụi Cánh', 'RADIANT', 1.1), H('Vỗ Cánh Cho Lành', 100), B('Bay Cao Ngoài Tầm', 'spd', 34), X('Lời Ngọt', 'pwr', 24)]),
     u('Bóng Trong Bình', '🏺', 'djinn', 'grunt', 'FROST', .95, 400, 78, 36, 36, 88,
       [S('Miệng Bình Lạnh', 'FROST', 1.1), BARRIER('Sáp Niêm Còn Nguyên', 145), X('Rỉ Hơi Lạnh', 'spd', 26), B('Ngủ Trong Bình', 'grd', 32)]),
     u('Khói Không Chịu Tan', '💨', 'djinn', 'grunt', 'STORM', .9, 350, 82, 24, 38, 112,
-      [S('Cuộn Xoáy', 'STORM', 1.1), X('Che Kín Mắt', 'acc', -26), B('Không Nắm Được', 'wrd', 34), ARC('Tách Làm Hai', 'STORM', .85)]),
+      [S('Cuộn Xoáy', 'STORM', 1.1), X('Che Kín Mắt', 'acc', 26), B('Không Nắm Được', 'wrd', 34), ARC('Tách Làm Hai', 'STORM', .85)]),
 
     u('Thủ Lĩnh Bốn Mươi Tên', '🗝️', 'dao', 'legend', 'STEEL', 1.15, 620, 100, 46, 40, 100,
       [S('Đao Chia Phần', 'STEEL', 1.3), R('Chia Đều Cho Anh Em', 'pwr', 32), STEAL('Vét Sạch Hang', 26), MARK('Ghi Cửa Bằng Phấn', 'STEEL', .9)],
@@ -88,7 +88,7 @@ export default {
     u('Kẻ Cưỡi Lạc Đà Nhanh', '🐫', 'dao', 'elite', 'STORM', 1.3, 560, 94, 42, 34, 112,
       [S('Đao Trên Yên', 'STORM', 1.25), ARC('Chạy Xuyên Đoàn', 'STORM', .95), B('Cát Mềm Không Cản Nổi', 'spd', 34), X('Kéo Người Lên Yên', 'grd', 26)]),
     u('Trộm Trên Mái', '🐈‍⬛', 'dao', 'grunt', 'STEEL', .9, 350, 84, 26, 30, 122,
-      [S('Dao Ngắn', 'STEEL', 1.1), STEAL('Lấy Trước Khi Ai Thấy', 22), B('Bước Không Ra Tiếng', 'spd', 34), X('Đá Ngói Xuống', 'acc', -22)]),
+      [S('Dao Ngắn', 'STEEL', 1.1), STEAL('Lấy Trước Khi Ai Thấy', 22), B('Bước Không Ra Tiếng', 'spd', 34), X('Đá Ngói Xuống', 'acc', 22)]),
     u('Người Dụ Rắn', '🐍', 'dao', 'grunt', 'VERDANT', .95, 380, 80, 30, 32, 98,
       [DOT('Rắn Cắn Theo Kèn', 'VERDANT', .8, 40), S('Giỏ Rắn Ném', 'VERDANT', 1.1), X('Tiếng Kèn Ru', 'spd', 26), B('Rắn Nghe Lời Hơn Người', 'pwr', 28)]),
     u('Lái Buôn Bán Tin', '🧾', 'dao', 'grunt', 'FORGE', 1.0, 420, 74, 40, 32, 86,
@@ -96,7 +96,7 @@ export default {
   ],
   mooks: [
     mook('Người Gánh Nước Chợ', '🫗', 'TIDE', .8, 175, 48, 26, 18, 92,
-      [S('Đòn Gánh Nước', 'TIDE', 1.05), X('Dội Nước Vào Mắt', 'acc', -20), B('Vai Đã Chai', 'grd', 26), H('Cho Một Bát Nước', 92)]),
+      [S('Đòn Gánh Nước', 'TIDE', 1.05), X('Dội Nước Vào Mắt', 'acc', 20), B('Vai Đã Chai', 'grd', 26), H('Cho Một Bát Nước', 92)]),
     mook('Con Khỉ Của Kẻ Trộm', '🐒', 'VERDANT', .55, 135, 50, 16, 18, 126,
       [S('Cào Mặt', 'VERDANT', 1.05), STEAL('Lấy Chìa Khoá', 20), B('Nhảy Lên Mái', 'spd', 30), S('Ném Vỏ Chà Là', 'FORGE', .85)])
   ],

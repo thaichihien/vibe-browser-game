@@ -2,7 +2,7 @@
    why the shop sells an energy drink into a dragon fight. Using one costs the
    unit's turn — that is the price. DOM-free. */
 
-import { living, ULT_FULL, healScale } from './combat.js';
+import { living, ULT_FULL, healScale, applyStat } from './combat.js';
 
 /**
  * Apply a consumable. Returns the events to animate, or null if it cannot be used.
@@ -16,7 +16,8 @@ export function useItem(state, actor, item, targetUid) {
   const t = targetUid ? by(targetUid) : null;
 
   ev.push({ t: 'log', text: `${actor.n} dùng ${item.icon} ${item.name}.` });
-  state.turns++;
+  // no turn is spent: reaching into the satchel does not move the battle clock, so
+  // it cannot age the flee window, the era-event schedule or the fatigue cap
 
   switch (item.id) {
     case 'noodles':   for (const a of allies) heal(a, Math.round(a.max * .15 * healScale(state)), ev); break;
@@ -24,10 +25,10 @@ export function useItem(state, actor, item, targetUid) {
                         actor.charge = Math.min(ULT_FULL, actor.charge + n);
                         ev.push({ t: 'note', tgt: f.uid, text: `−${n} NỘ` }); break; }
     case 'energy':    heal(t, Math.round(t.max * .35 * healScale(state)), ev); break;
-    case 'extinguisher': for (const a of allies) { a.dots = []; a.buffs.push({ stat: 'wrd', pct: 30, t: 3 }); ev.push({ t: 'note', tgt: a.uid, text: 'DẬP LỬA' }); } break;
+    case 'extinguisher': for (const a of allies) { a.dots = []; applyStat(a, 'wrd', 30, 3); ev.push({ t: 'note', tgt: a.uid, text: 'DẬP LỬA' }); } break;
     case 'ducttape':  t.buffs = t.buffs.filter(b => b.pct > 0); t.dots = []; t.marked = 0;
                       heal(t, Math.round(t.max * .15 * healScale(state)), ev); ev.push({ t: 'note', tgt: t.uid, text: 'GIẢI TRẠNG THÁI' }); break;
-    case 'gel':       t.buffs.push({ stat: 'pwr', pct: 30, t: 4 }); ev.push({ t: 'buff', tgt: t.uid, label: 'Gel năng lượng' }); break;
+    case 'gel':       applyStat(t, 'pwr', 30, 4); ev.push({ t: 'buff', tgt: t.uid, label: 'Gel năng lượng' }); break;
     case 'icepack':   { const fallen = state.units.find(u => u.side === actor.side && !u.alive);
                         if (!fallen) return null;
                         fallen.alive = true; fallen.hp = Math.round(fallen.max * .3);
@@ -37,7 +38,7 @@ export function useItem(state, actor, item, targetUid) {
     case 'firecracker': for (const f of foes) {              // area damage ignores taunt
                         f.hp -= 120; ev.push({ t: 'dmg', tgt: f.uid, n: 120, el: 'EMBER', em: 1, crit: false });
                         if (f.hp <= 0) { f.hp = 0; f.alive = false; ev.push({ t: 'death', tgt: f.uid }); } } break;
-    case 'sunglasses': for (const a of allies) { a.buffs.push({ stat: 'grd', pct: 25, t: 3 }, { stat: 'wrd', pct: 25, t: 3 }); ev.push({ t: 'buff', tgt: a.uid, label: 'Kính râm' }); } break;
+    case 'sunglasses': for (const a of allies) { applyStat(a, 'grd', 25, 3); applyStat(a, 'wrd', 25, 3); ev.push({ t: 'buff', tgt: a.uid, label: 'Kính râm' }); } break;
     case 'balloon':   { const f = t || foes[0]; f.gauge = Math.min(f.gauge, -600); ev.push({ t: 'note', tgt: f.uid, text: 'BAY VỀ CUỐI HÀNG' }); break; }
     case 'pencil':    { const keys = ['pwr', 'grd', 'wrd', 'spd'];
                         for (const k of keys) {

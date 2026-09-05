@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -58,7 +58,7 @@ export default {
     u('Cung Thủ Cấm Vệ', '🏹', 'tran', 'grunt', 'STORM', .95, 350, 84, 26, 30, 112,
       [SNIPE('Bắn Qua Khe Cửa', 'STORM', 1.15), ARC('Loạt Tên', 'STORM', .85), B('Ngắm Rất Kỹ', 'acc', 26), X('Ghim Chân', 'spd', 22)]),
     u('Dân Đóng Cọc', '🪵', 'tran', 'grunt', 'VERDANT', 1.0, 430, 72, 44, 26, 78,
-      [S('Vồ Đóng Cọc', 'VERDANT', 1.1), BARRIER('Hàng Cọc Ngầm', 150), B('Lưng Quen Nặng', 'grd', 32), X('Bùn Ném', 'acc', -22)]),
+      [S('Vồ Đóng Cọc', 'VERDANT', 1.1), BARRIER('Hàng Cọc Ngầm', 150), B('Lưng Quen Nặng', 'grd', 32), X('Bùn Ném', 'acc', 22)]),
 
     u('Thuỷ Tinh', '🌊', 'thuy', 'legend', 'TIDE', 1.35, 700, 100, 50, 46, 84,
       [S('Sóng Cuốn', 'TIDE', 1.3), AOE('Nước Dâng', 'TIDE', .95), X('Ngập Chân Trận', 'spd', 28), DRAIN('Xoáy Hút', 'TIDE', 1.0)],
@@ -75,7 +75,7 @@ export default {
     u('Binh Ốc Vặn', '🐚', 'thuy', 'grunt', 'FORGE', 1.1, 480, 70, 52, 30, 58,
       [TAUNT('Rút Vào Vỏ', 140), S('Vỏ Xoáy Đập', 'FORGE', 1.1), REGEN('Nhớt Liền Vỏ', 38), B('Chậm Mà Dày', 'grd', 36)]),
     u('Đàn Cá Chép Vượt Vũ', '🐟', 'thuy', 'grunt', 'VERDANT', .9, 340, 82, 24, 32, 118,
-      [ARC('Đàn Vọt Lên', 'VERDANT', .9), S('Đuôi Vỗ', 'VERDANT', 1.1), B('Ngược Dòng', 'spd', 32), X('Nước Bắn Mắt', 'acc', -24)]),
+      [ARC('Đàn Vọt Lên', 'VERDANT', .9), S('Đuôi Vỗ', 'VERDANT', 1.1), B('Ngược Dòng', 'spd', 32), X('Nước Bắn Mắt', 'acc', 24)]),
 
     u('Sơn Tinh', '⛰️', 'son', 'legend', 'FORGE', 1.7, 860, 96, 62, 44, 58,
       [S('Nắm Đá Dời Đồi', 'FORGE', 1.35), AOE('Núi Mọc Dưới Chân', 'FORGE', .9), TAUNT('Thân Núi', 185), STUN('Đá Lăn', 'FORGE', .95)],
@@ -86,13 +86,13 @@ export default {
     u('Hổ Xám Núi Tản', '🐅', 'son', 'elite', 'EMBER', 1.25, 560, 102, 40, 30, 116,
       [S('Vuốt Xám', 'EMBER', 1.35), EXEC('Ngoạm Cổ', 'EMBER', 1.2), B('Gầm Trong Hang', 'crt', 30), ARC('Nhảy Vờn', 'EMBER', .9)]),
     u('Thầy Mo Cúng Rừng', '🪘', 'son', 'elite', 'UMBRA', .95, 400, 96, 28, 46, 94,
-      [S('Gậy Cúng', 'UMBRA', 1.2), XALL('Khói Nhang Mờ Mắt', 'acc', -22), MARK('Gọi Tên Trong Lễ', 'UMBRA', .9), REVIVE('Gọi Âm Binh Về', .45)]),
+      [S('Gậy Cúng', 'UMBRA', 1.2), XALL('Khói Nhang Mờ Mắt', 'acc', 22), MARK('Gọi Tên Trong Lễ', 'UMBRA', .9), AOE('Gọi Âm Binh Về', 'UMBRA', .8)]),
     u('Khỉ Đá Trên Vách', '🐒', 'son', 'grunt', 'VERDANT', .9, 350, 80, 28, 26, 122,
       [S('Ném Đá', 'VERDANT', 1.1), ARC('Cả Đàn Ném', 'VERDANT', .85), B('Nhảy Vách', 'spd', 32), X('Trêu Tức', 'pwr', 24)]),
     u('Người Mường Bắn Nỏ', '🏹', 'son', 'grunt', 'STORM', .95, 360, 86, 26, 28, 108,
       [SNIPE('Nỏ Tẩm Nhựa', 'STORM', 1.15), DOT('Nhựa Cây Ngấm', 'STORM', .75, 36), B('Ngồi Rình Trên Cây', 'crt', 26), X('Bắn Gối', 'spd', 24)]),
     u('Ma Sương Đầu Non', '🌫️', 'son', 'grunt', 'FROST', .9, 330, 84, 22, 40, 110,
-      [S('Hơi Lạnh Chạm Da', 'FROST', 1.1), DRAIN('Gọi Tên Đi Theo', 'FROST', .95), B('Tan Vào Sương', 'wrd', 34), X('Mù Đường', 'acc', -24)])
+      [S('Hơi Lạnh Chạm Da', 'FROST', 1.1), DRAIN('Gọi Tên Đi Theo', 'FROST', .95), B('Tan Vào Sương', 'wrd', 34), X('Mù Đường', 'acc', 24)])
   ],
   mooks: [
     mook('Trai Làng Vác Gậy', '🎍', 'VERDANT', .88, 190, 52, 28, 16, 88,

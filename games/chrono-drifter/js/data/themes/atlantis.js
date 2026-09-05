@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -50,7 +50,7 @@ export default {
       [S('Đinh Ba Đâm', 'STEEL', 1.28), TAUNT('Tường Vảy', 155), PIERCE('Xuyên Ba Ngạnh', 'STEEL', 1.1), R('Khép Hàng Ngọc', 'grd', 32)],
       UGUARD('BA MŨI CÙNG ĐÂM', 197, 41)),
     u('Nữ Tư Tế Phát Quang', '🪼', 'coral', 'elite', 'RADIANT', 1.0, 350, 78, 28, 48, 98,
-      [S('Tia Sinh Học', 'RADIANT', 1.1), H('Ánh Sáng Lành', 132), REVIVE('Thắp Lại', .42), CLEANSE('Nước Trong', 88)]),
+      [S('Tia Sinh Học', 'RADIANT', 1.1), H('Ánh Sáng Lành', 132), REGEN('Thắp Lại', 44), CLEANSE('Nước Trong', 88)]),
     u('Kỵ Sĩ Cá Đao', '🗡️', 'coral', 'elite', 'FROST', 1.15, 470, 96, 34, 32, 114,
       [S('Mũi Cưa', 'FROST', 1.28), ARC('Lượn Cắt', 'FROST', .9), B('Phóng Nhanh', 'spd', 36), X('Cắt Vây', 'spd', 28)]),
     u('Thợ Trồng Rong', '🌿', 'coral', 'grunt', 'VERDANT', .95, 430, 70, 40, 34, 82,

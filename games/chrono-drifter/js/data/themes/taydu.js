@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -56,7 +56,7 @@ export default {
     u('Thiên Binh Cầm Giáo', '🔱', 'thien', 'grunt', 'FORGE', 1.05, 460, 78, 48, 28, 84,
       [PIERCE('Giáo Trời', 'FORGE', 1.1), TAUNT('Dựng Hàng Giáo', 136), B('Giáp Trời Phát Sẵn', 'grd', 34), X('Húc Cán Giáo', 'spd', 24)]),
     u('Tiên Nữ Rắc Hoa', '🌸', 'thien', 'grunt', 'RADIANT', .9, 360, 80, 26, 40, 108,
-      [S('Cánh Hoa Sắc', 'RADIANT', 1.1), H('Rắc Hoa Xuống', 106), B('Bay Trên Mây', 'spd', 30), X('Hoa Rơi Mờ Mắt', 'acc', -22)]),
+      [S('Cánh Hoa Sắc', 'RADIANT', 1.1), H('Rắc Hoa Xuống', 106), B('Bay Trên Mây', 'spd', 30), X('Hoa Rơi Mờ Mắt', 'acc', 22)]),
     u('Thổ Địa Bị Gọi Lên', '🧓', 'thien', 'grunt', 'VERDANT', .85, 400, 72, 40, 34, 78,
       [S('Gậy Trúc', 'VERDANT', 1.05), MARK('Chỉ Đường Vào Động', 'VERDANT', .9), B('Biết Hết Vùng Này', 'acc', 26), X('Kể Lể Dài Dòng', 'pwr', 22)]),
 
@@ -64,7 +64,7 @@ export default {
       [S('Sừng Húc', 'EMBER', 1.35), AOE('Quạt Lửa Ngang', 'EMBER', .9), B('Nguyên Hình Trâu Trắng', 'pwr', 40), STUN('Giẫm Sập Đất', 'EMBER', .95)],
       URAGE('HIỆN NGUYÊN HÌNH')),
     u('Bạch Cốt Phu Nhân', '💀', 'yeu', 'legend', 'UMBRA', 1.0, 470, 102, 30, 50, 104,
-      [S('Móng Xương', 'UMBRA', 1.25), MARK('Đổi Mặt Lần Nữa', 'UMBRA', .9), XALL('Giả Làm Người Đáng Thương', 'wrd', 24), REVIVE('Bỏ Xác Đi Tiếp', .45)],
+      [S('Móng Xương', 'UMBRA', 1.25), MARK('Đổi Mặt Lần Nữa', 'UMBRA', .9), XALL('Giả Làm Người Đáng Thương', 'wrd', 24), DRAIN('Bỏ Xác Đi Tiếp', 'UMBRA', 1.0)],
       UCURSE('BA LẦN ĐỀU LÀ TA', 'UMBRA', 46)),
     u('Nhện Tinh Động Bàn Tơ', '🕷️', 'yeu', 'elite', 'VERDANT', 1.1, 540, 96, 40, 40, 106,
       [S('Tơ Cắt Da', 'VERDANT', 1.25), X('Quấn Chặt Chân Tay', 'spd', 30), DOT('Tơ Siết Dần', 'VERDANT', .85, 44), ARC('Bảy Chị Em Cùng Nhả', 'VERDANT', .9)]),
@@ -75,7 +75,7 @@ export default {
     u('Tiểu Yêu Cầm Chiêng', '🪘', 'yeu', 'grunt', 'STORM', .9, 350, 78, 28, 34, 110,
       [S('Chiêng Đập', 'STORM', 1.1), R('Báo Động Cả Động', 'spd', 26), SILENCE('Chiêng Át Tiếng Chú', 'STORM', .9), B('Chạy Vào Trong Báo', 'spd', 30)]),
     u('Yêu Chồn Núi Tuyết', '🦊', 'yeu', 'grunt', 'FROST', .9, 370, 84, 26, 34, 118,
-      [S('Vuốt Lạnh', 'FROST', 1.15), X('Giả Làm Cô Gái Lạc Đường', 'acc', -24), B('Biến Hình Rất Nhanh', 'spd', 32), EXEC('Cắn Khi Người Ta Tin', 'FROST', 1.1)]),
+      [S('Vuốt Lạnh', 'FROST', 1.15), X('Giả Làm Cô Gái Lạc Đường', 'acc', 24), B('Biến Hình Rất Nhanh', 'spd', 32), EXEC('Cắn Khi Người Ta Tin', 'FROST', 1.1)]),
 
     u('Tôn Hành Giả', '🐒', 'kinh', 'legend', 'STORM', 1.0, 640, 106, 44, 44, 130,
       [S('Gậy Như Ý', 'STORM', 1.35), ARC('Gậy Quét Ngang', 'STORM', .95), B('Cân Đẩu Vân', 'spd', 40), PIERCE('Đâm Xuyên Vảy', 'STORM', 1.2)],

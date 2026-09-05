@@ -154,6 +154,10 @@ export function paint(u) {
     pip.classList.toggle('full', u.charge >= ULT_FULL);
   }
   u.node.classList.toggle('dead', !u.alive);
+  // A revived fighter kept the death animation's forwards fill — rotated 80deg,
+  // dropped 26px and held at opacity 0 — so "Hồi Quang" put them back on the field
+  // invisible, off their tile and impossible to click. Standing up clears it.
+  if (u.alive && u.node._death) { u.node._death.cancel(); u.node._death = null; }
 }
 
 export function drawMeta() {
@@ -414,9 +418,13 @@ async function die(u) {
   if (!u || !u.node) return;
   floatText(u, '💀', 'dmg', -60);
   if (!REDUCED && u.node) {
-    await u.node.animate(
+    // fill:forwards is what keeps the body down after the keyframes end — and it
+    // outlives the death, so paint() cancels it if the unit ever stands back up
+    const anim = u.node.animate(
       [{ opacity: 1, rotate: '0deg' }, { opacity: 0, rotate: '80deg', translate: '0 26px' }],
-      { duration: 520, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {});
+      { duration: 520, easing: 'ease-in', fill: 'forwards' });
+    u.node._death = anim;
+    await anim.finished.catch(() => {});
   }
   paint(u);
 }

@@ -16,6 +16,30 @@ const CHARGE_ON_HIT = 8;
 const BUFF_TURNS = 4;
 const DOT_TURNS = 3;
 
+/* One buff and one debuff per stat, and no deeper.
+
+   Stat modifiers used to multiply: three slows on the same target left it at
+   0.72^3 = 37% speed, and a boss — alone, and the only thing four enemies can
+   aim at — could be held there permanently. It is not a fight at that point,
+   it is a spectator seat. Same stat and same direction now share ONE entry: the
+   strongest magnitude applies and re-applying refreshes its timer instead of
+   deepening it. Opposite directions still coexist and cancel out multiplicatively,
+   so a slow can be answered with a haste. Permanent relic buffs sit outside the
+   rule entirely — nothing refreshes them, so nothing may fold them in either. */
+export function applyStat(u, stat, pct, turns) {
+  if (!stat || !pct) return null;
+  const dir = Math.sign(pct);
+  const held = u.buffs.find(b => b.stat === stat && !b.perm && Math.sign(b.pct) === dir);
+  if (held) {
+    held.pct = dir * Math.max(Math.abs(held.pct), Math.abs(pct));
+    held.t = Math.max(held.t, turns);
+    return held;
+  }
+  const entry = { stat, pct, t: turns };
+  u.buffs.push(entry);
+  return entry;
+}
+
 /** Effective stat after buffs and debuffs. Never drops below 1. */
 export function statOf(u, key) {
   let v = u[key];
@@ -267,7 +291,7 @@ export function resolve(state, actor, move, targetUid) {
     const back = Math.min(EP_WAIT, actor.epMax - actor.ep);
     if (back > 0) { actor.ep += back; ev.push({ t: 'ep', tgt: actor.uid, n: back }); }
     actor.charge = Math.min(ULT_FULL, actor.charge + WAIT_CHARGE);
-    actor.buffs.push({ stat: 'grd', pct: WAIT_GUARD, t: 2 }, { stat: 'wrd', pct: WAIT_GUARD, t: 2 });
+    applyStat(actor, 'grd', WAIT_GUARD, 2); applyStat(actor, 'wrd', WAIT_GUARD, 2);
     ev.push({ t: 'wait', src: actor.uid });
 
   } else if (m.kind === HEAL && m.reviveAll) {
@@ -279,13 +303,13 @@ export function resolve(state, actor, move, targetUid) {
     if (!fallen.length) ev.push({ t: 'note', tgt: actor.uid, text: 'KHÔNG AI ĐỂ GỌI VỀ' });
 
   } else if (m.kind === BUFF && m.rage) {
-    actor.buffs.push({ stat: 'pwr', pct: 80, t: 5 }, { stat: 'spd', pct: 40, t: 5 }, { stat: 'crt', pct: 30, t: 5 });
+    applyStat(actor, 'pwr', 80, 5); applyStat(actor, 'spd', 40, 5); applyStat(actor, 'crt', 30, 5);
     ev.push({ t: 'buff', tgt: actor.uid, label: m.name });
     ev.push({ t: 'note', tgt: actor.uid, text: 'CUỒNG NỘ' });
 
   } else if (m.kind === DEBUFF && m.curse) {
     for (const t of foes) {
-      for (const k of ['pwr', 'grd', 'wrd', 'spd']) t.buffs.push({ stat: k, pct: -m.pct, t: 4 });
+      for (const k of ['pwr', 'grd', 'wrd', 'spd']) applyStat(t, k, -m.pct, 4);
       if (m.dot) t.dots.push({ amt: m.dot, el: m.el, t: DOT_TURNS });
       ev.push({ t: 'debuff', tgt: t.uid, label: m.name });
     }
@@ -317,7 +341,7 @@ export function resolve(state, actor, move, targetUid) {
     if (m.chargeup) { actor.chargeup = 2; ev.push({ t: 'note', tgt: actor.uid, text: 'DỒN LỰC' }); }
     const list = m.team ? allies : [actor];
     for (const t of list) {
-      if (m.stat) t.buffs.push({ stat: m.stat, pct: m.pct, t: BUFF_TURNS });
+      if (m.stat) applyStat(t, m.stat, m.pct, BUFF_TURNS);
       if (m.shield) { t.shield += m.shield; ev.push({ t: 'shield', tgt: t.uid, n: m.shield, gain: true }); }
       if (m.regen) t.buffs.push({ stat: null, regen: m.regen, t: DOT_TURNS + 1 });
       if (m.taunt) t.taunt = m.taunt + 1;
@@ -333,7 +357,7 @@ export function resolve(state, actor, move, targetUid) {
         t.charge -= taken; actor.charge = Math.min(ULT_FULL, actor.charge + taken);
         ev.push({ t: 'note', tgt: t.uid, text: `−${taken} NỘ` });
       }
-      if (m.stat) { t.buffs.push({ stat: m.stat, pct: -m.pct, t: BUFF_TURNS }); ev.push({ t: 'debuff', tgt: t.uid, label: m.name }); }
+      if (m.stat) { applyStat(t, m.stat, -m.pct, BUFF_TURNS); ev.push({ t: 'debuff', tgt: t.uid, label: m.name }); }
     }
 
   } else { // damage

@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -86,7 +86,7 @@ export default {
     u('Nhà Buôn Vũ Khí', '💰', 'trader', 'elite', 'EMBER', .95, 400, 92, 30, 30, 98,
       [S('Hàng Mẫu', 'EMBER', 1.2), AOE('Xả Kho', 'EMBER', .8), R('Trang Bị Tận Răng', 'pwr', 32), BARRIER('Giáp Bán Chịu', 110)]),
     u('Kỹ Sư Cứu Hộ', '🔩', 'trader', 'elite', 'FORGE', .95, 420, 72, 44, 34, 88,
-      [S('Cờ Lê Nặng', 'FORGE', 1.1), H('Hàn Vỏ', 125), REVIVE('Khởi Động Nguội', .35), R('Gia Cố', 'grd', 30)]),
+      [S('Cờ Lê Nặng', 'FORGE', 1.1), H('Hàn Vỏ', 125), BARRIER('Trường Chắn Tạm', 150), R('Gia Cố', 'grd', 30)]),
     u('Phi Hành Đoàn Tạp Nham', '🧑‍🔧', 'trader', 'grunt', 'STEEL', .9, 350, 70, 30, 28, 100,
       [S('Ống Sắt', 'STEEL', 1.05), B('Đồng Lòng', 'pwr', 25), X('Ném Cờ Lê', 'grd', 24), H('Sơ Cứu', 95)]),
     u('Mèo Tàu', '🐈', 'trader', 'grunt', 'UMBRA', .7, 260, 76, 20, 26, 130,

@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -54,7 +54,7 @@ export default {
     u('Nữ Hiệp Nga Mi', '🗡️', 'zhengdao', 'elite', 'FROST', .95, 420, 98, 30, 42, 112,
       [SNIPE('Nga Mi Thích', 'FROST', 1.2), B('Ngưng Thần', 'crt', 28), ARC('Kiếm Vũ', 'FROST', .9), H('Điều Tức', 104)]),
     u('Lãng Khách Hoa Sơn', '⚔️', 'zhengdao', 'grunt', 'STEEL', 1.0, 400, 84, 34, 30, 106,
-      [S('Hoa Sơn Kiếm Pháp', 'STEEL', 1.15), RAMP('Kiếm Ý Dồn Dập', 'STEEL', 1.0), B('Rượu Ngon', 'pwr', 28), X('Hoa Mắt', 'acc', -24)]),
+      [S('Hoa Sơn Kiếm Pháp', 'STEEL', 1.15), RAMP('Kiếm Ý Dồn Dập', 'STEEL', 1.0), B('Rượu Ngon', 'pwr', 28), X('Hoa Mắt', 'acc', 24)]),
     u('Tiêu Sư Trấn Viễn', '🧳', 'zhengdao', 'grunt', 'FORGE', 1.1, 460, 76, 48, 28, 78,
       [S('Đao Hộ Tiêu', 'FORGE', 1.1), TAUNT('Chắn Xe Tiêu', 134), B('Vai Rộng Đường Dài', 'grd', 34), X('Quát Lớn', 'pwr', 24)]),
     u('Đệ Tử Cái Bang', '🥢', 'zhengdao', 'grunt', 'VERDANT', .9, 340, 80, 26, 26, 118,
@@ -71,9 +71,9 @@ export default {
     u('Sát Thủ Áo Đen', '🥷', 'modao', 'elite', 'UMBRA', .95, 400, 102, 26, 34, 118,
       [EXEC('Cắt Cổ Trong Đêm', 'UMBRA', 1.2), SNIPE('Ám Khí', 'UMBRA', 1.15), B('Ẩn Vào Bóng', 'crt', 30), S('Chuỷ Thủ', 'STEEL', 1.1)]),
     u('Trưởng Lão Cầm Tiêu', '🪈', 'modao', 'grunt', 'TIDE', .95, 380, 82, 30, 40, 100,
-      [SILENCE('Tiếng Tiêu Loạn Tâm', 'TIDE', .9), S('Tiêu Sắt', 'TIDE', 1.1), X('Mê Âm', 'acc', -24), B('Điều Tức Theo Nhịp', 'wrd', 30)]),
+      [SILENCE('Tiếng Tiêu Loạn Tâm', 'TIDE', .9), S('Tiêu Sắt', 'TIDE', 1.1), X('Mê Âm', 'acc', 24), B('Điều Tức Theo Nhịp', 'wrd', 30)]),
     u('Đệ Tử Thánh Giáo', '🔥', 'modao', 'grunt', 'EMBER', 1.0, 420, 80, 34, 26, 92,
-      [S('Liệt Hoả Chưởng', 'EMBER', 1.15), AOE('Đuốc Đêm', 'EMBER', .8), B('Cuồng Tín', 'pwr', 30), X('Khói Cay', 'acc', -22)]),
+      [S('Liệt Hoả Chưởng', 'EMBER', 1.15), AOE('Đuốc Đêm', 'EMBER', .8), B('Cuồng Tín', 'pwr', 30), X('Khói Cay', 'acc', 22)]),
     u('Người Luyện Cổ Trùng', '🐛', 'modao', 'grunt', 'VERDANT', .9, 360, 78, 28, 32, 104,
       [DOT('Cổ Trùng Vào Máu', 'VERDANT', .75, 38), S('Bột Trùng', 'VERDANT', 1.05), X('Ngứa Ngáy', 'grd', 26), REGEN('Trùng Ăn Thịt Thối', 36)]),
 
@@ -90,13 +90,13 @@ export default {
     u('Đao Khách Quan Ngoại', '🔪', 'guanwai', 'grunt', 'STEEL', 1.05, 430, 82, 38, 26, 96,
       [S('Đại Đao', 'STEEL', 1.15), RAMP('Đao Nhanh Dần', 'STEEL', 1.0), B('Áo Da Cừu', 'grd', 30), X('Hù Doạ', 'pwr', 24)]),
     u('Ưng Sư Nuôi Chim', '🦅', 'guanwai', 'grunt', 'FROST', .9, 350, 80, 24, 34, 122,
-      [MARK('Ưng Dẫn Đường', 'FROST', .9), S('Vuốt Ưng', 'FROST', 1.1), B('Thổi Còi', 'spd', 30), X('Mổ Mắt', 'acc', -24)]),
+      [MARK('Ưng Dẫn Đường', 'FROST', .9), S('Vuốt Ưng', 'FROST', 1.1), B('Thổi Còi', 'spd', 30), X('Mổ Mắt', 'acc', 24)]),
     u('Lính Trường Thương', '🔱', 'guanwai', 'grunt', 'FORGE', 1.05, 450, 74, 46, 28, 82,
       [PIERCE('Thương Xuyên', 'FORGE', 1.1), TAUNT('Dựng Rào Thương', 132), B('Đội Ngũ Kín', 'grd', 32), S('Cán Thương Quật', 'STEEL', 1.0)])
   ],
   mooks: [
     mook('Tiểu Nhị Quán Trọ', '🍶', 'TIDE', .6, 140, 48, 18, 16, 100,
-      [S('Ném Bát', 'TIDE', 1.0), X('Rượu Vào Mắt', 'acc', -20), B('Chạy Xuống Bếp', 'spd', 26), S('Đòn Gánh', 'STEEL', .85)]),
+      [S('Ném Bát', 'TIDE', 1.0), X('Rượu Vào Mắt', 'acc', 20), B('Chạy Xuống Bếp', 'spd', 26), S('Đòn Gánh', 'STEEL', .85)]),
     mook('Cước Phu Gánh Hàng', '🧺', 'FORGE', .85, 190, 52, 28, 16, 84,
       [S('Đòn Gánh Tre', 'FORGE', 1.05), B('Vai Chai', 'grd', 26), S('Đá Cuội', 'FORGE', .9), X('Gọi Người', 'pwr', 18)])
   ],

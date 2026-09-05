@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -56,9 +56,9 @@ export default {
     u('Ký Giả Tò Mò', '📰', 'hoi', 'grunt', 'STORM', .9, 340, 80, 26, 34, 110,
       [MARK('Chụp Một Tấm', 'STORM', .9), S('Đèn Flash', 'STORM', 1.1), X('Đăng Tin Rúng Động', 'wrd', 26), B('Chạy Trước Khi Bị Đấm', 'spd', 32)]),
     u('Cảnh Sát Cảng', '👮', 'hoi', 'grunt', 'STEEL', 1.05, 450, 80, 44, 28, 90,
-      [S('Dùi Cui', 'STEEL', 1.1), TAUNT('Chặn Đầu Ngõ', 134), B('Áo Dày', 'grd', 32), X('Thổi Còi', 'acc', -22)]),
+      [S('Dùi Cui', 'STEEL', 1.1), TAUNT('Chặn Đầu Ngõ', 134), B('Áo Dày', 'grd', 32), X('Thổi Còi', 'acc', 22)]),
     u('Thợ Máy Tàu Cũ', '🔧', 'hoi', 'grunt', 'FORGE', 1.0, 430, 76, 42, 26, 84,
-      [S('Cờ Lê', 'FORGE', 1.1), REGEN('Vá Tạm Bằng Băng Keo', 38), B('Tay Đầy Dầu', 'pwr', 28), X('Xả Hơi Nóng', 'acc', -24)]),
+      [S('Cờ Lê', 'FORGE', 1.1), REGEN('Vá Tạm Bằng Băng Keo', 38), B('Tay Đầy Dầu', 'pwr', 28), X('Xả Hơi Nóng', 'acc', 24)]),
 
     u('Chủ Tế Áo Rong', '🐙', 'giao', 'legend', 'TIDE', 1.2, 640, 100, 48, 48, 82,
       [S('Gậy San Hô', 'TIDE', 1.3), DRAIN('Đọc Lời Mời', 'TIDE', 1.05), XALL('Thuỷ Triều Trong Đầu', 'wrd', 24), MARK('Chọn Vật Tế', 'TIDE', .9)],
@@ -67,11 +67,11 @@ export default {
       [S('Bút Đâm', 'UMBRA', 1.25), SILENCE('Đọc Một Câu Không Nên Đọc', 'UMBRA', .95), X('Viết Sai Tên Ai Đó', 'wrd', 30), DOT('Câu Chữ Ăn Vào Đầu', 'UMBRA', .8, 42)],
       UCURSE('TRANG CUỐI ĐƯỢC ĐỌC LÊN', 'UMBRA', 46)),
     u('Đồ Đệ Đeo Mặt Cá', '🎭', 'giao', 'elite', 'TIDE', 1.05, 500, 94, 42, 36, 98,
-      [S('Móc Lưới', 'TIDE', 1.25), B('Không Tháo Mặt Nạ Nữa', 'pwr', 34), ARC('Quét Lưới', 'TIDE', .9), X('Nước Biển Vào Mắt', 'acc', -24)]),
+      [S('Móc Lưới', 'TIDE', 1.25), B('Không Tháo Mặt Nạ Nữa', 'pwr', 34), ARC('Quét Lưới', 'TIDE', .9), X('Nước Biển Vào Mắt', 'acc', 24)]),
     u('Bà Đỡ Của Giáo Phái', '🕯️', 'giao', 'elite', 'EMBER', .95, 420, 90, 32, 44, 92,
-      [S('Nến Nóng', 'EMBER', 1.2), HALL('Đếm Lại Từng Đứa', 94), REVIVE('Chưa Cho Đi Đâu Cả', .45), X('Ghi Vào Sổ Làng', 'grd', 26)]),
+      [S('Nến Nóng', 'EMBER', 1.2), HALL('Đếm Lại Từng Đứa', 94), TAUNT('Chưa Cho Đi Đâu Cả', 150), X('Ghi Vào Sổ Làng', 'grd', 26)]),
     u('Tín Đồ Cầm Đèn', '🪔', 'giao', 'grunt', 'EMBER', .95, 390, 78, 32, 28, 96,
-      [S('Đèn Bão Đập', 'EMBER', 1.1), DOT('Dầu Đèn Bắt Lửa', 'EMBER', .75, 36), B('Đứng Ngoài Mưa Cả Đêm', 'grd', 30), X('Soi Vào Mặt', 'acc', -22)]),
+      [S('Đèn Bão Đập', 'EMBER', 1.1), DOT('Dầu Đèn Bắt Lửa', 'EMBER', .75, 36), B('Đứng Ngoài Mưa Cả Đêm', 'grd', 30), X('Soi Vào Mặt', 'acc', 22)]),
     u('Người Thổi Kèn Sừng', '📯', 'giao', 'grunt', 'STORM', 1.0, 400, 82, 30, 36, 100,
       [S('Sóng Âm', 'STORM', 1.1), R('Một Tiếng Kèn', 'pwr', 26), SILENCE('Át Hết Tiếng Khác', 'STORM', .9), B('Phổi Khoẻ', 'wrd', 30)]),
     u('Kẻ Canh Hầm Đá', '🗝️', 'giao', 'grunt', 'FORGE', 1.1, 470, 74, 50, 26, 74,
@@ -84,15 +84,15 @@ export default {
       [S('Xúc Tu Quật', 'FROST', 1.3), AOE('Nước Cống Trào', 'FROST', .9), DOT('Nhớt Lạnh', 'FROST', .85, 44), B('Da Trơn', 'grd', 34)],
       USACRIFY('CẮT MÌNH RA LÀM LỄ', 'FROST', 3.2)),
     u('Người Có Mang', '🐟', 'bien', 'elite', 'TIDE', 1.05, 520, 94, 40, 38, 112,
-      [S('Vuốt Có Màng', 'TIDE', 1.25), EXEC('Kéo Xuống Bến Cạn', 'TIDE', 1.2), B('Bơi Nhanh Hơn Người', 'spd', 34), X('Tát Nước Mặn', 'acc', -22)]),
+      [S('Vuốt Có Màng', 'TIDE', 1.25), EXEC('Kéo Xuống Bến Cạn', 'TIDE', 1.2), B('Bơi Nhanh Hơn Người', 'spd', 34), X('Tát Nước Mặn', 'acc', 22)]),
     u('Thứ Đứng Sau Cửa', '🚪', 'bien', 'elite', 'UMBRA', 1.1, 540, 98, 42, 40, 86,
       [S('Với Qua Khe Cửa', 'UMBRA', 1.3), STUN('Chặn Đường Ra', 'UMBRA', .95), B('Chỉ Nghe Tiếng Hít Vào', 'wrd', 34), SNIPE('Đợi Đúng Lúc', 'UMBRA', 1.15)]),
     u('Dân Chài Đêm', '🎣', 'bien', 'grunt', 'TIDE', 1.0, 420, 80, 36, 28, 96,
-      [S('Móc Câu Cá', 'TIDE', 1.1), DRAIN('Kéo Lưới Về', 'TIDE', .9), B('Quen Sóng Đêm', 'grd', 30), X('Ném Ruột Cá', 'acc', -24)]),
+      [S('Móc Câu Cá', 'TIDE', 1.1), DRAIN('Kéo Lưới Về', 'TIDE', .9), B('Quen Sóng Đêm', 'grd', 30), X('Ném Ruột Cá', 'acc', 24)]),
     u('Trẻ Con Không Nói', '🧒', 'bien', 'grunt', 'FROST', .7, 310, 82, 22, 36, 118,
       [S('Cắn', 'FROST', 1.1), SILENCE('Cả Bọn Cùng Im', 'FROST', .9), B('Không Ai Nghi Ngờ', 'spd', 32), X('Đứng Nhìn', 'pwr', 24)]),
     u('Nấm Mọc Trên Tường', '🍄', 'bien', 'grunt', 'VERDANT', .9, 400, 72, 40, 34, 66,
-      [DOT('Bào Tử Trắng', 'VERDANT', .8, 40), S('Sợi Nấm Quấn', 'VERDANT', 1.05), REGEN('Mọc Lại Từ Vách', 40), X('Mùi Ẩm', 'acc', -22)])
+      [DOT('Bào Tử Trắng', 'VERDANT', .8, 40), S('Sợi Nấm Quấn', 'VERDANT', 1.05), REGEN('Mọc Lại Từ Vách', 40), X('Mùi Ẩm', 'acc', 22)])
   ],
   mooks: [
     mook('Mèo Hoang Ngoài Cảng', '🐈', 'FROST', .55, 135, 48, 16, 22, 124,

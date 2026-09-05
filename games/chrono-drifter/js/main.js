@@ -85,7 +85,9 @@ function startBattle(g) {
   for (const u of living(B, 'ally')) {
     if (hasRelic('gloves')) u.pwr = Math.round(u.pwr * 1.08);
     if (hasRelic('watch')) u.spd = Math.round(u.spd * 1.05);
-    if (hasRelic('helmet')) u.buffs.push({ stat: 'grd', pct: 10, t: 999 }, { stat: 'wrd', pct: 10, t: 999 });
+    // perm: outside the one-per-stat rule — a relic is not something to refresh
+    if (hasRelic('helmet')) u.buffs.push({ stat: 'grd', pct: 10, t: 999, perm: true },
+                                         { stat: 'wrd', pct: 10, t: 999, perm: true });
     if (hasRelic('marker')) u.charge = 25;
   }
 
@@ -113,6 +115,7 @@ async function turnLoop() {
   if (opening.some(e => e.t === 'skip')) return afterAction(actor);
   if (checkEnd(B)) return finish();
 
+  actor.usedItem = false;
   if (actor.side === 'ally') showDeck(actor);
   else { showDeck(null, `${actor.n} đang suy tính…`); await view.wait(520); await aiTurn(actor); }
 }
@@ -121,6 +124,7 @@ async function afterAction(actor) {
   if (B.over) return finish();
   if (actor.alive && actor.extraTurns > 0) {   // Time Stop, and the power bank
     actor.extraTurns--;
+    actor.usedItem = false;                   // a granted turn is a turn, bag included
     view.setActive(actor);
     if (actor.side === 'ally') return showDeck(actor);
     await view.wait(420);
@@ -313,12 +317,14 @@ function renderSatchel(actor) {
     return;
   }
   const keys = ['Q', 'W', 'E', 'R', 'T'];
-  row.innerHTML = '<span class="sat-note">TÚI ĐỒ</span>';
+  const spent = !!actor.usedItem;
+  row.innerHTML = `<span class="sat-note">${spent ? 'ĐÃ DÙNG ĐỒ LƯỢT NÀY' : 'TÚI ĐỒ'}</span>`;
   B.bag.forEach((id, i) => {
     const item = byId(id);
     const b = document.createElement('button');
     b.className = 'sat';
-    b.title = item.desc;
+    b.disabled = spent;                        // one item per turn, then it is your move
+    b.title = spent ? `${item.name} — mỗi lượt chỉ dùng được một món.` : item.desc;
     b.innerHTML = `<span class="k">${keys[i]}</span>${item.icon} ${item.name}`
       + `<span class="n">×${save.stock[item.id] || 0}</span>`;
     b.onclick = () => pickItem(actor, item, b);
@@ -376,7 +382,12 @@ async function pickItem(actor, item, btn) {
   await view.play(ev);
   busy = false;
   if (checkEnd(B)) return finish();
-  afterAction(actor);
+  // An item is help, not a turn. Reaching into the satchel used to cost the whole
+  // action — which meant healing was only ever affordable on a turn you could
+  // spare, and a boss acting once every five enemy turns could never spare one.
+  // You still get your move; you just get one item per turn to go with it.
+  actor.usedItem = true;
+  showDeck(actor);
 }
 
 async function aiTurn(actor) {

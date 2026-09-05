@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -88,11 +88,11 @@ export default {
     u('Thái Sử Từ', '🏹', 'wu', 'elite', 'STORM', 1.0, 460, 98, 30, 34, 116,
       [SNIPE('Ghim Tay Vào Cột', 'STORM', 1.25), ARC('Bắn Kép', 'STORM', .9), B('Nhắm Rất Lâu', 'acc', 28), PIERCE('Xuyên Giáp Nhẹ', 'STORM', 1.1)]),
     u('Thuỷ Quân Đông Ngô', '🚣', 'wu', 'grunt', 'TIDE', 1.0, 430, 80, 36, 30, 100,
-      [S('Móc Câu Thuyền', 'TIDE', 1.1), DRAIN('Lôi Xuống Sông', 'TIDE', .9), B('Chân Vững Trên Sóng', 'spd', 28), X('Tát Nước Mặt', 'acc', -22)]),
+      [S('Móc Câu Thuyền', 'TIDE', 1.1), DRAIN('Lôi Xuống Sông', 'TIDE', .9), B('Chân Vững Trên Sóng', 'spd', 28), X('Tát Nước Mặt', 'acc', 22)]),
     u('Đao Thuẫn Thủ', '🛡️', 'wu', 'grunt', 'FORGE', 1.05, 460, 74, 48, 26, 78,
       [S('Đao Sau Khiên', 'FORGE', 1.1), TAUNT('Dựng Khiên', 136), B('Khiên Lớn Hơn Người', 'grd', 34), X('Húc Khiên', 'spd', 24)]),
     u('Lính Đốt Thuyền', '🕯️', 'wu', 'grunt', 'EMBER', .95, 380, 84, 28, 24, 104,
-      [DOT('Cỏ Tẩm Dầu', 'EMBER', .8, 40), S('Đuốc Quật', 'EMBER', 1.1), B('Không Tính Đường Về', 'pwr', 32), X('Khói Mù', 'acc', -24)])
+      [DOT('Cỏ Tẩm Dầu', 'EMBER', .8, 40), S('Đuốc Quật', 'EMBER', 1.1), B('Không Tính Đường Về', 'pwr', 32), X('Khói Mù', 'acc', 24)])
   ],
   mooks: [
     mook('Nông Binh Bị Bắt Lính', '🌾', 'VERDANT', .85, 185, 50, 26, 16, 86,

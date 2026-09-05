@@ -27,7 +27,10 @@ export const SILENCE = (name, el, pow)        => ({ id: 'SILENCE', name, el, kin
 export const H       = (name, amt)            => ({ id: 'HEAL',    name, kind: HEAL, amt });
 export const HALL    = (name, amt)            => ({ id: 'MENDALL', name, kind: HEAL, amt, all: true });
 export const REGEN   = (name, amt)            => ({ id: 'REGEN',   name, kind: HEAL, amt: 0, regen: amt });
-export const REVIVE  = (name, pct)            => ({ id: 'REVIVE',  name, kind: HEAL, amt: 0, revive: pct });
+/* No REVIVE archetype. A fighter coming back is an ULTIMATE (URAISE) or a bought
+   item (the ice pack) — never a move you can spend a turn on again next turn.
+   As an ordinary skill it raised the same fighter up to nine times in one battle
+   and stretched those battles from 56 turns to 70. */
 export const CLEANSE = (name, amt)            => ({ id: 'CLEANSE', name, kind: HEAL, amt, cleanse: true });
 
 /* ── buff ───────────────────────────────────────────────────────────────── */
@@ -37,9 +40,12 @@ export const BARRIER = (name, amt)            => ({ id: 'BARRIER', name, kind: B
 export const TAUNT   = (name, amt)            => ({ id: 'TAUNT',   name, kind: BUFF, shield: amt, taunt: 2, self: true });
 export const CHARGEUP= (name)                 => ({ id: 'CHARGE',  name, kind: BUFF, chargeup: true, self: true });
 
-/* ── debuff ─────────────────────────────────────────────────────────────── */
-export const X       = (name, stat, pct)      => ({ id: 'HEX',     name, kind: DEBUFF, stat, pct });
-export const XALL    = (name, stat, pct)      => ({ id: 'HEXALL',  name, kind: DEBUFF, stat, pct, all: true });
+/* ── debuff ─────────────────────────────────────────────────────────────────
+   `pct` is a MAGNITUDE, never a signed delta: resolve() subtracts it. Written
+   with a minus in the data it was negated twice and landed on the enemy as a
+   buff, so the constructor takes the sign out of the caller's hands. */
+export const X       = (name, stat, pct)      => ({ id: 'HEX',     name, kind: DEBUFF, stat, pct: Math.abs(pct) });
+export const XALL    = (name, stat, pct)      => ({ id: 'HEXALL',  name, kind: DEBUFF, stat, pct: Math.abs(pct), all: true });
 export const STEAL   = (name, amt)            => ({ id: 'STEAL',   name, kind: DEBUFF, steal: amt });
 
 /* ── ultimates (legends and bosses only) ──────────────────────────────────
@@ -77,7 +83,7 @@ export const WAIT_GUARD = 20;
 export const ARCHETYPES = [
   'STRIKE', 'CLEAVE', 'ARC', 'PIERCE', 'SNIPE', 'DRAIN', 'EXECUTE', 'RAMP', 'FIXED',
   'DOT', 'MARK', 'STUN', 'SILENCE',
-  'HEAL', 'MENDALL', 'REGEN', 'REVIVE', 'CLEANSE',
+  'HEAL', 'MENDALL', 'REGEN', 'CLEANSE',
   'BUFF', 'RALLY', 'BARRIER', 'TAUNT', 'CHARGE',
   'HEX', 'HEXALL', 'STEAL',
   'ANNIHILATE', 'PURGE', 'FULLMEND', 'TIMESTOP', 'SUNDERBLOW', 'CHAIN', 'DEVOUR',
@@ -98,7 +104,7 @@ export const EP_WAIT = 30;         // Chờ gives this much on top of the regen
 const BASE_COST = {
   STRIKE: 11, CLEAVE: 29, ARC: 21, PIERCE: 16, SNIPE: 19, DRAIN: 16,
   EXECUTE: 18, RAMP: 13, FIXED: 14, DOT: 18, MARK: 11, STUN: 24, SILENCE: 24,
-  HEAL: 22, MENDALL: 32, REGEN: 20, REVIVE: 36, CLEANSE: 18,
+  HEAL: 22, MENDALL: 32, REGEN: 20, CLEANSE: 18,
   BUFF: 13, RALLY: 23, BARRIER: 21, TAUNT: 18, CHARGE: 16,
   HEX: 13, HEXALL: 27, STEAL: 10,
   WAIT: 0

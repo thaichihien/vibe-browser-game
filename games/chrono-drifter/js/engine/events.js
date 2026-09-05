@@ -9,7 +9,7 @@
    allowed; "Kẻ Cuối Cùng" is the counterweight. */
 
 import { mult, RING } from './elements.js';
-import { living, ULT_FULL, statOf } from './combat.js';
+import { living, ULT_FULL, statOf, applyStat } from './combat.js';
 import { randInt, pick, sample } from './rng.js';
 
 export const PERIOD_MIN = 30;
@@ -122,8 +122,8 @@ export const EVENTS = [
     effect: 'Hệ Thánh Quang −30% PWR, hệ Bóng Tối +30% PWR trong 4 lượt.',
     run(state, ev) {
       for (const u of both(state)) {
-        if (u.el === 'RADIANT') { u.buffs.push({ stat: 'pwr', pct: -30, t: 5 }); ev.push({ t: 'debuff', tgt: u.uid, label: 'Nhật thực' }); }
-        if (u.el === 'UMBRA') { u.buffs.push({ stat: 'pwr', pct: 30, t: 5 }); ev.push({ t: 'buff', tgt: u.uid, label: 'Nhật thực' }); }
+        if (u.el === 'RADIANT') { applyStat(u, 'pwr', -30, 5); ev.push({ t: 'debuff', tgt: u.uid, label: 'Nhật thực' }); }
+        if (u.el === 'UMBRA') { applyStat(u, 'pwr', 30, 5); ev.push({ t: 'buff', tgt: u.uid, label: 'Nhật thực' }); }
       }
     }
   },
@@ -137,7 +137,7 @@ export const EVENTS = [
     run(state, ev) {
       for (const u of both(state)) {
         if (u.hp / u.max >= .5) continue;
-        u.buffs.push({ stat: 'pwr', pct: 40, t: 4 });
+        applyStat(u, 'pwr', 40, 4);
         ev.push({ t: 'buff', tgt: u.uid, label: 'Đường cùng' });
       }
     }
@@ -167,7 +167,7 @@ export const EVENTS = [
         const team = living(state, side);
         if (team.length !== 1) continue;
         const u = team[0];
-        u.buffs.push({ stat: 'pwr', pct: 50, t: 4 }, { stat: 'crt', pct: 25, t: 4 });
+        applyStat(u, 'pwr', 50, 4); applyStat(u, 'crt', 25, 4);
         u.shield += frac(u, .3);
         ev.push({ t: 'shield', tgt: u.uid, n: frac(u, .3), gain: true });
         ev.push({ t: 'buff', tgt: u.uid, label: 'Kẻ cuối cùng' });
@@ -236,7 +236,7 @@ export const EVENTS = [
     effect: 'Cả hai phe −25đ chính xác trong 4 lượt.',
     run(state, ev) {
       for (const u of both(state)) {
-        u.buffs.push({ stat: 'acc', pct: -25, t: 5 });
+        applyStat(u, 'acc', -25, 5);
         ev.push({ t: 'debuff', tgt: u.uid, label: 'Sương mù' });
       }
     }
@@ -256,7 +256,7 @@ export const EVENTS = [
     effect: 'Cả hai phe +30đ chí mạng trong 3 lượt.',
     run(state, ev) {
       for (const u of both(state)) {
-        u.buffs.push({ stat: 'crt', pct: 30, t: 4 });
+        applyStat(u, 'crt', 30, 4);
         ev.push({ t: 'buff', tgt: u.uid, label: 'Lưỡi dao cạo' });
       }
     }

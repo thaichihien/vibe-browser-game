@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -54,7 +54,7 @@ export default {
     u('Xạ Thủ Đội Đặc Nhiệm', '🔫', 'canh', 'elite', 'STEEL', 1.0, 450, 102, 30, 34, 104,
       [SNIPE('Bắn Từ Trên Mái', 'STEEL', 1.3), B('Nằm Chờ Sáu Tiếng', 'crt', 32), PIERCE('Xuyên Áo Chống Đạn', 'STEEL', 1.2), X('Bắn Vào Tay Súng', 'pwr', 28)]),
     u('Cảnh Sát Tuần Đêm', '👮', 'canh', 'grunt', 'RADIANT', 1.05, 440, 78, 44, 28, 92,
-      [S('Đèn Pin Đập', 'RADIANT', 1.1), X('Chiếu Vào Mắt', 'acc', -24), TAUNT('Chặn Miệng Hẻm', 132), B('Áo Mưa Dày', 'grd', 32)]),
+      [S('Đèn Pin Đập', 'RADIANT', 1.1), X('Chiếu Vào Mắt', 'acc', 24), TAUNT('Chặn Miệng Hẻm', 132), B('Áo Mưa Dày', 'grd', 32)]),
     u('Điều Tra Viên Chống Rượu', '🍾', 'canh', 'grunt', 'EMBER', 1.0, 410, 82, 34, 30, 98,
       [S('Đập Vỡ Thùng Rượu', 'EMBER', 1.15), DOT('Rượu Bắt Lửa', 'EMBER', .8, 38), B('Không Uống Bao Giờ', 'pwr', 28), X('Niêm Phong Quán', 'spd', 24)]),
     u('Nhân Chứng Được Bảo Vệ', '🧥', 'canh', 'grunt', 'TIDE', .95, 400, 72, 36, 40, 100,
@@ -71,7 +71,7 @@ export default {
     u('Tay Đấm Sàn Cá Cược', '🥊', 'mafia', 'elite', 'EMBER', 1.2, 600, 100, 44, 28, 96,
       [S('Móc Trái', 'EMBER', 1.35), RAMP('Đánh Càng Lâu Càng Hăng', 'EMBER', 1.0), B('Chịu Đòn Rất Giỏi', 'grd', 36), EXEC('Kết Ở Vòng Cuối', 'EMBER', 1.15)]),
     u('Tài Xế Chạy Trốn', '🚗', 'mafia', 'grunt', 'FORGE', 1.15, 460, 80, 42, 26, 116,
-      [S('Húc Cản Trước', 'FORGE', 1.15), ARC('Lao Qua Hai Người', 'FORGE', .9), B('Biết Hết Hẻm Một Chiều', 'spd', 34), X('Xịt Khói Xe', 'acc', -22)]),
+      [S('Húc Cản Trước', 'FORGE', 1.15), ARC('Lao Qua Hai Người', 'FORGE', .9), B('Biết Hết Hẻm Một Chiều', 'spd', 34), X('Xịt Khói Xe', 'acc', 22)]),
     u('Người Rót Rượu Lậu', '🥃', 'mafia', 'grunt', 'VERDANT', .95, 400, 74, 34, 32, 94,
       [S('Ném Ly Dày', 'VERDANT', 1.1), H('Rót Một Ngón Tay', 104), X('Pha Thêm Thứ Khác', 'wrd', 26), B('Đứng Sau Quầy Gỗ', 'grd', 30)]),
     u('Ca Sĩ Phòng Trà', '🎤', 'mafia', 'grunt', 'STORM', .9, 350, 82, 24, 38, 106,
@@ -90,7 +90,7 @@ export default {
     u('Kẻ Nghe Điện Thoại', '☎️', 'hoikin', 'grunt', 'STORM', .9, 350, 80, 26, 38, 104,
       [MARK('Nghe Ra Địa Chỉ', 'STORM', .9), S('Ống Nghe Quật', 'STORM', 1.1), X('Cắt Cuộc Gọi', 'wrd', 26), B('Ghi Chép Rất Nhanh', 'acc', 26)]),
     u('Người Dán Áp Phích', '📌', 'hoikin', 'grunt', 'FROST', .95, 380, 76, 32, 34, 96,
-      [S('Đóng Đinh Găm', 'FROST', 1.1), MARK('Dán Ảnh Ngươi Lên Tường', 'FROST', .9), X('Hồ Dán Vào Mắt', 'acc', -24), B('Đi Trước Tin Xấu', 'spd', 28)]),
+      [S('Đóng Đinh Găm', 'FROST', 1.1), MARK('Dán Ảnh Ngươi Lên Tường', 'FROST', .9), X('Hồ Dán Vào Mắt', 'acc', 24), B('Đi Trước Tin Xấu', 'spd', 28)]),
     u('Gã Cho Vay Nặng Lãi', '💰', 'hoikin', 'grunt', 'FORGE', 1.05, 440, 76, 42, 32, 86,
       [S('Cặp Tiền Đập', 'FORGE', 1.1), STEAL('Thu Lãi Ngày', 24), X('Nhắc Ngày Tới Hạn', 'pwr', 26), B('Chưa Cần Dùng Tay', 'grd', 32)])
   ],

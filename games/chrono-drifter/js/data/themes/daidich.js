@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -58,7 +58,7 @@ export default {
     u('Người Ghi Sổ Tử', '📓', 'thay', 'grunt', 'STEEL', .9, 350, 78, 28, 36, 100,
       [S('Đập Sổ Dày', 'STEEL', 1.1), MARK('Ghi Tên Vào Lề', 'STEEL', .9), X('Đọc To Con Số', 'wrd', 26), B('Tay Viết Rất Nhanh', 'acc', 26)]),
     u('Bà Nấu Thuốc Rẻ', '🫕', 'thay', 'grunt', 'VERDANT', .95, 410, 72, 36, 38, 88,
-      [S('Muôi Nóng', 'VERDANT', 1.05), H('Bát Thuốc Đắng', 108), REGEN('Nồi Vẫn Sôi', 38), X('Khói Thuốc Cay', 'acc', -22)]),
+      [S('Muôi Nóng', 'VERDANT', 1.05), H('Bát Thuốc Đắng', 108), REGEN('Nồi Vẫn Sôi', 38), X('Khói Thuốc Cay', 'acc', 22)]),
 
     u('Kẻ Dẫn Đoàn Roi', '⛓️', 'hanhxac', 'legend', 'UMBRA', 1.15, 600, 102, 44, 42, 92,
       [S('Roi Đầu Sắt', 'UMBRA', 1.3), R('Cả Đoàn Cùng Chịu', 'pwr', 32), DOT('Vết Roi Không Lành', 'UMBRA', .85, 44), B('Đau Là Đúng', 'crt', 30)],
@@ -75,7 +75,7 @@ export default {
     u('Kẻ Hát Thánh Ca Lạc Giọng', '🎼', 'hanhxac', 'grunt', 'STORM', .9, 360, 80, 26, 36, 100,
       [SILENCE('Hát Át Mọi Lời', 'STORM', .9), S('Sách Ca Đập', 'STORM', 1.1), R('Cả Đoàn Hát Theo', 'pwr', 26), B('Giọng Đã Vỡ', 'wrd', 30)]),
     u('Đứa Trẻ Cầm Nến', '🪔', 'hanhxac', 'grunt', 'EMBER', .7, 310, 78, 22, 34, 112,
-      [S('Nến Chạm Vào', 'EMBER', 1.1), H('Che Nến Cho Người Bên Cạnh', 100), B('Nến Chưa Bao Giờ Tắt', 'wrd', 32), X('Nhỏ Sáp Nóng', 'acc', -22)]),
+      [S('Nến Chạm Vào', 'EMBER', 1.1), H('Che Nến Cho Người Bên Cạnh', 100), B('Nến Chưa Bao Giờ Tắt', 'wrd', 32), X('Nhỏ Sáp Nóng', 'acc', 22)]),
 
     u('Chúa Chuột Cống Lớn', '🐀', 'chuot', 'legend', 'UMBRA', 1.35, 660, 102, 48, 38, 104,
       [S('Răng Cửa Dài', 'UMBRA', 1.3), ARC('Cả Bầy Ùa Ra', 'UMBRA', .95), DOT('Vết Cắn Nhiễm', 'UMBRA', .85, 44), B('Mèo Đã Đi Hết', 'pwr', 38)],
@@ -90,13 +90,13 @@ export default {
     u('Chuột Gác Mái', '🐭', 'chuot', 'grunt', 'FROST', .8, 330, 80, 24, 30, 122,
       [S('Gặm Trong Đêm', 'FROST', 1.1), X('Không Cho Ai Ngủ', 'wrd', 26), B('Chạy Trên Xà', 'spd', 34), ARC('Bầy Nhỏ Chạy Qua', 'FROST', .85)]),
     u('Đàn Bọ Trong Nệm', '🛏️', 'chuot', 'grunt', 'VERDANT', .9, 380, 74, 34, 32, 84,
-      [DOT('Cắn Khi Người Ta Ngủ', 'VERDANT', .8, 40), S('Bò Kín Người', 'VERDANT', 1.05), X('Ngứa Không Chịu Được', 'acc', -24), B('Chờ Rất Kiên Nhẫn', 'grd', 30)]),
+      [DOT('Cắn Khi Người Ta Ngủ', 'VERDANT', .8, 40), S('Bò Kín Người', 'VERDANT', 1.05), X('Ngứa Không Chịu Được', 'acc', 24), B('Chờ Rất Kiên Nhẫn', 'grd', 30)]),
     u('Quạ Ăn Xác Thành', '🐦‍⬛', 'chuot', 'grunt', 'UMBRA', .9, 340, 84, 24, 30, 116,
       [EXEC('Rỉa Kẻ Đã Yếu', 'UMBRA', 1.15), S('Mổ Mắt', 'UMBRA', 1.1), B('Không Phải Bay Đi Đâu', 'spd', 30), MARK('Đậu Lên Mái Nhà Đó', 'UMBRA', .85)])
   ],
   mooks: [
     mook('Người Đào Huyệt Thuê', '🪦', 'FORGE', .9, 190, 52, 30, 16, 80,
-      [S('Xẻng Sắt', 'FORGE', 1.05), B('Lưng Rất Khoẻ', 'grd', 26), X('Ném Đất Vào Mặt', 'acc', -20), S('Cán Xẻng Quật', 'STEEL', .9)]),
+      [S('Xẻng Sắt', 'FORGE', 1.05), B('Lưng Rất Khoẻ', 'grd', 26), X('Ném Đất Vào Mặt', 'acc', 20), S('Cán Xẻng Quật', 'STEEL', .9)]),
     mook('Kẻ Bán Thuốc Giả', '🧪', 'VERDANT', .7, 150, 48, 18, 20, 106,
       [S('Ném Lọ Thuốc', 'VERDANT', 1.05), X('Nói Thánh Nói Tướng', 'wrd', 20), B('Chạy Trước Khi Bị Đánh', 'spd', 28), H('Nước Sông Pha Mật', 88)])
   ],

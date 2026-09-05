@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -50,7 +50,7 @@ export default {
       [S('Móng Trời', 'STORM', 1.3), ARC('Vòng Lượn', 'STORM', .9), B('Cất Cánh', 'spd', 38), EXEC('Bổ Nhào Cuối', 'STORM', 1.1)],
       UEXEC('MẮT CỦA HORUS', 'STORM', 1.5)),
     u('Nữ Tư Tế Isis', '🪬', 'ra', 'elite', 'RADIANT', .95, 330, 76, 28, 48, 96,
-      [S('Lời Chú', 'RADIANT', 1.1), H('Cánh Isis', 130), REVIVE('Hồi Sinh Osiris', .45), CLEANSE('Nước Sông Thánh', 90)]),
+      [S('Lời Chú', 'RADIANT', 1.1), H('Cánh Isis', 130), REGEN('Bùa Osiris', 46), CLEANSE('Nước Sông Thánh', 90)]),
     u('Lính Kopesh', '🗡️', 'ra', 'elite', 'STEEL', 1.0, 460, 88, 44, 28, 92,
       [S('Lưỡi Cong', 'STEEL', 1.2), R('Đội Hình Đền', 'grd', 30), PIERCE('Xuyên Giáp Đồng', 'STEEL', 1.05), X('Chặt Gân', 'spd', 26)]),
     u('Người Giữ Đèn', '🕯️', 'ra', 'grunt', 'EMBER', .9, 340, 74, 28, 36, 94,

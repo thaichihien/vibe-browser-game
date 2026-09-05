@@ -389,8 +389,15 @@ body.at-vortex .roll-card {
   flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .deck-hd .hint { font-size: 10.5px; color: var(--ink-dim); letter-spacing: .05em;
   flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.moves { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 7px;
+/* The column count is stated rather than left to auto-fit: on a laptop the deck is
+   wide enough for five, which left the sixth slot alone on a row of its own. Four
+   across puts the six slots in two even rows of three-and-three... four-and-two,
+   and keeps the buttons wide enough to read at every width. */
+.moves { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px;
   align-content: start; position: relative; }
+@media (max-width: 1120px) { .moves { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 620px)  { .moves { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 400px)  { .moves { grid-template-columns: 1fr; } }
 /* not your turn: the grid keeps its height, and says whose turn it is instead */
 .moves[data-wait]::after {
   content: attr(data-wait); position: absolute; inset: 0;

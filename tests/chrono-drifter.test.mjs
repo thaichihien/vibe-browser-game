@@ -11,15 +11,16 @@ import { CONSUMABLES, RELICS, SHOP } from '../games/chrono-drifter/js/data/shop.
 import { mult, RING, ELEMENTS, STRONG, WEAK, EL_ICON, weakTo, strongAgainst, resists }
   from '../games/chrono-drifter/js/engine/elements.js';
 import { EFFECTS, effectsOf } from '../games/chrono-drifter/js/data/effects.js';
-import { ARCHETYPES, tagOf, WAIT, costOf, EP_MAX, EP_REGEN, EP_WAIT, DMG }
+import { ARCHETYPES, tagOf, WAIT, costOf, EP_MAX, EP_REGEN, EP_WAIT, DMG, X, XALL }
   from '../games/chrono-drifter/js/engine/moves.js';
 import { FORMATS, DIFFICULTIES, fleeCost, FLEE_GRACE_TURNS, FORMAT_WORTH, winShards, lossShards }
   from '../games/chrono-drifter/js/engine/formats.js';
 import { generate, balance } from '../games/chrono-drifter/js/engine/generator.js';
 import { createBattle, nextActor, openTurn, resolve, legalMoves, targetsFor,
          turnOrder, living, statOf, damageOf, checkEnd, hitChance, critChance,
-         pointStat, canAfford, BASE_ACC, BASE_CRIT } from '../games/chrono-drifter/js/engine/combat.js';
+         pointStat, canAfford, applyStat, BASE_ACC, BASE_CRIT } from '../games/chrono-drifter/js/engine/combat.js';
 import { chooseAction } from '../games/chrono-drifter/js/engine/ai.js';
+import { useItem } from '../games/chrono-drifter/js/engine/items.js';
 import { EVENTS, eligible, due, fire, rollPeriod, byId as eventById, LEADINS,
          PERIOD_MIN, PERIOD_MAX, GRACE_TURNS } from '../games/chrono-drifter/js/engine/events.js';
 import { RIDER_CHANCE, CC_IMMUNE_TURNS, ridersOf } from '../games/chrono-drifter/js/engine/moves.js';
@@ -73,6 +74,146 @@ test('every era carries 20+ characters across three factions', () => {
     assert.ok(era.mooks.length >= 2, `${era.key} needs a mook pool`);
     assert.ok(era.boss, `${era.key} needs a boss`);
   }
+});
+
+/* A debuff's `pct` is a magnitude, not a signed delta — resolve() subtracts it.
+   Forty-eight moves across eleven eras were written with a minus, which negated
+   twice: the button read "−-24đ chính xác" and the enemy walked away with +24
+   accuracy. The constructor now strips the sign; these lock both halves down. */
+/* An item is help, not a turn. It used to cost the whole action, which meant a heal
+   was only affordable on a turn you could spare — and a boss acting once every five
+   enemy turns can never spare one. The satchel no longer moves the battle clock, so
+   it cannot age the flee window, the era-event schedule or the fatigue cap either. */
+test('reaching into the satchel costs no turn', () => {
+  const g = generate(ERAS, { seed: 11, formatKey: 'even', difficulty: 2 });
+  const s = createBattle({ era: g.era, format: g.format, mine: g.mine, foes: g.foes,
+    difficulty: g.difficulty, rng: g.rng, seed: g.seed, allEras: ERAS });
+  const me = living(s, 'ally')[0];
+  const hurt = living(s, 'ally').at(-1);
+  hurt.hp = Math.round(hurt.max * .4);
+
+  const clock = s.turns;
+  const ev = useItem(s, me, CONSUMABLES.find(i => i.id === 'energy'), hurt.uid);
+  assert.ok(ev && ev.length, 'the drink should do something');
+  assert.ok(hurt.hp > Math.round(hurt.max * .4), 'and heal');
+  assert.equal(s.turns, clock, 'but the battle clock must not move');
+
+  // the mover still has their move: nothing about the unit was spent
+  assert.ok(legalMoves(s, me).some(m => !m.locked), 'the fighter can still act');
+});
+
+/* Raising the dead is an ultimate, not a skill. As an ordinary move it raised the
+   same fighter up to nine times in one battle and stretched those battles from 56
+   turns to 70 — the fight stopped being winnable and started being long. */
+test('nothing but an ultimate brings a fighter back', () => {
+  assert.ok(!ARCHETYPES.includes('REVIVE'), 'the archetype library should not offer one');
+  let ults = 0;
+  for (const era of ERAS) {
+    for (const u of [...era.units, ...era.mooks, era.boss]) {
+      for (const m of u.mv) {
+        assert.ok(!m.revive && !m.reviveAll,
+          `${era.key}/${u.n}: ${m.name} raises the dead as an ordinary move`);
+      }
+      if (u.ult && (u.ult.revive || u.ult.reviveAll)) {
+        ults++;
+        assert.ok(u.ult.ult, `${era.key}/${u.n}: a raise must be flagged as an ultimate`);
+      }
+    }
+  }
+  assert.ok(ults >= 3, `only ${ults} ultimates can raise anyone — the shape should survive`);
+});
+
+/* Stat modifiers used to multiply. Three slows put a target at 0.72^3 = 37% speed,
+   and a boss — alone, and the only thing four enemies can aim at — could be held
+   there permanently. One entry per stat per direction now, strongest wins. */
+test('the same debuff twice is one debuff, not two', () => {
+  const u = { spd: 100, buffs: [] };
+  applyStat(u, 'spd', -24, 4);
+  applyStat(u, 'spd', -24, 4);
+  applyStat(u, 'spd', -30, 4);
+  assert.equal(u.buffs.length, 1, 'three slows should share one entry');
+  assert.equal(u.buffs[0].pct, -30, 'the strongest magnitude applies');
+  assert.equal(statOf(u, 'spd'), 70, 'and it is applied once, not three times');
+
+  // a weaker one afterwards refreshes the timer without weakening the hold
+  u.buffs[0].t = 1;
+  applyStat(u, 'spd', -24, 4);
+  assert.equal(u.buffs[0].pct, -30);
+  assert.equal(u.buffs[0].t, 4);
+});
+
+test('a haste still answers a slow, and relics stay out of it', () => {
+  const u = { spd: 100, buffs: [] };
+  applyStat(u, 'spd', -30, 4);
+  applyStat(u, 'spd', 40, 4);
+  assert.equal(u.buffs.length, 2, 'opposite directions coexist');
+  assert.equal(Math.round(statOf(u, 'spd')), 98, '0.7 x 1.4');
+
+  const v = { grd: 100, buffs: [{ stat: 'grd', pct: 10, t: 999, perm: true }] };
+  applyStat(v, 'grd', 20, 2);
+  assert.equal(v.buffs.length, 2, 'a permanent relic buff is never folded into');
+  assert.equal(v.buffs[0].t, 999, 'and never has its timer touched');
+});
+
+test('no unit ever holds two same-direction modifiers on one stat', () => {
+  for (let seed = 1; seed <= 120; seed++) {
+    const g = generate(ERAS, { seed, formatKey: 'boss', difficulty: 2 });
+    const s = createBattle({ era: g.era, format: g.format, mine: g.mine, foes: g.foes,
+      difficulty: g.difficulty, rng: g.rng, seed: g.seed, allEras: ERAS });
+    for (let i = 0; i < 1200 && !s.over; i++) {
+      const actor = nextActor(s);
+      if (!actor) break;
+      openTurn(s, actor);
+      if (!actor.alive) continue;
+      if (checkEnd(s)) break;
+      const { move, targetUid } = chooseAction(s, actor);
+      resolve(s, actor, move, targetUid);
+      actor.extraTurns = 0;
+      for (const u of s.units) {
+        const seen = new Set();
+        for (const b of u.buffs) {
+          if (!b.stat || b.perm) continue;
+          const key = `${b.stat}${Math.sign(b.pct)}`;
+          assert.ok(!seen.has(key), `seed ${seed}: ${u.n} stacked ${key}`);
+          seen.add(key);
+        }
+      }
+    }
+  }
+});
+
+test('a debuff written with a minus still debuffs', () => {
+  assert.equal(X('Bom Khói', 'acc', -24).pct, 24, 'the constructor takes a magnitude');
+  assert.equal(XALL('Che Kín Mắt', 'spd', -30).pct, 30);
+
+  for (const era of ERAS) {
+    for (const u of [...era.units, ...era.mooks, era.boss]) {
+      for (const m of u.mv) {
+        if (m.kind !== 'debuff' || !m.stat) continue;
+        assert.ok(m.pct > 0, `${era.key}/${u.n}/${m.name} carries a signed pct (${m.pct})`);
+        assert.ok(!tagOf(m, era).includes('−-'), `${era.key}/${u.n}/${m.name} prints a double minus`);
+      }
+    }
+  }
+});
+
+test('an accuracy hex lowers the target, and says so the same way twice', () => {
+  const era = ERAS[0];
+  const hex = X('Bom Khói', 'acc', -24);
+  const B = createBattle({ era, format: FORMATS[1], difficulty: DIFFICULTIES[2],
+    mine: [{ ...era.units[0], mv: [hex, ...era.units[0].mv.slice(1)] }],
+    foes: [era.units[1]], rng: mulberry32(7), seed: 7 });
+  const [me] = living(B, 'ally'), [foe] = living(B, 'foe');
+  const before = pointStat(foe, 'acc', BASE_ACC);
+  resolve(B, me, hex, foe.uid);
+  const after = pointStat(foe, 'acc', BASE_ACC);
+  assert.equal(after, before - 24, `accuracy should fall, went ${before} → ${after}`);
+
+  // the button, the status chip and the arithmetic must agree on the direction
+  assert.match(tagOf(hex, era), /−24đ/);
+  const chip = effectsOf(foe).find(e => e.label.startsWith('Chính xác'));
+  assert.equal(chip.label, 'Chính xác -24đ');
+  assert.equal(chip.kind ?? 'debuff', chip.kind ?? 'debuff');
 });
 
 test('every character has exactly four moves, plus WAIT as the fifth option', () => {

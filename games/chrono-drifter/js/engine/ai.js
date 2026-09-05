@@ -71,7 +71,7 @@ export function chooseAction(state, actor) {
   }
 
   // set up instead of swinging, sometimes — a metronome is not an opponent
-  const util = moves.filter(m => m.kind === BUFF || m.kind === DEBUFF);
+  const util = moves.filter(m => m.kind === BUFF || m.kind === DEBUFF).filter(m => !stale(state, actor, m));
   const setupChance = tier >= 3 ? .16 : tier === 2 ? .2 : .3;
   if (util.length && (!best || rng() < setupChance)) {
     const m = util[Math.floor(rng() * util.length)];
@@ -82,6 +82,22 @@ export function chooseAction(state, actor) {
     return { move: m, targetUid: firstTarget(state, actor, m, rng) };
   }
   return { move: best.move, targetUid: best.tgt ? best.tgt.uid : null };
+}
+
+/* Stat modifiers do not stack any more, so re-applying one already at full
+   strength buys nothing. Before, four enemies would each spend turns re-slowing
+   the same boss; now they swing instead. Only counts as stale when EVERY unit the
+   move would touch already carries it — a rally that reaches one fresh ally is
+   still worth casting. */
+function stale(state, actor, m) {
+  if (!m.stat) return false;
+  const dir = m.kind === DEBUFF ? -1 : 1;
+  const targets = m.kind === DEBUFF
+    ? living(state, actor.side === 'ally' ? 'foe' : 'ally')
+    : (m.team ? living(state, actor.side) : [actor]);
+  if (!targets.length) return false;
+  return targets.every(t => t.buffs.some(b =>
+    b.stat === m.stat && Math.sign(b.pct) === dir && Math.abs(b.pct) >= m.pct));
 }
 
 /** Some ultimates do nothing at all in the wrong moment. Do not burn the meter. */

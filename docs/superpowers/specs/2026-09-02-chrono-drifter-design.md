@@ -165,6 +165,73 @@ cannot see are not a decision.
 
 Measured over 600 simulated battles: **7.7% miss rate, 9.1% crit rate.**
 
+### An item is help, not a turn
+
+Using a satchel item no longer ends your turn — you use it and still act. It used to
+cost the whole action, which meant a heal was only ever affordable on a turn you
+could spare, and a boss acting once in every five enemy turns can never spare one.
+
+**One item per turn** is the remaining limit, so a turn is at most one item plus one
+move rather than a five-item dump. The real cost sits where it always did: five
+satchel slots, and every consumable bought with ⧗.
+
+`useItem()` also stopped incrementing `state.turns` — an item that costs no turn must
+not age the flee window, the era-event schedule or the fatigue cap. A granted extra
+turn (the power bank, Time Stop) resets the allowance, because a turn is a turn.
+
+### Raising the dead is an ultimate, not a skill
+
+There is no `REVIVE` archetype. A fighter comes back one of two ways: an **ultimate**
+(`URAISE`, four of them across the 23 eras, gated behind a full charge bar) or a
+**bought item** (the ice pack, one satchel slot and 280 ⧗). Never a move you can
+spend a turn on and then spend again next turn.
+
+Sixteen characters used to carry it as an ordinary skill. Measured over 500 AI
+battles: it landed in 6.8% of them, and where it landed it was cast **1.94 times**;
+twelve fighters were raised three or more times and one came back **nine times**.
+Battles with a reviver on the field ran a median of **70 turns against 56** without
+one — the fight stopped being winnable and started being long, which is the same
+failure the fatigue cap exists to prevent.
+
+The sixteen kept their identity and lost the loop: the necromancers took `DRAIN`
+(*Gọi Hồn*, *Gọi Tổ Tiên*, *Kéo Xác Lên Boong* — the name still fits when it is your
+life it is calling), the medics took `REGEN` or `CLEANSE` (*Khởi Động Lại* now
+reboots a status instead of a corpse), the defibrillator became a `STUN` (*Sốc
+Điện*), and the cult midwife's *Chưa Cho Đi Đâu Cả* became the `TAUNT` it always
+sounded like. Two of the sixteen — the Draugr king and the bone shaman — already had
+`URAISE` ultimates, so their skill slot was pure redundancy.
+
+### Stat modifiers do not stack either
+
+One buff and one debuff per stat, and no deeper. They used to multiply: three slows
+left a target at `0.72³ = 37%` speed, and a boss — alone, and the only thing four
+enemies can aim at — could be held there permanently, which is a spectator seat
+rather than a fight. Same stat and same direction now share one entry, the strongest
+magnitude applies, and re-applying refreshes the timer instead of deepening the hold.
+
+Opposite directions still coexist and cancel out multiplicatively, so a slow can be
+answered with a haste. Permanent relic buffs (`perm: true`) sit outside the rule
+entirely — nothing refreshes them, so nothing may fold them in either. Every stat
+change in the game routes through `applyStat()`: moves, ultimates, the WAIT guard,
+era events and items alike.
+
+The AI stopped re-applying what is already there. It used to pick a random utility
+move on 16–30% of turns with no check, so four enemies would spend their turns
+re-slowing the same boss; a modifier already at full strength on every unit the move
+would touch is now skipped, and those turns go into attacks instead.
+
+Measured over 400 boss-format battles, before → after:
+
+| | before | after |
+|---|---|---|
+| deepest slow stack | 6 | **1** |
+| worst speed multiplier | ×0.135 | **×0.680** |
+| boss share of all turns | 18.3% | 19.4% |
+| boss survives | 35.8% | **39.3%** |
+
+How often a lone unit is slowed at all barely moved (13.9% → 13.6% of its turns),
+which is the intent: one slow is a real tactic, four on top of each other is not.
+
 ### Riders roll separately, and control cannot be chained
 
 A move landing and its rider landing are two different questions. Burn and mark apply at 85%;
@@ -336,6 +403,15 @@ A rat is not a dragon is not a boss. Final glyph size is
 colliding. Measured across every format, the worst sprite overlap is under 30% of the
 smaller sprite, and zero in the crowded ones.
 
+### Death is an animation, and animations outlive the thing they played on
+
+The death keyframes end on `fill: 'forwards'` — that is what keeps a body down after
+they finish. It also outlives the death: "Hồi Quang" put a fallen fighter back on the
+field still holding `opacity: 0`, `rotate: 80deg` and `translate: 0 26px`, so they
+were invisible, sitting off their own tile, and impossible to click. `paint()` cancels
+the death animation whenever a unit is alive, which covers every way one comes back —
+the era event, the revive moves, `URAISE` and the ice pack.
+
 ### Animation beats
 
 | Beat | What happens |
@@ -430,6 +506,19 @@ Rows wrap to at most two lines and carry their full text as a tooltip. About ten
 eleven are on screen at once and the rest are one scroll up — the panel is as tall as the
 deck beside it, and buying the last four rows would have meant a taller console than the
 battlefield can spare.
+
+### Two conventions the data can no longer break
+
+**A debuff's `pct` is a magnitude, not a signed delta.** `resolve()` subtracts it, so
+a move written `X('Bom Khói', 'acc', -24)` was negated twice: the button read
+`−-24đ chính xác` and the enemy walked away with **+24 accuracy**. Forty-eight moves
+across eleven eras were written that way. `X`/`XALL` now take the sign out of the
+caller's hands, the data reads positive, and a test walks every era asserting no
+debuff carries a signed `pct` and no tag prints a double minus.
+
+**Point stats are points everywhere.** `acc` and `crt` move in percentage points, and
+the status chip said `%` while the move button said `đ` — the same number, two units.
+Both say `đ` now.
 
 ### Fleeing
 

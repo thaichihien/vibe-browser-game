@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -50,7 +50,7 @@ export default {
       [S('Thanh Nhiên Liệu', 'STORM', 1.3), AOE('Rò Rỉ', 'STORM', .8), DOT('Nhiễm Xạ', 'STORM', .7, 40), B('Quá Tải Lò', 'pwr', 34)],
       UCHAIN('TAN CHẢY LÒ', 'STORM', 1.5)),
     u('Y Tá Hầm Trú', '💉', 'vault', 'elite', 'RADIANT', .95, 340, 74, 30, 46, 94,
-      [S('Kim Tiêm', 'RADIANT', 1.05), H('Truyền Dịch', 132), REVIVE('Sốc Điện', .4), CLEANSE('Thuốc Kháng Xạ', 88)]),
+      [S('Kim Tiêm', 'RADIANT', 1.05), H('Truyền Dịch', 132), STUN('Sốc Điện', 'STORM', .85), CLEANSE('Thuốc Kháng Xạ', 88)]),
     u('Lính Gác Cửa Hầm', '🪖', 'vault', 'elite', 'STEEL', 1.0, 480, 86, 46, 30, 88,
       [S('Súng Trường Cũ', 'STEEL', 1.2), R('Bịt Lối', 'grd', 30), STUN('Báng Súng', 'STEEL', .85), B('Giáp Chắp Vá', 'grd', 32)]),
     u('Thợ Sửa Máy Lọc', '🔧', 'vault', 'grunt', 'TIDE', .95, 420, 70, 40, 32, 84,

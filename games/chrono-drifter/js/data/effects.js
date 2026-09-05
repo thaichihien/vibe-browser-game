@@ -1,7 +1,10 @@
 /* What every status chip means, in one place, so the inspect panel can explain
    itself on hover instead of leaving the player to guess at an emoji. DOM-free. */
 
-const STAT_VI = { pwr: 'Sức mạnh', grd: 'Giáp vật lý', wrd: 'Kháng nguyên tố', spd: 'Tốc độ' };
+import { POINT_STATS } from '../engine/moves.js';
+
+const STAT_VI = { pwr: 'Sức mạnh', grd: 'Giáp vật lý', wrd: 'Kháng nguyên tố', spd: 'Tốc độ',
+                  acc: 'Chính xác', crt: 'Chí mạng' };
 
 export const EFFECTS = {
   shield:    { icon: '🛡️', name: 'Khiên',        desc: 'Hấp thụ sát thương trước khi máu bị trừ. Vỡ khi hết điểm khiên.' },
@@ -43,9 +46,11 @@ export function effectsOf(u) {
     if (!b.stat) continue;
     const name = STAT_VI[b.stat] || b.stat;
     const up = b.pct > 0;
+    // acc and crt move in percentage POINTS; saying % here contradicted the button
+    const unit = POINT_STATS.includes(b.stat) ? 'đ' : '%';
     push(up ? 'buff' : 'debuff', {
-      label: `${name} ${up ? '+' : ''}${b.pct}%`,
-      desc: `${name} đang ${up ? 'tăng' : 'giảm'} ${Math.abs(b.pct)}% trong ${b.t} lượt nữa.`
+      label: `${name} ${up ? '+' : ''}${b.pct}${unit}`,
+      desc: `${name} đang ${up ? 'tăng' : 'giảm'} ${Math.abs(b.pct)}${unit} trong ${b.t} lượt nữa.`
     });
   }
   return out;

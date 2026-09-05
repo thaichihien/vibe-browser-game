@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -47,7 +47,7 @@ export default {
       [S('Rìu Vua', 'STEEL', 1.3), TAUNT('Tường Khiên', 150), R('Lời Thề Valhalla', 'pwr', 32), H('Mật Ong Chiến', 118)],
       UGUARD('KHÚC CA TỬ TRẬN', 190, 43)),
     u('Valkyrie Cánh Bạc', '🕊️', 'einherjar', 'legend', 'RADIANT', 1.1, 540, 100, 40, 48, 112,
-      [S('Giáo Ánh Sáng', 'RADIANT', 1.3), REVIVE('Đón Về Valhalla', .5), HALL('Cánh Che Chở', 95), ARC('Bổ Nhào', 'RADIANT', .9)],
+      [S('Giáo Ánh Sáng', 'RADIANT', 1.3), BARRIER('Cánh Chắn Bạc', 155), HALL('Cánh Che Chở', 95), ARC('Bổ Nhào', 'RADIANT', .9)],
       UMEND('CỔNG VALHALLA MỞ', 275)),
     u('Berserker Da Gấu', '🐻', 'einherjar', 'elite', 'EMBER', 1.25, 560, 104, 34, 26, 100,
       [S('Cuồng Chém', 'EMBER', 1.35), B('Điên Máu', 'pwr', 45), RAMP('Càng Đánh Càng Hăng', 'EMBER', 1.0), EXEC('Xé Toạc', 'EMBER', 1.15)]),
@@ -78,7 +78,7 @@ export default {
       [S('Quẫy Đuôi', 'TIDE', 1.15), DOT('Nọc Mặn', 'TIDE', .7, 36), DRAIN('Cuốn Siết', 'TIDE', .9), X('Sóng Đánh', 'grd', 26)]),
 
     u('Draugr Vua Mộ', '⚰️', 'draugr', 'legend', 'UMBRA', 1.2, 700, 94, 54, 44, 70,
-      [PIERCE('Kiếm Mộ', 'UMBRA', 1.25), AOE('Sương Hel', 'UMBRA', .85), REVIVE('Trỗi Dậy', .45), DRAIN('Rút Hơi Ấm', 'UMBRA', 1.0)],
+      [PIERCE('Kiếm Mộ', 'UMBRA', 1.25), AOE('Sương Hel', 'UMBRA', .85), STUN('Bàn Tay Dưới Đất', 'UMBRA', .9), DRAIN('Rút Hơi Ấm', 'UMBRA', 1.0)],
       URAISE('CẢ GÒ MỘ THỨC DẬY', .5)),
     u('Nữ Phù Thuỷ Seidr', '🔮', 'draugr', 'legend', 'FROST', .95, 380, 102, 26, 48, 106,
       [S('Lời Nguyền Băng', 'FROST', 1.25), XALL('Điềm Xấu', 'pwr', 24), SILENCE('Trói Lưỡi', 'FROST', .9), MARK('Sợi Định Mệnh', 'FROST', .9)],

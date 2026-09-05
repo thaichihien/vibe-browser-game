@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -58,7 +58,7 @@ export default {
     u('Lính Gác Cửa Ngục', '⛓️', 'diem', 'grunt', 'FORGE', 1.1, 470, 76, 50, 26, 76,
       [S('Xích Quật', 'FORGE', 1.1), TAUNT('Chắn Cửa', 138), B('Sáu Trăm Năm Một Chỗ', 'grd', 34), X('Khoá Cổ', 'spd', 24)]),
     u('Người Cầm Đèn Dẫn Hồn', '🏮', 'diem', 'grunt', 'RADIANT', .9, 350, 80, 26, 36, 106,
-      [S('Đèn Chạm Vào', 'RADIANT', 1.1), H('Soi Đường Cho Đồng Liêu', 104), B('Đi Trước Ba Bước', 'spd', 30), X('Che Đèn', 'acc', -24)]),
+      [S('Đèn Chạm Vào', 'RADIANT', 1.1), H('Soi Đường Cho Đồng Liêu', 104), B('Đi Trước Ba Bước', 'spd', 30), X('Che Đèn', 'acc', 24)]),
 
     u('Ngưu Đầu', '🐂', 'quysai', 'legend', 'FORGE', 1.45, 740, 102, 56, 36, 76,
       [S('Chuỳ Đầu Trâu', 'FORGE', 1.35), TAUNT('Đứng Giữa Cầu', 180), AOE('Quét Ngang', 'FORGE', .9), B('Nợ Nhang Phải Trả', 'pwr', 38)],
@@ -73,7 +73,7 @@ export default {
     u('Chó Ngao Canh Cầu', '🐕', 'quysai', 'grunt', 'UMBRA', 1.1, 440, 84, 34, 26, 116,
       [S('Ba Miệng Cùng Cắn', 'UMBRA', 1.15), ARC('Vờn Hai Bên', 'UMBRA', .85), B('Không Ngủ', 'spd', 30), EXEC('Cắn Không Nhả', 'UMBRA', 1.1)]),
     u('Quỷ Đầu Trâu Nhỏ', '🐃', 'quysai', 'grunt', 'FORGE', 1.05, 450, 74, 46, 26, 80,
-      [S('Húc Sừng Non', 'FORGE', 1.1), TAUNT('Đứng Chặn Theo Đúng Lệ', 130), B('Hỏi Giấy Rất Kỹ', 'grd', 32), X('Đọc Sai Tên', 'acc', -22)]),
+      [S('Húc Sừng Non', 'FORGE', 1.1), TAUNT('Đứng Chặn Theo Đúng Lệ', 130), B('Hỏi Giấy Rất Kỹ', 'grd', 32), X('Đọc Sai Tên', 'acc', 22)]),
     u('Sai Nha Đòi Nhang', '🕯️', 'quysai', 'grunt', 'EMBER', .95, 380, 80, 30, 30, 98,
       [S('Bó Nhang Cháy', 'EMBER', 1.1), STEAL('Thu Hết Nhang Khói', 24), DOT('Tàn Nhang Bám Áo', 'EMBER', .75, 36), B('Đòi Được Là Về', 'pwr', 28)]),
 
@@ -84,7 +84,7 @@ export default {
       [S('Vục Tay Vào Mâm', 'VERDANT', 1.3), DRAIN('Hút Sạch Cỗ Cúng', 'VERDANT', 1.05), B('Bụng Không Đáy', 'pwr', 36), DOT('Cái Đói Lây Sang', 'VERDANT', .8, 42)],
       URAISE('CẢ CHỢ MA ĐỨNG DẬY', .5)),
     u('Đèn Ma Trơi', '🔵', 'cohon', 'elite', 'STORM', .85, 380, 100, 22, 46, 122,
-      [S('Lửa Xanh Chạm Mặt', 'STORM', 1.25), X('Dẫn Sai Đường', 'acc', -26), B('Tắt Rồi Sáng Chỗ Khác', 'spd', 36), ARC('Chia Đôi Ngọn Lửa', 'STORM', .9)]),
+      [S('Lửa Xanh Chạm Mặt', 'STORM', 1.25), X('Dẫn Sai Đường', 'acc', 26), B('Tắt Rồi Sáng Chỗ Khác', 'spd', 36), ARC('Chia Đôi Ngọn Lửa', 'STORM', .9)]),
     u('Ma Da Kéo Chân', '🖐️', 'cohon', 'elite', 'TIDE', 1.05, 520, 94, 40, 34, 100,
       [DRAIN('Kéo Xuống Bến', 'TIDE', 1.05), S('Bàn Tay Trồi Lên', 'TIDE', 1.25), X('Níu Chân', 'spd', 30), STUN('Dìm Một Nhịp', 'TIDE', .9)]),
     u('Hồn Trẻ Mất Tên', '🧸', 'cohon', 'grunt', 'UMBRA', .7, 300, 84, 20, 34, 120,
@@ -92,13 +92,13 @@ export default {
     u('Ma Xó Góc Nhà', '🕸️', 'cohon', 'grunt', 'VERDANT', .9, 360, 78, 32, 32, 94,
       [S('Bụi Góc Nhà', 'VERDANT', 1.1), X('Kể Chuyện Cũ', 'pwr', 26), REGEN('Ở Đây Lâu Rồi', 36), B('Không Ra Khỏi Góc', 'grd', 32)]),
     u('Bóng Không Mặt', '👥', 'cohon', 'grunt', 'UMBRA', 1.0, 380, 82, 26, 38, 108,
-      [S('Đè Lên Người', 'UMBRA', 1.15), SILENCE('Bịt Miệng Trong Mơ', 'UMBRA', .9), B('Đứng Sai Chỗ Đèn', 'wrd', 32), X('Nhân Đôi Bóng', 'acc', -22)])
+      [S('Đè Lên Người', 'UMBRA', 1.15), SILENCE('Bịt Miệng Trong Mơ', 'UMBRA', .9), B('Đứng Sai Chỗ Đèn', 'wrd', 32), X('Nhân Đôi Bóng', 'acc', 22)])
   ],
   mooks: [
     mook('Hồn Mới Chưa Biết Mình Chết', '💀', 'UMBRA', .85, 175, 48, 24, 20, 92,
       [S('Vẫn Cố Bắt Tay', 'UMBRA', 1.0), X('Hỏi Đường Về Nhà', 'wrd', 20), B('Chưa Chấp Nhận', 'grd', 24), S('Đấm Yếu', 'STEEL', .85)]),
     mook('Hình Nhân Giấy', '🧧', 'EMBER', .75, 150, 50, 16, 14, 108,
-      [S('Giấy Cắt Ngón Tay', 'EMBER', 1.05), B('Cháy Rồi Lại Có Cái Khác', 'spd', 28), X('Rắc Tro', 'acc', -20), S('Đập Bằng Cả Người', 'FORGE', .9)])
+      [S('Giấy Cắt Ngón Tay', 'EMBER', 1.05), B('Cháy Rồi Lại Có Cái Khác', 'spd', 28), X('Rắc Tro', 'acc', 20), S('Đập Bằng Cả Người', 'FORGE', .9)])
   ],
   boss: boss('Vạc Dầu Ngàn Năm', '🍲', 'EMBER', 2.4, 2250, 116, 62, 56, 58,
     [AOE('Trào Ra Bốn Phía', 'EMBER', .95), DOT('Dầu Bám Không Rửa Được', 'EMBER', .9, 52), S('Miệng Vạc Đè', 'EMBER', 1.4), TAUNT('Thành Vạc Dày', 195)],

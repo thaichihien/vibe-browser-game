@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -56,9 +56,9 @@ export default {
     u('Thợ Bơm Khí', '🎈', 'hamdoi', 'grunt', 'FROST', 1.0, 440, 74, 44, 30, 84,
       [S('Ống Bơm Quật', 'FROST', 1.1), BARRIER('Bơm Căng Lớp Bọc', 150), B('Cả Tàu Trông Vào Mình', 'grd', 32), X('Xì Khí Lạnh', 'spd', 24)]),
     u('Lính Tín Hiệu Cờ', '🚩', 'hamdoi', 'grunt', 'RADIANT', .9, 370, 80, 28, 36, 106,
-      [S('Cán Cờ Quật', 'RADIANT', 1.1), R('Truyền Tín Hiệu', 'spd', 28), X('Phất Cờ Sai', 'acc', -24), B('Không Cần Hét', 'wrd', 30)]),
+      [S('Cán Cờ Quật', 'RADIANT', 1.1), R('Truyền Tín Hiệu', 'spd', 28), X('Phất Cờ Sai', 'acc', 24), B('Không Cần Hét', 'wrd', 30)]),
     u('Thợ Hàn Vỏ Tàu', '🔩', 'hamdoi', 'grunt', 'FORGE', 1.0, 450, 76, 46, 26, 82,
-      [S('Mỏ Hàn', 'FORGE', 1.1), REGEN('Vá Vỏ Đang Bay', 40), B('Buộc Bằng Một Sợi Dây', 'grd', 32), X('Xỉ Hàn Bắn Vào Mắt', 'acc', -22)]),
+      [S('Mỏ Hàn', 'FORGE', 1.1), REGEN('Vá Vỏ Đang Bay', 40), B('Buộc Bằng Một Sợi Dây', 'grd', 32), X('Xỉ Hàn Bắn Vào Mắt', 'acc', 22)]),
 
     u('Thuyền Trưởng Cướp Mây', '🏴‍☠️', 'cuop', 'legend', 'STEEL', 1.15, 620, 102, 46, 40, 104,
       [S('Đao Cong Trên Boong', 'STEEL', 1.3), ARC('Nhảy Sang Tàu Địch', 'STEEL', .95), STEAL('Vét Khoang Hàng', 26), B('Chia Phần Sòng Phẳng', 'crt', 30)],
@@ -69,13 +69,13 @@ export default {
     u('Tay Móc Neo', '⚓', 'cuop', 'elite', 'FORGE', 1.2, 580, 96, 48, 32, 90,
       [PIERCE('Móc Neo Xuyên', 'FORGE', 1.3), DRAIN('Kéo Sang Boong Mình', 'FORGE', 1.0), TAUNT('Ghim Hai Tàu Vào Nhau', 165), X('Ghìm Tại Chỗ', 'spd', 28)]),
     u('Kẻ Cưỡi Diều', '🪁', 'cuop', 'elite', 'TIDE', .9, 430, 98, 26, 38, 126,
-      [S('Dây Diều Cắt', 'TIDE', 1.25), SNIPE('Bổ Từ Trên Xuống', 'TIDE', 1.2), B('Không Có Gì Để Mất', 'spd', 36), X('Cắt Ngang Tầm Nhìn', 'acc', -24)]),
+      [S('Dây Diều Cắt', 'TIDE', 1.25), SNIPE('Bổ Từ Trên Xuống', 'TIDE', 1.2), B('Không Có Gì Để Mất', 'spd', 36), X('Cắt Ngang Tầm Nhìn', 'acc', 24)]),
     u('Thợ Máy Chân Gỗ', '🦿', 'cuop', 'grunt', 'STEEL', 1.05, 460, 78, 44, 28, 94,
       [S('Cờ Lê Nặng', 'STEEL', 1.1), REGEN('Chắp Vá Rất Nhanh', 38), B('Leo Nhanh Hơn Cả Đội', 'spd', 30), X('Tháo Mất Một Con Ốc', 'grd', 26)]),
     u('Xạ Thủ Súng Hơi', '🔫', 'cuop', 'grunt', 'EMBER', .95, 370, 84, 26, 30, 110,
       [SNIPE('Bắn Người Trên Boong', 'EMBER', 1.15), ARC('Xả Hai Phát', 'EMBER', .85), B('Nạp Hơi Sẵn', 'crt', 26), X('Bắn Vào Chân', 'spd', 24)]),
     u('Đầu Bếp Trên Tàu', '🍳', 'cuop', 'grunt', 'VERDANT', 1.0, 430, 72, 40, 32, 86,
-      [S('Chảo Gang', 'VERDANT', 1.1), H('Bữa Nóng Giữa Trời Lạnh', 108), B('Bếp Là Chỗ Ấm Nhất', 'grd', 30), X('Hắt Dầu Sôi', 'acc', -22)]),
+      [S('Chảo Gang', 'VERDANT', 1.1), H('Bữa Nóng Giữa Trời Lạnh', 108), B('Bếp Là Chỗ Ấm Nhất', 'grd', 30), X('Hắt Dầu Sôi', 'acc', 22)]),
 
     u('Đại Trưởng Lão Điểu Nhân', '🦅', 'dieu', 'legend', 'RADIANT', 1.2, 600, 94, 44, 52, 96,
       [S('Vuốt Trưởng Lão', 'RADIANT', 1.25), HALL('Tiếng Gọi Của Tổ', 96), CLEANSE('Rũ Sạch Lông Bẩn', 92), R('Nhớ Đường Bay Cũ', 'acc', 26)],
@@ -86,17 +86,17 @@ export default {
     u('Người Giữ Trứng Tổ Lớn', '🥚', 'dieu', 'elite', 'VERDANT', 1.15, 620, 88, 56, 42, 68,
       [TAUNT('Ôm Kín Tổ', 175), S('Mỏ Bổ', 'VERDANT', 1.25), REGEN('Bốn Mươi Ngày Không Rời', 46), B('Không Lùi Nửa Bước', 'grd', 36)]),
     u('Kẻ Bổ Nhào', '🦉', 'dieu', 'elite', 'UMBRA', 1.0, 480, 100, 32, 36, 120,
-      [SNIPE('Bổ Từ Trên Mây', 'UMBRA', 1.25), S('Vuốt Xé', 'UMBRA', 1.3), B('Phanh Đúng Một Thước', 'spd', 34), X('Bóng Che Trước Mặt', 'acc', -24)]),
+      [SNIPE('Bổ Từ Trên Mây', 'UMBRA', 1.25), S('Vuốt Xé', 'UMBRA', 1.3), B('Phanh Đúng Một Thước', 'spd', 34), X('Bóng Che Trước Mặt', 'acc', 24)]),
     u('Điểu Nhân Trẻ', '🐦', 'dieu', 'grunt', 'STORM', .85, 340, 82, 24, 30, 126,
       [S('Mổ Nhanh', 'STORM', 1.1), ARC('Bay Sượt Qua Hai Người', 'STORM', .85), B('Bay Bù Cho Lông Yếu', 'spd', 34), X('Kêu Chói Tai', 'pwr', 22)]),
     u('Người Hót Gọi Gió', '🎐', 'dieu', 'grunt', 'TIDE', .9, 380, 78, 28, 38, 104,
-      [S('Luồng Gió Đẩy', 'TIDE', 1.1), R('Gió Xuôi Cho Cả Phe', 'spd', 28), X('Đổi Hướng Gió', 'acc', -24), B('Ba Lần Một Ngày', 'wrd', 30)]),
+      [S('Luồng Gió Đẩy', 'TIDE', 1.1), R('Gió Xuôi Cho Cả Phe', 'spd', 28), X('Đổi Hướng Gió', 'acc', 24), B('Ba Lần Một Ngày', 'wrd', 30)]),
     u('Kẻ Dệt Tổ Bằng Rễ', '🪺', 'dieu', 'grunt', 'VERDANT', .95, 440, 74, 44, 32, 80,
       [S('Rễ Quất', 'VERDANT', 1.1), BARRIER('Đan Rễ Thành Vách', 148), X('Quấn Rễ Vào Chân', 'spd', 26), B('Rễ Không Rơi Khi Đảo Nghiêng', 'grd', 32)])
   ],
   mooks: [
     mook('Chim Đưa Thư Đảo Trôi', '🕊️', 'STORM', .55, 135, 48, 16, 22, 128,
-      [S('Mổ Vào Tai', 'STORM', 1.05), X('Bay Vòng Trước Mặt', 'acc', -20), B('Tìm Được Mọi Chỗ', 'spd', 30), S('Cào Nhẹ', 'STEEL', .85)]),
+      [S('Mổ Vào Tai', 'STORM', 1.05), X('Bay Vòng Trước Mặt', 'acc', 20), B('Tìm Được Mọi Chỗ', 'spd', 30), S('Cào Nhẹ', 'STEEL', .85)]),
     mook('Thợ Vá Buồm Tập Sự', '🧵', 'FORGE', .8, 180, 50, 26, 18, 92,
       [S('Kim Buồm To', 'FORGE', 1.05), REGEN('Vá Tạm Một Miếng', 34), B('Tay Run Mà Mũi Đều', 'grd', 24), X('Kéo Đứt Dây Chằng', 'spd', 20)])
   ],

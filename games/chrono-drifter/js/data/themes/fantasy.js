@@ -1,6 +1,6 @@
 import { u, mook, boss } from '../mk.js';
 import { S, AOE, ARC, PIERCE, SNIPE, DRAIN, EXEC, RAMP, DOT, MARK, STUN, SILENCE,
-         H, HALL, REGEN, REVIVE, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
+         H, HALL, REGEN, CLEANSE, B, R, BARRIER, TAUNT, CHARGEUP,
          X, XALL, STEAL, U, UEXEC, UMEND, UTIME,
          UNUKE, UCHAIN, UDRAIN, UCURSE, UGUARD, URAISE, USTUN, URAGE, USACRIFY }
   from '../../engine/moves.js';
@@ -81,7 +81,7 @@ export default {
       [S('Cào Than', 'EMBER', 1.2), AOE('Vỗ Cánh', 'STEEL', .7), B('Da Nham Thạch', 'grd', 40), DOT('Dấu Thiêu', 'EMBER', .8, 40)],
       UCURSE('MƯA TRO', 'EMBER', 43)),
     u('Lãnh Chúa Xương', '☠️', 'abyss', 'legend', 'UMBRA', 1.1, 560, 94, 46, 40, 90,
-      [PIERCE('Lưỡi Hái', 'UMBRA', 1.15), AOE('Gió Mộ', 'UMBRA', .75), REVIVE('Gọi Hồn', .4), X('Nguyền Rủa', 'pwr', 30)],
+      [PIERCE('Lưỡi Hái', 'UMBRA', 1.15), AOE('Gió Mộ', 'UMBRA', .75), DRAIN('Gọi Hồn', 'UMBRA', 1.05), X('Nguyền Rủa', 'pwr', 30)],
       UEXEC('THU HOẠCH', 'UMBRA', 1.5)),
     u('Gnash Bới Mộ', '💀', 'abyss', 'elite', 'UMBRA', .85, 280, 71, 26, 31, 118,
       [PIERCE('Xé Sườn', 'UMBRA', 1.0), X('Phá Giáp', 'grd', 35), DOT('Bùa Thối Rữa', 'UMBRA', .5, 30), B('Cười Rợn', 'crt', 35)]),
