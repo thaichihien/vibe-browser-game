@@ -64,9 +64,9 @@ next**, which is what keeps a battle coherent instead of a costume box:
 
 | # | Draw | Constrained by |
 |---|---|---|
-| 1 | **Era** — one of 23 | — |
+| 1 | **Era** — one of 30 | — |
 | 2 | **Two rival factions** | must be a declared pair in `era.rivalries` |
-| 3 | **Format** — one of 5 | — |
+| 3 | **Format** — one of 11 | — |
 | 4 | **Difficulty** — one of 5 | — |
 | 5 | **Both rosters** | the format's size and pool rules, drawn from those two factions |
 | 6 | **Difficulty edge** | a spare mook for the opposition (not in `duel` / `boss`) |
@@ -85,7 +85,7 @@ from two factions that the era file explicitly declares as enemies.
 
 ## 3. Eras
 
-23 eras, each a self-contained file in `js/data/themes/`. An era owns its factions, its
+30 eras, each a self-contained file in `js/data/themes/`. An era owns its factions, its
 rivalries, its roster, its stage art and **its own Vietnamese name for all nine elements**.
 
 | Key | Name | Key | Name |
@@ -103,6 +103,19 @@ rivalries, its roster, its stage art and **its own Vietnamese name for all nine 
 | `stone` | TIỀN SỬ | `bautroi` | HẢI TẶC MÂY TRỜI |
 | `atlantis` | ATLANTIS CHÌM | | |
 
+Seven more were added on a second pass, chosen to fill the widest gaps — the Americas,
+Africa, Slavic Europe, a non-mythic historical setting, and two that are not places at all:
+
+| Key | Name | What it is |
+|---|---|---|
+| `sunempire` | ĐẾ CHẾ MẶT TRỜI | Mesoamerica: jaguar knights, the ball court, the feathered serpent |
+| `hellas` | ANH HÙNG CA | Greek myth: the phalanx, the monsters, the gods on the mountain |
+| `southpole` | NAM CỰC 1912 | an Antarctic expedition, the ice fauna, and what the drill hit |
+| `slavic` | RỪNG BABA YAGA | the hut on chicken legs, the deathless man, the river women |
+| `mali` | VÀNG VÀ MUỐI | the Sahel: the golden court, the salt caravan, the savanna spirits |
+| `circus` | GÁNH XIẾC ĐÊM | a night circus, its audience, and what is in the cages |
+| `manga` | VŨ TRỤ TRUYỆN TRANH | anime and manga: heroes, villain organisations, mecha |
+
 Every era carries, and a test enforces:
 
 - **3 factions**, each with a declared rivalry list
@@ -112,8 +125,8 @@ Every era carries, and a test enforces:
 - **a bio** for every unit
 - **its own name for all nine elements**
 
-**Totals:** 483 named characters + 46 mook entries + 23 bosses = **552 fighters**, carrying
-**2 208 move instances** and **161 ultimates**.
+**Totals:** 632 named characters + 60 mook entries + 30 bosses = **722 fighters**, carrying
+**2 888 move instances** and **210 ultimates**.
 
 ---
 
@@ -133,6 +146,7 @@ u(name, emoji, faction, tier, element, size, hp, pwr, grd, wrd, spd, moves, ulti
 | `el` | elemental affinity — what they are **hit** as, not what they hit with |
 | `sz` | body size multiplier, ~0.8–2.0; drives the sprite's pixel size on the field |
 | `hp pwr grd wrd spd` | the stat line |
+| `hp0` / `ep0` | optional: a format may put a fighter on the field already spent — see KẺ SỐNG SÓT |
 | `mv` | exactly four moves |
 | `ult` | an ultimate, on legends and bosses only |
 
@@ -140,10 +154,10 @@ u(name, emoji, faction, tier, element, size, hp, pwr, grd, wrd, spd, moves, ulti
 
 | Tier | Count | Rules |
 |---|---|---|
-| **legend** | 138 | Has an ultimate. **Never appears twice on one team** and never twice in one battle. |
-| **elite** | 138 | No ultimate, stronger line than a grunt. |
-| **grunt** | 253 | Includes the nameless mook pool. |
-| **boss** | 23 | One per era. Enormous. Owns its front rank alone. Has an ultimate. |
+| **legend** | 180 | Has an ultimate. **Never appears twice on one team** and never twice in one battle. |
+| **elite** | 180 | No ultimate, stronger line than a grunt. |
+| **grunt** | 332 | Includes the nameless mook pool. |
+| **boss** | 30 | One per era. Enormous. Owns its front rank alone. Has an ultimate. |
 
 Repeats among the nameless get Roman numerals (`Chuột Hang`, `Chuột Hang Ⅱ`, `Chuột Hang Ⅲ`)
 so the combat log stays readable. Legends never reach that code path.
@@ -168,10 +182,10 @@ first group and `đ` for the second, everywhere, so the two are never confused.
 
 ## 5. Elements
 
-One wheel for all 23 eras. Only the **names** reskin: a move stores an element code and its
+One wheel for all 30 eras. Only the **names** reskin: a move stores an element code and its
 display label is built at render time from the era's `elNames` map, so the same STRIKE reads
 *"Lửa Rồng"* in Giả Tưởng and *"Xung EMP"* in Cyberpunk. One table to balance, one to test,
-23 vocabularies on top.
+30 vocabularies on top.
 
 ```
 ⚡ STORM → 🌊 TIDE → 🔥 EMBER → 🌿 VERDANT → ⚙️ FORGE → ❄️ FROST → ⚡ STORM
@@ -197,7 +211,9 @@ the 🔦 relic shows an enemy's element and its counters right on the health bar
 
 ## 6. Teams and battle formats
 
-Five shapes, drawn per battle (`engine/formats.js`):
+Eleven shapes, drawn per battle (`engine/formats.js`), on two different axes.
+
+**The five size formats** vary one thing: how many bodies each side has.
 
 | Key | Name | Blurb | Side A | Side B | `par` | Worth |
 |---|---|---|---|---|---|---|
@@ -206,6 +222,29 @@ Five shapes, drawn per battle (`engine/formats.js`):
 | `horde` | TỬ THỦ | a few against the many | 3–4 named | 6–8 mooks | 18 | ×2.6 |
 | `boss` | SĂN QUÁI | a party against the giant | 3–4 named | boss + 0–2 minions | 16 | ×2.8 |
 | `war` | ĐẠI CHIẾN | full ranks on both sides | 6–8 mixed | 6–8 mixed | 24 | ×3.2 |
+
+**The six draft formats** vary *who* gets drafted and what state they arrive in — a
+second axis over the same engine, with no new win conditions and no new verbs.
+
+| Key | Name | What is different | Sizes | `par` | Worth |
+|---|---|---|---|---|---|
+| `civil` | NỘI CHIẾN | both sides drafted from the **same faction**, nobody twice | 3v3 | 14 | ×2.0 |
+| `brawl` | LOẠN ĐẢ | **grunts and mooks only**, with replacement — duplicates are the point | 6–8 each | 26 | ×3.0 |
+| `counter` | TƯƠNG KHẮC | one side **mono-element**, the other **the element it beats**, answering with numbers | 2–3 v 3–5 | 15 | ×2.4 |
+| `survivor` | KẺ SỐNG SÓT | everyone starts at **55–85% HP and 30–60% energy** | 3–4 each | 13 | ×1.8 |
+| `rookie` | TÂN BINH | **no legends**, so nobody has an ultimate | 4v4 | 16 | ×2.2 |
+| `titan` | SONG QUÁI | this era's **boss against another era's boss**, one or two minions each | 2–3 each | 18 | ×3.4 |
+
+Two of them redefine what a *side* is, and say so in the side names: TƯƠNG KHẮC
+labels the sides by element (*Phe Hoả Diệm Sơn* vs *Phe Đào Vườn Trời*), SONG QUÁI by
+era (*AI CẬP THẦN THOẠI* vs *TÂY DU*), and NỘI CHIẾN splits one faction into
+*Phe Ly Khai* and *Phe Trung Thành*. Everywhere else the rivalry rule holds.
+
+**TƯƠNG KHẮC is lopsided on purpose.** Being on the right side of the wheel is worth
+about **×2.3** on the exchange (×1.6 out, ×0.7 back), so the parity pass counts that
+edge as strength — the countered side is *supposed* to have the bigger stat line and
+the extra bodies. Raw parity is the wrong measure there; the test asserts the outcome
+instead, and side A wins 49% of 120 simulated battles.
 
 - **`named` pool** — drawn from the faction roster *without replacement*, so no duplicates.
 - **`mixed` pool** — named units first, mooks filling the rest of the requested size.
@@ -610,8 +649,8 @@ every time:
 | Key | Name | Shape |
 |---|---|---|
 | `ranks` | Hàng ngũ | both sides in matching ranks |
-| `duel` | Đối mặt | you low and close, them high and far — the classic |
-| `arc` | Vây bọc | the mob curls around whoever it outnumbers |
+| `duel` | Đối mặt | you low and close, them high and far — the classic; also SONG QUÁI |
+| `arc` | Vây bọc | the mob curls around whoever it outnumbers; also TƯƠNG KHẮC |
 | `terrace` | Chiếm cao điểm | one side holds the ridge and looks down |
 
 ### Sizing and occlusion
@@ -661,8 +700,8 @@ shards = round((12 + 14 × format.worth) × difficulty.reward)
 Losing pays **25%** of the win's shards — the consolation of a witness. Fleeing early costs
 shards instead.
 
-At the extremes: a very easy TAY ĐÔI pays **19 ⧗** and scores **84**; a very hard ĐẠI CHIẾN
-pays **125 ⧗** and scores **704** before the two bonuses.
+At the extremes: a very easy TAY ĐÔI pays **19 ⧗** and scores **84**; a very hard SONG QUÁI
+pays **131 ⧗** and scores **748** before the two bonuses.
 
 ### The satchel
 
@@ -710,7 +749,7 @@ allowance.
 | 2600 | 📸 Máy ảnh | replay the code of a battle you have won |
 | 5000 | ⌛ Đồng hồ cát | once per battle, undo the last turn |
 
-Prices run **190–5000 ⧗** against **19–125 ⧗** a win, so the shop is a long game.
+Prices run **190–5000 ⧗** against **19–131 ⧗** a win, so the shop is a long game.
 
 ---
 

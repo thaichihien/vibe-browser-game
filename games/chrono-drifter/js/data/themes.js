@@ -25,7 +25,15 @@ import noir from './themes/noir.js';
 import daidich from './themes/daidich.js';
 import comong from './themes/comong.js';
 import bautroi from './themes/bautroi.js';
+import sunempire from './themes/sunempire.js';
+import hellas from './themes/hellas.js';
+import southpole from './themes/southpole.js';
+import slavic from './themes/slavic.js';
+import mali from './themes/mali.js';
+import circus from './themes/circus.js';
+import manga from './themes/manga.js';
 
 export const ERAS = [fantasy, cyber, space, sail, egypt, japan, west, waste, norse, steam, stone, atlantis,
-                     wuxia, tamquoc, daiviet, taydu, diaphu, arab, cthulhu, noir, daidich, comong, bautroi];
+                     wuxia, tamquoc, daiviet, taydu, diaphu, arab, cthulhu, noir, daidich, comong, bautroi,
+                     sunempire, hellas, southpole, slavic, mali, circus, manga];
 export const byKey = (k) => ERAS.find(e => e.key === k);

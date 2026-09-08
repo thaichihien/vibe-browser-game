@@ -115,6 +115,9 @@ export const COMPOSITION_KEYS = Object.keys(COMPOSITIONS);
 export function pickComposition(rng, formatKey, sizes) {
   const big = Math.max(sizes.ally, sizes.foe);
   if (formatKey === 'duel' || formatKey === 'boss') return rng() < .8 ? 'duel' : 'terrace';
+  // two giants square off; a countered side curls its numbers around the few
+  if (formatKey === 'titan') return rng() < .7 ? 'duel' : 'terrace';
+  if (formatKey === 'counter') return rng() < .6 ? 'arc' : 'terrace';
   if (formatKey === 'horde') return rng() < .7 ? 'arc' : 'ranks';
   if (big >= 6) return rng() < .65 ? 'ranks' : 'arc';
   const pool = ['ranks', 'duel', 'terrace', 'arc'];

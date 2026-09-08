@@ -16,11 +16,50 @@ export const FORMATS = [
     par: 16, a: { n: [3, 4], pool: 'named' }, b: { n: [1, 1], pool: 'boss', minions: [0, 2] } },
 
   { key: 'war',   name: 'ĐẠI CHIẾN', blurb: 'dàn quân đầy đủ cả hai bên',
-    par: 24, a: { n: [6, 8], pool: 'mixed' }, b: { n: [6, 8], pool: 'mixed' } }
+    par: 24, a: { n: [6, 8], pool: 'mixed' }, b: { n: [6, 8], pool: 'mixed' } },
+
+  /* ── the draft formats ────────────────────────────────────────────────────
+     The first five vary one thing only: how many bodies each side has. These
+     six vary WHO gets drafted and what state they start in, which is a second
+     axis over the same engine — no new win conditions, no new verbs. */
+
+  // one house against itself: both sides out of the SAME faction, so the
+  // counter wheel goes quiet and it is read-and-respond rather than matchup
+  { key: 'civil', name: 'NỘI CHIẾN', blurb: 'một nhà chia làm hai',
+    par: 14, sameFaction: true,
+    a: { n: [3, 3], pool: 'named' }, b: { n: [3, 3], pool: 'named' } },
+
+  // nobody matters alone: grunts and mooks only, duplicates everywhere
+  { key: 'brawl', name: 'LOẠN ĐẢ',   blurb: 'cả đám lao vào nhau',
+    par: 26, a: { n: [6, 8], pool: 'rabble' }, b: { n: [6, 8], pool: 'rabble' } },
+
+  // a hard counter against numbers. Side A holds the element that beats side
+  // B's; side B answers with bodies, and the parity pass tops up the rest.
+  { key: 'counter', name: 'TƯƠNG KHẮC', blurb: 'khắc chế đấu với đông người',
+    par: 15, counter: true,
+    a: { n: [2, 3], pool: 'element' }, b: { n: [4, 5], pool: 'element' } },
+
+  // the premise, made literal: you drop into a fight already in progress
+  { key: 'survivor', name: 'KẺ SỐNG SÓT', blurb: 'rơi vào giữa trận đang dở',
+    par: 13, wounded: { hp: [.55, .85], ep: [.30, .60] },
+    a: { n: [3, 4], pool: 'mixed' }, b: { n: [3, 4], pool: 'mixed' } },
+
+  // nobody has an ultimate: pure move economy and energy discipline
+  { key: 'rookie', name: 'TÂN BINH',  blurb: 'không ai có tuyệt kỹ',
+    par: 16, a: { n: [4, 4], pool: 'nolegend' }, b: { n: [4, 4], pool: 'nolegend' } },
+
+  // two monsters that were never supposed to meet
+  { key: 'titan', name: 'SONG QUÁI', blurb: 'hai con khổng lồ của hai thời đại',
+    par: 18, crossEra: true,
+    a: { n: [1, 1], pool: 'boss', minions: [1, 2] },
+    b: { n: [1, 1], pool: 'boss', minions: [1, 2] } }
 ];
 
 /** Score multiplier — a pitched battle is worth more than a duel. */
-export const FORMAT_WORTH = { duel: 1.4, even: 2.0, horde: 2.6, boss: 2.8, war: 3.2 };
+export const FORMAT_WORTH = {
+  duel: 1.4, even: 2.0, horde: 2.6, boss: 2.8, war: 3.2,
+  civil: 2.0, brawl: 3.0, counter: 2.4, survivor: 1.8, rookie: 2.2, titan: 3.4
+};
 
 /** What winning this battle pays. The single source of truth for the economy. */
 export function winShards(difficulty, format) {

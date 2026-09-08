@@ -61,7 +61,7 @@ test('no accidental gaps: every ring pair is 1.6, 0.7 or a deliberate 1.0', () =
 /* ── content audit ──────────────────────────────────────────── */
 
 test('every era carries 20+ characters across three factions', () => {
-  assert.equal(ERAS.length, 23);
+  assert.equal(ERAS.length, 30);
   for (const era of ERAS) {
     const factions = Object.keys(era.factions);
     assert.equal(factions.length, 3, `${era.key} should have 3 factions`);
@@ -417,14 +417,85 @@ test('the generator never seats rival factions together or repeats a legend', ()
     const g = generate(ERAS, { seed });
     assert.ok(g.mine.length >= 1 && g.foes.length >= 1, 'a side came out empty');
 
+    /* Two formats say up front that a faction is not what makes a side: TƯƠNG KHẮC
+       lines everyone up by element and SONG QUÁI drags in another era entirely.
+       Everywhere else the rivalry rule holds — no knight beside a monster. */
+    const byFaction = !g.format.counter && !g.format.crossEra;
     for (const team of [g.mine, g.foes]) {
-      const factions = new Set(team.map(u => u.faction).filter(f => f !== '*'));
-      assert.ok(factions.size <= 1, `mixed factions on one side in seed ${seed}`);
+      if (byFaction) {
+        const factions = new Set(team.map(u => u.faction).filter(f => f !== '*'));
+        assert.ok(factions.size <= 1, `mixed factions on one side in seed ${seed} (${g.format.key})`);
+      }
       const names = team.map(u => u.n);
       assert.equal(new Set(names).size, names.length, `duplicate name on a side in seed ${seed}`);
     }
     const legends = [...g.mine, ...g.foes].filter(u => u.tier === 'legend').map(u => u.n);
     assert.equal(new Set(legends).size, legends.length, `a legend appears twice in seed ${seed}`);
+  }
+});
+
+/* The first five formats vary one thing: how many bodies each side has. These six
+   vary who gets drafted and what state they start in — a second axis over the same
+   engine, so each one has to keep its own promise. */
+test('the draft formats each keep their own promise', () => {
+  for (let seed = 1; seed <= 80; seed++) {
+    // NỘI CHIẾN — one house against itself, and nobody fights themselves
+    {
+      const g = generate(ERAS, { seed, formatKey: 'civil', difficulty: 2 });
+      const named = [...g.mine, ...g.foes].filter(u => u.faction !== '*');
+      const factions = new Set(named.map(u => u.faction));
+      assert.equal(factions.size, 1, `civil seed ${seed} drew from ${factions.size} factions`);
+      const names = named.map(u => u.baseName || u.n);
+      assert.equal(new Set(names).size, names.length, `civil seed ${seed} fielded the same fighter twice`);
+      assert.notEqual(g.yourSide, g.foeSide, 'the two halves need different names');
+    }
+    // LOẠN ĐẢ — nobody with a name worth remembering
+    {
+      const g = generate(ERAS, { seed, formatKey: 'brawl', difficulty: 2 });
+      for (const u of [...g.mine, ...g.foes]) {
+        assert.equal(u.tier, 'grunt', `brawl seed ${seed} fielded a ${u.tier}`);
+        assert.ok(!u.ult, 'a brawler should have no ultimate');
+      }
+    }
+    // TƯƠNG KHẮC — one element against the one it beats, answered with numbers
+    {
+      const g = generate(ERAS, { seed, formatKey: 'counter', difficulty: 2 });
+      const hi = [...new Set(g.mine.map(u => u.el))], lo = [...new Set(g.foes.map(u => u.el))];
+      assert.equal(hi.length, 1, `counter seed ${seed}: side A is ${hi.join('/')}`);
+      assert.equal(lo.length, 1, `counter seed ${seed}: side B is ${lo.join('/')}`);
+      assert.equal(Math.max(mult(hi[0], lo[0]), mult(lo[0], hi[0])), STRONG,
+        `counter seed ${seed}: ${hi[0]} and ${lo[0]} do not counter each other`);
+      assert.ok(g.mine.length !== g.foes.length || g.mine.length <= 2,
+        'the countered side should bring more bodies unless the era has none to bring');
+    }
+    // KẺ SỐNG SÓT — everyone arrives already spent
+    {
+      const g = generate(ERAS, { seed, formatKey: 'survivor', difficulty: 2 });
+      const s = createBattle({ era: g.era, format: g.format, mine: g.mine, foes: g.foes,
+        difficulty: g.difficulty, rng: g.rng, seed: g.seed, allEras: ERAS });
+      for (const u of s.units) {
+        assert.ok(u.hp < u.max, `survivor seed ${seed}: ${u.n} started at full health`);
+        assert.ok(u.hp >= 1, 'nobody may start dead');
+        assert.ok(u.ep < EP_MAX, `survivor seed ${seed}: ${u.n} started at full energy`);
+      }
+    }
+    // TÂN BINH — no ultimates anywhere on the field
+    {
+      const g = generate(ERAS, { seed, formatKey: 'rookie', difficulty: 2 });
+      for (const u of [...g.mine, ...g.foes]) {
+        assert.ok(!u.ult, `rookie seed ${seed}: ${u.n} brought an ultimate`);
+        assert.notEqual(u.tier, 'legend');
+      }
+    }
+    // SONG QUÁI — two bosses, and they come from two different ages
+    {
+      const g = generate(ERAS, { seed, formatKey: 'titan', difficulty: 2 });
+      assert.equal(g.mine.filter(u => u.tier === 'boss').length, 1, 'one boss a side');
+      assert.equal(g.foes.filter(u => u.tier === 'boss').length, 1, 'one boss a side');
+      const bosses = [...g.mine, ...g.foes].filter(u => u.tier === 'boss');
+      assert.notEqual(bosses[0].n, bosses[1].n, `titan seed ${seed} fielded the same boss twice`);
+      assert.notEqual(g.yourSide, g.foeSide);
+    }
   }
 });
 
@@ -441,6 +512,13 @@ test('every format produces its declared shape', () => {
         assert.ok(all.some(u => u.tier === 'boss'), `boss format without a boss, seed ${seed}`);
       }
       if (fmt.key === 'war') assert.ok(sizes[0] >= 6, `war got ${sizes}`);
+      if (fmt.key === 'civil') assert.deepEqual(sizes, [3, 3]);
+      if (fmt.key === 'brawl') assert.ok(sizes[0] >= 6, `brawl got ${sizes}`);
+      if (fmt.key === 'rookie') assert.deepEqual(sizes, [4, 4]);
+      if (fmt.key === 'titan') {
+        const all = [...g.mine, ...g.foes];
+        assert.equal(all.filter(u => u.tier === 'boss').length, 2, `titan got ${sizes}`);
+      }
     }
   }
 });
@@ -450,10 +528,36 @@ test('the parity pass leaves both sides within a factor of two', () => {
   let worst = 1;
   for (let seed = 1; seed <= 300; seed++) {
     const g = generate(ERAS, { seed, difficulty: 2 });
+    // TƯƠNG KHẮC is deliberately lopsided on paper — see the test below
+    if (g.format.counter) continue;
     const r = power(g.mine) / power(g.foes);
     worst = Math.max(worst, r, 1 / r);
   }
   assert.ok(worst < 2.0, `worst power ratio after balancing was ${worst.toFixed(2)}`);
+});
+
+/* TƯƠNG KHẮC hands one side a ×1.6 swing and takes ×0.7 back — worth about ×2.3 on
+   the exchange — so its stat line is SUPPOSED to be the smaller one and raw parity
+   is the wrong measure. What has to be fair is the result. */
+test('the countered side is outgunned on paper and even in practice', () => {
+  const power = (arr) => arr.reduce((s, u) => s + u.pwr * Math.sqrt(u.hp), 0);
+  let lopsided = 0;
+  for (let seed = 1; seed <= 120; seed++) {
+    const g = generate(ERAS, { seed, formatKey: 'counter', difficulty: 2 });
+    const r = power(g.mine) / power(g.foes);
+    if (r > 1.25 || r < 1 / 1.25) lopsided++;
+  }
+  assert.ok(lopsided > 60, `only ${lopsided}/120 counter battles were uneven on paper — the format lost its shape`);
+
+  let wins = 0, ran = 0;
+  for (let seed = 1; seed <= 120; seed++) {
+    const r = runToEnd(seed, { formatKey: 'counter', difficulty: 2 });
+    if (!r.ok) continue;
+    ran++; if (r.won) wins++;
+  }
+  const rate = wins / ran;
+  assert.ok(rate > 0.35 && rate < 0.65,
+    `the wheel is not paying for the bodies: side A wins ${(rate * 100).toFixed(0)}% of ${ran}`);
 });
 
 test('you are put on either side, not always the good one', () => {
@@ -729,7 +833,7 @@ test('shards can never be driven below zero by a forfeit', async () => {
 function runToEnd(seed, opts) {
   const s = fixture({ seed, ...opts });
   for (let guard = 0; guard < 4000; guard++) {
-    if (checkEnd(s)) return { rounds: Math.ceil(s.turns / Math.max(1, s.units.length)), turns: s.turns, ok: true };
+    if (checkEnd(s)) return { rounds: Math.ceil(s.turns / Math.max(1, s.units.length)), turns: s.turns, ok: true, won: s.won };
     const actor = nextActor(s);
     if (!actor) break;
     openTurn(s, actor);
@@ -744,7 +848,7 @@ function runToEnd(seed, opts) {
     }
     actor.extraTurns = 0;
   }
-  return { rounds: Math.ceil(s.turns / Math.max(1, s.units.length)), turns: s.turns, ok: s.over };
+  return { rounds: Math.ceil(s.turns / Math.max(1, s.units.length)), turns: s.turns, ok: s.over, won: s.won };
 }
 
 test('500 AI-vs-AI battles all terminate', () => {

@@ -84,10 +84,11 @@ export function fatigueOf(state) {
 
 export function createBattle({ era, format, mine, foes, difficulty, rng, seed, eventPeriod = 0, allEras = [] }) {
   let id = 0;
+  // hp0 / ep0 let a format put a fighter on the field already spent — see KẺ SỐNG SÓT
   const mk = (def, side, slot) => ({
     ...def, uid: `${side}${id++}`, side, slot,
-    max: def.hp, hp: def.hp,
-    ep: EP_MAX, epMax: EP_MAX,
+    max: def.hp, hp: def.hp0 ? Math.max(1, Math.round(def.hp * def.hp0)) : def.hp,
+    ep: def.ep0 ? Math.round(EP_MAX * def.ep0) : EP_MAX, epMax: EP_MAX,
     charge: 0, buffs: [], dots: [], shield: 0,
     taunt: 0, stunned: 0, silenced: 0, marked: 0, ramp: 0, chargeup: 0, extraTurns: 0,
     ccImmune: 0,
