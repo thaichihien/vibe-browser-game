@@ -5,6 +5,7 @@ import { renderMenu } from './ui/menu.js';
 import { isMuted, setMuted, recordClear } from './storage.js';
 import { plan } from './engine/director.js';
 import { mount, targets, slotElement } from './engine/site.js';
+import { nearestEnclosed } from './engine/hittest.js';
 import { newRun, observerFor } from './state.js';
 import { resolve, giveUp, reconcile } from './engine/run.js';
 import { initMode } from './ui/mode.js';
@@ -54,19 +55,43 @@ export function boot() {
     finish();
   });
 
-  const lasso = initLasso(document.getElementById('lasso'), mode, (stroke, verdict) => {
-    if (!run || run.over) return;
-    const result = resolve(run, stroke, verdict, targets(shadow));
-    const [message, kind] = FEEDBACK[result.outcome];
+  /* Ngắm — viền phần tử SẼ bị tính điểm nếu người chơi thả tay bây giờ.
+     Viền này cố tình trung tính: nó nói bạn đang khoanh CÁI GÌ, không nói cái đó có phải dị
+     thường hay không. Nếu nó đổi màu theo đúng/sai thì trò chơi tự trả lời hộ người chơi. */
+  let aimed = null;
+  const setAim = (el) => {
+    if (el === aimed) return;
+    aimed?.classList.remove('aim-ring');
+    aimed = el;
+    aimed?.classList.add('aim-ring');
+  };
 
-    if (result.outcome === 'CAPTURED') {
-      const el = shadow.querySelector(`[data-anom="${result.anomId}"]`);
-      if (el) el.classList.add('evidence-ring');
+  const lasso = initLasso(document.getElementById('lasso'), mode, {
+    onStart: () => (run && !run.over && shadow ? targets(shadow) : null),
+
+    onPreview: (snapshot, stroke, verdict) => {
+      if (!snapshot || verdict !== 'OK') { setAim(null); return; }
+      setAim(nearestEnclosed(stroke, snapshot)?.el ?? null);
+    },
+
+    onStroke: (snapshot, stroke, verdict) => {
+      setAim(null);
+      if (!run || run.over || !snapshot) return;
+
+      // Resolve against the SAME list the preview used, so the outline the player saw is
+      // the claim they made.
+      const result = resolve(run, stroke, verdict, snapshot);
+      const [message, kind] = FEEDBACK[result.outcome];
+
+      if (result.outcome === 'CAPTURED') {
+        const el = shadow.querySelector(`[data-anom="${result.anomId}"]`);
+        if (el) el.classList.add('evidence-ring');
+      }
+      toast(message, kind);
+      beep(kind);
+      renderHud(run);
+      if (run.over) finish();
     }
-    toast(message, kind);
-    beep(kind);
-    renderHud(run);
-    if (run.over) finish();
   });
 
   showMenu();

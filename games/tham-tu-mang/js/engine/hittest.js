@@ -48,6 +48,10 @@ export function centroid(points) {
   return { x: x / points.length, y: y / points.length };
 }
 
+export function pointInRect(pt, r) {
+  return pt.x >= r.left && pt.x <= r.right && pt.y >= r.top && pt.y <= r.bottom;
+}
+
 /**
  * Score exactly one target — the enclosed element whose centre sits nearest the loop's
  * centroid. Even if a tight loop catches two neighbours, the claim resolves against the one
@@ -65,15 +69,35 @@ export function centroid(points) {
  */
 export function nearestEnclosed(points, targets) {
   const c = centroid(points);
-  let best = null;
-  let bestD = Infinity;
+  const hits = [];
+
   for (const t of targets) {
-    const hits = t.points ?? [{ x: t.cx, y: t.cy }];
-    for (const p of hits) {
+    const candidates = t.points ?? [{ x: t.cx, y: t.cy }];
+    let d = Infinity;
+    for (const p of candidates) {
       if (!pointInPolygon(p, points)) continue;
-      const d = (p.x - c.x) ** 2 + (p.y - c.y) ** 2;
-      if (d < bestD) { best = t; bestD = d; }   // strict < keeps ties on the earlier target
+      d = Math.min(d, (p.x - c.x) ** 2 + (p.y - c.y) ** 2);
     }
+
+    /* Scribbling ON something selects it. Players mark a thing by drawing over it far more
+       often than by neatly encircling it, and requiring a target's own centre to fall inside
+       the loop punished that. If the loop's centre lands on the target, that is a claim. */
+    if (d === Infinity && t.rects?.some((r) => pointInRect(c, r))) d = 0;
+
+    if (d !== Infinity) hits.push({ t, d });
   }
-  return best;
+  if (!hits.length) return null;
+
+  /* Anomalies outrank ordinary content. Anomalies are usually NESTED inside a clean target —
+     S01's odd word is a <span> inside a <p data-catch>, E04's extra line sits in the footer —
+     so circling the anomaly encloses its container too. Resolving purely by distance let the
+     container win, because a paragraph's line centre sits mid-line while the odd word sits off
+     to one side: the player circled the right thing and lost a heart for it. With the stroke
+     size already capped, "something suspicious was inside your loop" is the claim they meant. */
+  const anomalies = hits.filter((h) => h.t.anomaly);
+  const pool = anomalies.length ? anomalies : hits;
+
+  let best = pool[0];
+  for (const h of pool) if (h.d < best.d) best = h;   // strict < keeps ties on the earlier target
+  return best.t;
 }

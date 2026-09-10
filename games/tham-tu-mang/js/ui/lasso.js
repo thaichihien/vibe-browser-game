@@ -3,11 +3,21 @@
 
 import { strokeVerdict, MAX_W, MAX_H, bounds } from '../engine/hittest.js';
 
-export function initLasso(canvas, mode, onStroke) {
+/**
+ * hooks.onStart()                      -> snapshot handed back to the other two hooks
+ * hooks.onPreview(snapshot, pts, verdict)  live, while drawing
+ * hooks.onStroke(snapshot, pts, verdict)   on release
+ *
+ * The snapshot exists so the target list is measured ONCE per stroke: what the preview
+ * outlined is exactly what gets scored, even though a couple of anomalies drift or breathe.
+ */
+export function initLasso(canvas, mode, hooks) {
   const ctx = canvas.getContext('2d');
   let drawing = false;
   let points = [];
   let anchor = null;
+  let snapshot = null;
+  let queued = false;
 
   /* The canvas lives inside #viewport-wrap, which is `hidden` until a chapter starts — so at
      boot clientWidth is 0 and a canvas sized then stays 0x0, silently swallowing every stroke.
@@ -57,12 +67,19 @@ export function initLasso(canvas, mode, onStroke) {
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   };
 
+  /** Canvas-local points -> viewport points, which is what getBoundingClientRect speaks. */
+  const toViewport = (pts) => {
+    const r = canvas.getBoundingClientRect();
+    return pts.map((p) => ({ x: p.x + r.left, y: p.y + r.top }));
+  };
+
   canvas.addEventListener('pointerdown', (e) => {
     if (!mode.isCapture()) return;
     resize();                       // the wrap may have become visible since the last stroke
     drawing = true;
     anchor = local(e);
     points = [anchor];
+    snapshot = hooks.onStart?.() ?? null;
     canvas.setPointerCapture(e.pointerId);
     draw();
   });
@@ -71,6 +88,15 @@ export function initLasso(canvas, mode, onStroke) {
     if (!drawing) return;
     points.push(local(e));
     draw();
+
+    // Preview costs a pass over every target, so run it at most once per frame.
+    if (queued || !hooks.onPreview) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      if (!drawing) return;
+      hooks.onPreview(snapshot, toViewport(points), strokeVerdict(points));
+    });
   });
 
   function finish(e) {
@@ -78,16 +104,15 @@ export function initLasso(canvas, mode, onStroke) {
     drawing = false;
     try { canvas.releasePointerCapture(e.pointerId); } catch { /* already gone */ }
 
-    const stroke = points;
-    const verdict = strokeVerdict(stroke);
+    const stroke = toViewport(points);
+    const verdict = strokeVerdict(points);
+    const snap = snapshot;
     points = [];
     anchor = null;
+    snapshot = null;
     clear();
 
-    // Points are canvas-local; the canvas is fixed below the HUD, so add its offset back
-    // before handing them to code that compares against getBoundingClientRect().
-    const r = canvas.getBoundingClientRect();
-    onStroke(stroke.map((p) => ({ x: p.x + r.left, y: p.y + r.top })), verdict);
+    hooks.onStroke(snap, stroke, verdict);
   }
 
   canvas.addEventListener('pointerup', finish);

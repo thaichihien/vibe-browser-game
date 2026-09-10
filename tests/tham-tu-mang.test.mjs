@@ -722,3 +722,79 @@ test('R05 is the only stage 1 anomaly marked deferred', () => {
   assert.deepStrictEqual(deferred, ['R05'],
     'only two-stage reactive anomalies may be absent from the DOM after apply()');
 });
+
+/* ── Resolution: anomaly priority and scribble-to-select ────────────────── */
+
+import { pointInRect } from '../games/tham-tu-mang/js/engine/hittest.js';
+
+const rectAt = (x, y, w, h) => ({ left: x, right: x + w, top: y, bottom: y + h });
+
+test('pointInRect covers the box including its edges', () => {
+  const r = rectAt(0, 0, 100, 40);
+  assert.strictEqual(pointInRect({ x: 50, y: 20 }, r), true);
+  assert.strictEqual(pointInRect({ x: 0, y: 0 }, r), true);
+  assert.strictEqual(pointInRect({ x: 101, y: 20 }, r), false);
+});
+
+test('an anomaly nested in a clean container wins over the container', () => {
+  // The bug this fixes: S01's odd word is a <span> inside a <p data-catch>. Circling the word
+  // encloses both, and the paragraph's line centre is often NEARER the loop centroid than the
+  // word is — so the player circled the anomaly and lost a heart for it.
+  const para = { id: 'p', anomaly: false, anomId: null, points: [{ x: 150, y: 50 }] };
+  const word = { id: 'w', anomaly: true, anomId: 'S01', points: [{ x: 120, y: 50 }] };
+  const loop = [{ x: 100, y: 30 }, { x: 200, y: 30 }, { x: 200, y: 70 }, { x: 100, y: 70 }];
+
+  // centroid is x=150 — exactly on the paragraph's point, 30px from the word's
+  assert.strictEqual(nearestEnclosed(loop, [para, word]).anomId, 'S01');
+});
+
+test('anomaly priority holds regardless of target order', () => {
+  const para = { id: 'p', anomaly: false, anomId: null, points: [{ x: 150, y: 50 }] };
+  const word = { id: 'w', anomaly: true, anomId: 'S01', points: [{ x: 120, y: 50 }] };
+  const loop = [{ x: 100, y: 30 }, { x: 200, y: 30 }, { x: 200, y: 70 }, { x: 100, y: 70 }];
+  assert.strictEqual(nearestEnclosed(loop, [word, para]).anomId, 'S01');
+});
+
+test('the nearest anomaly wins when two anomalies are both enclosed', () => {
+  const far = { id: 'a', anomaly: true, anomId: 'T01', points: [{ x: 115, y: 50 }] };
+  const near = { id: 'b', anomaly: true, anomId: 'E04', points: [{ x: 148, y: 50 }] };
+  const loop = [{ x: 100, y: 30 }, { x: 200, y: 30 }, { x: 200, y: 70 }, { x: 100, y: 70 }];
+  assert.strictEqual(nearestEnclosed(loop, [far, near]).anomId, 'E04');
+});
+
+test('scribbling on a target selects it even when no centre is inside the loop', () => {
+  // A small loop drawn ON a wide line of text: the line's centre is far to the right and
+  // outside the loop, but the loop's own centre lands on the text.
+  const line = {
+    id: 'note', anomaly: true, anomId: 'R05',
+    points: [{ x: 400, y: 50 }], rects: [rectAt(20, 40, 760, 20)]
+  };
+  const scribble = [{ x: 40, y: 45 }, { x: 70, y: 45 }, { x: 70, y: 56 }, { x: 40, y: 56 }];
+  assert.strictEqual(nearestEnclosed(scribble, [line])?.anomId, 'R05');
+});
+
+test('a loop over genuinely empty space still hits nothing', () => {
+  const line = {
+    id: 'note', anomaly: true, anomId: 'R05',
+    points: [{ x: 400, y: 50 }], rects: [rectAt(20, 40, 760, 20)]
+  };
+  const elsewhere = [
+    { x: 40, y: 300 }, { x: 90, y: 300 }, { x: 90, y: 340 }, { x: 40, y: 340 }
+  ];
+  assert.strictEqual(nearestEnclosed(elsewhere, [line]), null,
+    'scribble-to-select must not turn the whole page into a hit');
+});
+
+test('a clean target is still returned when no anomaly is in the loop', () => {
+  const para = { id: 'p', anomaly: false, anomId: null, points: [{ x: 150, y: 50 }] };
+  const loop = [{ x: 100, y: 30 }, { x: 200, y: 30 }, { x: 200, y: 70 }, { x: 100, y: 70 }];
+  assert.strictEqual(nearestEnclosed(loop, [para]).id, 'p');
+});
+
+test('anomaly priority does not resurrect an out-of-range anomaly', () => {
+  const para = { id: 'p', anomaly: false, anomId: null, points: [{ x: 150, y: 50 }] };
+  const away = { id: 'a', anomaly: true, anomId: 'T01', points: [{ x: 900, y: 900 }] };
+  const loop = [{ x: 100, y: 30 }, { x: 200, y: 30 }, { x: 200, y: 70 }, { x: 100, y: 70 }];
+  assert.strictEqual(nearestEnclosed(loop, [para, away]).id, 'p',
+    'only ENCLOSED anomalies get priority');
+});

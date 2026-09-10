@@ -54,22 +54,28 @@ export function slotElement(shadow, type, nth) {
  * give the tight text rects instead, one per line, so every visible line is circleable.
  * Replaced elements (an <img>, an empty node) have no text rects and fall back to their box.
  */
-function hitPoints(el) {
+function hitGeometry(el) {
   const points = [];
+  const rects = [];
+  const take = (r) => {
+    rects.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom });
+    points.push({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+  };
+
   try {
     const range = el.ownerDocument.createRange();
     range.selectNodeContents(el);
     for (const r of range.getClientRects()) {
       if (r.width < 2 || r.height < 2) continue;
-      points.push({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+      take(r);
     }
   } catch { /* detached node — fall through to the box */ }
 
   if (!points.length) {
     const r = el.getBoundingClientRect();
-    if (r.width || r.height) points.push({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+    if (r.width || r.height) take(r);
   }
-  return points;
+  return { points, rects };
 }
 
 /**
@@ -80,14 +86,15 @@ export function targets(shadow) {
   const out = [];
   let n = 0;
   for (const el of shadow.querySelectorAll('[data-anom], [data-catch]')) {
-    const points = hitPoints(el);
+    const { points, rects } = hitGeometry(el);
     if (!points.length) continue;                       // hidden markers are not targets
     out.push({
       id: el.dataset.anom ? `anom:${el.dataset.anom}:${n++}` : `catch:${n++}`,
       anomaly: Boolean(el.dataset.anom),
       anomId: el.dataset.anom ?? null,
       el,
-      points
+      points,
+      rects
     });
   }
   return out;
