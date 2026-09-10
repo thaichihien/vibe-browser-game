@@ -42,4 +42,28 @@ export const I03 = {
   }
 };
 
-export const IMAGE_ANOMALIES = [I01, I03];
+export const I04 = {
+  id: 'I04', family: 'IMAGE', label: 'Tấm ảnh mờ dần mỗi lần bạn nhìn nó',
+  slots: ['photo', 'avatar'], weight: 2,
+  apply(ctx) {
+    const img = ctx.slot.closest('figure')?.querySelector('img');
+    if (!img) return;
+    ctx.mark(img);
+
+    /* Dùng filter của CSS chứ không phải tham số ?blur= của CDN: loremflickr không có tham số
+       đó, và đổi src mỗi lần nhìn sẽ khiến ảnh phải tải lại — ngoại tuyến là rơi thẳng về
+       ảnh dự phòng. Nhìn là thứ làm nó mờ đi, và nó không bao giờ trong lại. */
+    const STEPS = [0, 0.6, 1.4, 2.6];
+    let step = 0;
+    const seen = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        step = Math.min(step + 1, STEPS.length - 1);
+        img.style.filter = `blur(${STEPS[step]}px)`;
+      }
+    }, { threshold: 0.5 });
+    seen.observe(img);
+  }
+};
+
+export const IMAGE_ANOMALIES = [I01, I03, I04];

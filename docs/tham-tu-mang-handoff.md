@@ -1,6 +1,7 @@
 # Thám Tử Mạng — handoff
 
-**Written:** 2026-09-10 · **For:** a fresh Claude session picking this up on another machine.
+**Written:** 2026-09-10 · **Last updated:** 2026-09-10, after the first playtests
+**For:** a fresh Claude session picking this up on another machine.
 
 You are inheriting a **half-built game**: the engine and Chapter 1 are done and tested,
 Chapters 2–6 do not exist. Read this file, then the spec, then start.
@@ -21,6 +22,12 @@ circle around what you find.
 
 Three hearts. Circling ordinary content costs one. **Circling empty space also costs one** —
 that was a deliberate user decision, not an oversight; see §6.
+
+While you draw, the element that *would* be scored is outlined in neutral grey. **That outline
+never changes colour**, because telling you whether the thing is an anomaly would let a player
+sweep the page and read the answer off the ring. Ending a run — win, loss, or the `BỎ CUỘC`
+button — reveals every anomaly: green for found, amber dashed for missed, with a clickable
+results list naming each one.
 
 Anomalies are **applied at runtime to a clean site**, so the same site plays differently every
 run. That is the load-bearing architectural idea and §7 explains what it forbids.
@@ -57,11 +64,11 @@ node --test "tests/*.test.mjs"          # PowerShell
 node --test tests/tham-tu-mang.test.mjs # just this game
 ```
 
-Node 22 built-ins only. Current state: **84 tests for this game, 429 repo-wide, all passing.**
+Node 22 built-ins only. Current state: **96 tests for this game, 441 repo-wide, all passing.**
 
 ## 4. What exists
 
-`games/tham-tu-mang/` — 29 files, ~1,700 lines.
+`games/tham-tu-mang/` — 29 files, ~2,100 lines.
 
 ```
 index.html          shell: HUD, viewport host, overlays. No game logic.
@@ -75,28 +82,35 @@ js/
     rng.js          mulberry32 + range/pick/shuffle    ← DOM-free, tested
     hittest.js      polygon math, multi-point targets  ← DOM-free, tested
     img.js          pinned CDN urls + SVG fallback     ← DOM-free, tested
-    registry.js     the 13 anomalies                   ← DOM-free, tested
+    registry.js     the 19 anomalies                   ← DOM-free, tested
     director.js     seeded pick + slot assignment      ← DOM-free, tested
     run.js          hearts, capture, giveUp, reconcile ← DOM-free, tested
     site.js         shadow root, slot lookup, targets(), sealNavigation()
+                    targets() returns one hit point PER LINE OF TEXT, plus rects
   anomalies/        text · style · motion · element · reactive · image
   ui/               menu · hud · mode · lasso · toast · overlay
   chapters/         index.js · ch1-lumiere.js
 sites/ch1-lumiere/  page.js (markup) · site.css
 ```
 
-**The 13 anomalies built** (of 34 designed):
+**The 19 anomalies built** (of 34 designed):
 
 | Family | Built |
 |---|---|
-| TEXT | `T01` cursed sentence · `T02` rewrites on re-read · `T03` number stops being a number |
-| STYLE | `S01` one word wrong font · `S05` caption ≠ photo · `S07` stray emoji |
+| TEXT | `T01` cursed sentence · `T02` rewrites on re-read · `T03` number stops being a number · `T04` the site knows a true fact about you · `T05` tooltip contradicts the caption |
+| STYLE | `S01` one word wrong font · `S04` shadow falls the wrong way · `S05` caption ≠ photo · `S06` line escapes into the margin · `S07` stray emoji |
 | MOTION | `M01` drifts toward cursor · `M03` breathing |
-| ELEMENT | `E01` button in the margin · `E04` impossible footer line |
+| ELEMENT | `E01` button in the margin · `E04` impossible footer line · `E05` wrong cursor |
 | REACTIVE | `R05` newsletter says you subscribed years ago |
-| IMAGE | `I01` one photo drained of colour · `I03` two names, one face |
+| IMAGE | `I01` one photo drained of colour · `I03` two names, one face · `I04` photo blurs each time you look |
 
-**Not built:** the other 21 anomalies (spec §6), Chapters 2–6, chapter unlocking, multi-page
+**Chapter 1 is bigger than the spec's sketch.** After the first playtest it grew to ~36 slot
+elements across ten sections (hero, six feature bullets, how-to steps, four ingredient photos,
+a comparison table, four testimonials, FAQ, three store locations, newsletter, footer) and its
+roll went from 5–6 to **6–8**. Five anomalies simply vanished in a page that size. If you need
+to retune difficulty, `CH1.min`/`CH1.max` is the lever.
+
+**Not built:** the other 15 anomalies (spec §6), Chapters 2–6, chapter unlocking, multi-page
 navigation. Ch1 is permanently unlocked and is the only entry in `js/chapters/index.js`.
 
 ## 5. What the tests actually guarantee
@@ -148,6 +162,13 @@ These look like bugs. They are not. They were each raised, questioned, and reaff
   be reached and the run becomes unwinnable. `reconcile()` in `run.js` is the safety net — it
   drops unattached anomalies and corrects the total — but *rely on it only as a net*. Reactive
   anomalies that appear later must set `deferred: true` or reconcile will drop them.
+- **Fonts must cover Vietnamese.** Georgia and Times New Roman do **not** contain the
+  precomposed glyphs (`ằ ặ ệ ộ ữ`), so the browser swaps fonts mid-word and the different
+  metrics read as stray whitespace after the character. Use the `--serif` / `--sans` variables
+  in `site.css`; never introduce a stack led by an incomplete face. This applies to anomalies
+  too: `S01` must reskin with **named** families, never generic `cursive`/`fantasy`/`monospace`,
+  or it renders as a broken page rather than a wrong word and stops meaning anything. There is
+  a test for that.
 - **`CATEGORY_ICONS` in the root `index.html` must stay monochrome.** `Puzzle: "▨"`. An emoji
   renders in colour and breaks the hub sidebar.
 - **A new game is unreachable until registered** in the root `index.html` `games` array.
@@ -168,11 +189,20 @@ keyword/lock pairs in `sites/ch1-lumiere/page.js` have never been looked at by a
 | Where | Call |
 |---|---|
 | hero product shot | `photo('skincare,cream', 21, …, 520, 380)` |
+| how-to wide shot | `photo('hands,cream', 88, …, 640, 240)` |
 | ingredient 1 | `photo('chamomile', 34, …, 300, 220)` |
 | ingredient 2 | `photo('grapeseed,oil', 55, …, 300, 220)` |
 | ingredient 3 | `photo('laboratory,glass', 68, …, 300, 220)` |
+| ingredient 4 | `photo('squalane,bottle', 29, …, 300, 220)` |
 | testimonial 1 | `photo('portrait,woman', 12, …, 96, 96)` |
 | testimonial 2 | `photo('portrait,person', 47, …, 96, 96)` |
+| testimonial 3 | `photo('portrait,smile', 73, …, 96, 96)` |
+| testimonial 4 | `photo('portrait,man', 91, …, 96, 96)` |
+| store front | `photo('shop,interior', 64, …, 640, 240)` |
+
+The four testimonial portraits matter most: `I03` swaps one avatar's photo onto another to make
+two names share a face, and that only unsettles if the portraits are plainly *different people*
+to begin with.
 
 Load the page, look at them, and change any `lock` number whose photo is absurd or off-subject.
 This matters beyond looks: `S05` writes a caption that contradicts the photograph, and that
@@ -191,18 +221,32 @@ This is a stated playtest gate in spec §3.4, never yet run.
 
 ### 8.3 Calibrate difficulty
 
-Nobody has played a full run. Play several and answer: are 5–6 anomalies findable on one page
-without frustration? Is the budget ring legible while drawing? Is `M03` (breathing, 1.2% scale)
-perceptible at all, or invisible?
+Chapter 1 has been played, which is where bugs 1–7 in §9 came from, but it has **not** been
+played since it doubled in size and gained six anomaly types. Open questions: are 6–8 anomalies
+findable across the longer page without frustration? Is `M03` (breathing, 1.2% scale)
+perceptible at all, or invisible? Is `T05` findable now that its only tell is a faint dotted
+underline? Does `E05` (wrong cursor) register on anything other than the buy button?
 
 The lever is **`CH1.min`/`CH1.max`** in `js/chapters/ch1-lumiere.js` — *not* the heart rule,
 which the user decided (§6.1). If an individual anomaly is invisible or trivially obvious, tune
 that anomaly's `apply()`.
 
+Two known compromises to judge while playing, both flagged rather than hidden:
+
+- **`T05` carries a faint dotted underline.** Without it a tooltip is findable only by hovering
+  every element on the page — and since you must find *all* anomalies to win, an undiscoverable
+  one doesn't make a run hard, it makes it unwinnable. If the underline reads as too obvious,
+  it needs a different tell, not no tell.
+- **`I04` blurs with a CSS filter, not the CDN's `blur=` parameter.** `loremflickr` has no such
+  parameter, and re-fetching `src` on every viewport entry would drop straight to the offline
+  placeholder. Slightly less "survives inspection" than spec §6 intends.
+
 ## 9. Bugs already found by playing — do not reintroduce
 
-Four real bugs, all found by a human playing, none catchable by the current tests. They tell
-you where this codebase's blind spots are.
+Seven real bugs, every one found by a human playing, **none catchable by the test suite that
+was green at the time**. That ratio is the single most useful thing in this document: the
+DOM-free logic is well tested and has never been the problem. Everything that broke lived in
+rendering, geometry, or the gap between data and page.
 
 1. **The lasso canvas was 0×0.** `initLasso` sized it at boot, when `#viewport-wrap` is still
    `hidden`, so `clientWidth` was 0 and every stroke was drawn into a zero-pixel buffer. Capture
@@ -222,6 +266,21 @@ you where this codebase's blind spots are.
    run and dumped the player at the menu. `sealNavigation()` in `site.js` now
    `preventDefault`s clicks on links and all submits, in the **capture phase** so anomaly
    handlers still receive their events.
+5. **Circling an anomaly could score its container.** Anomalies usually nest inside a clean
+   target — `S01`'s odd word is a `<span>` in a `<p data-catch>` — so circling the anomaly
+   encloses both, and resolving by distance let the paragraph win, because its line centre sits
+   mid-line while the odd word sits off to one side. You circled the right thing, lost a heart,
+   and the results screen then agreed with you. Enclosed anomalies now outrank enclosed clean
+   content. **Lesson: `ctx.mark()` marks a node inside a marked node; the two compete.**
+6. **Anomalies always landed on the first element of their slot type.** `claimSlot` generated
+   one option per slot *type* with `nth = number already used`, so the first claimant of
+   `feature-icon` always got index 0 — with three emoji, the odd one was *always* the first,
+   every run. Players learn that rule far faster than they learn to observe. It now enumerates
+   every free position. **Lesson: check that randomness actually varies, not merely that it is
+   seeded — the director's eleven tests all passed throughout this.**
+7. **Vietnamese diacritics rendered with stray whitespace.** Georgia/Times lack precomposed
+   glyphs, so the browser substituted a font mid-word. Fixed by the `--serif`/`--sans` stacks
+   (§7). **Lesson: a Vietnamese-language game cannot use a default English font stack.**
 
 ## 10. Known limitation for Chapter 2
 
@@ -238,7 +297,10 @@ to extend.
 
 ## 11. Current state
 
-Branch `main`. **Everything is uncommitted** — the user asked for no commits. `git status`
-shows: modified `index.html`, `README.md`, `CLAUDE.md`; new `games/tham-tu-mang/`,
-`tests/tham-tu-mang.test.mjs`, and the two docs. Confirm the user still wants it that way
-before committing anything.
+Branch **`feat/tham-tu-mang`**, off `main`. Not pushed, no PR opened. The work is committed in
+readable steps: spec+plan, engine+chapter 1, hub registration, this handoff, then a fix commit
+per round of playtesting. Commit bodies carry the reasoning — read
+`git log feat/tham-tu-mang` before changing anything load-bearing, since several commits explain
+why something that looks wrong is deliberate.
+
+Ask the user before pushing or opening a PR.

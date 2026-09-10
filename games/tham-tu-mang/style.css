@@ -16,7 +16,9 @@ body {
   margin: 0;
   background: var(--ink);
   color: var(--paper);
-  font: 14px/1.5 "Segoe UI", system-ui, sans-serif;
+  /* Đủ dấu tiếng Việt trên cả Windows lẫn macOS — nếu thiếu glyph, trình duyệt sẽ thay phông
+     ngay giữa từ và chữ có dấu chồng (ằ, ộ) trông như bị thừa khoảng trắng. */
+  font: 14px/1.55 "Segoe UI", Tahoma, system-ui, "Noto Sans", Arial, sans-serif;
 }
 
 /* ── HUD ───────────────────────────────────────────────────────────── */

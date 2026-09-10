@@ -241,17 +241,17 @@ import { CHAPTERS } from '../games/tham-tu-mang/js/chapters/index.js';
 
 test('chapter 1 declares the slot inventory the spec gives it', () => {
   const slots = CH1.pages[0].slots;
-  assert.strictEqual(slots.paragraph, 4);
-  assert.strictEqual(slots.photo, 4);
-  assert.strictEqual(slots.avatar, 2);
-  assert.strictEqual(slots['feature-icon'], 3);
+  assert.strictEqual(slots.paragraph, 9);
+  assert.strictEqual(slots.photo, 7);
+  assert.strictEqual(slots.avatar, 4);
+  assert.strictEqual(slots['feature-icon'], 6);
   assert.strictEqual(slots.nav, 1);
   assert.strictEqual(slots.newsletter, 1);
 });
 
-test('chapter 1 rolls 5 to 6', () => {
-  assert.strictEqual(CH1.min, 5);
-  assert.strictEqual(CH1.max, 6);
+test('chapter 1 rolls 6 to 8', () => {
+  assert.strictEqual(CH1.min, 6);
+  assert.strictEqual(CH1.max, 8);
 });
 
 test('chapter 1 forces the emoji anomaly so the tutorial teaches on something legible', () => {
@@ -284,7 +284,7 @@ test('T02 replacements change the SHAPE of the block, not one character', () => 
 
 import { ANOMALIES, byId } from '../games/tham-tu-mang/js/engine/registry.js';
 
-const STAGE1_IDS = ['T01','T02','T03','S01','S05','S07','M01','M03','E01','E04','R05','I01','I03'];
+const STAGE1_IDS = ['T01','T02','T03','T04','T05','S01','S04','S05','S06','S07','M01','M03','E01','E04','E05','R05','I01','I03','I04'];
 const FAMILIES = ['TEXT','STYLE','MOTION','ELEMENT','REACTIVE','IMAGE'];
 
 test('the registry holds exactly the stage 1 anomalies', () => {
@@ -797,4 +797,59 @@ test('anomaly priority does not resurrect an out-of-range anomaly', () => {
   const loop = [{ x: 100, y: 30 }, { x: 200, y: 30 }, { x: 200, y: 70 }, { x: 100, y: 70 }];
   assert.strictEqual(nearestEnclosed(loop, [para, away]).id, 'p',
     'only ENCLOSED anomalies get priority');
+});
+
+/* ── Positional variety ─────────────────────────────────────────────────── */
+
+test('an anomaly does not always land on the first element of its slot type', () => {
+  // The bug: claimSlot offered one option per slot TYPE with nth = "number already used", so
+  // the first claimant of a type always got index 0. With three emoji, the odd one was always
+  // the first — a rule the player learns far faster than they learn to observe.
+  const seen = new Map();
+  for (const seed of SEEDS) {
+    for (const p of plan(CH1, seed).picks) {
+      if (!seen.has(p.slot)) seen.set(p.slot, new Set());
+      seen.get(p.slot).add(p.nth);
+    }
+  }
+  for (const [slot, positions] of seen) {
+    const available = CH1.pages[0].slots[slot];
+    if (available < 2) continue;
+    assert.ok(positions.size > 1,
+      `${slot} has ${available} elements but anomalies only ever landed on index ` +
+      `${[...positions]} across ${SEEDS.length} seeds`);
+  }
+});
+
+test('over many seeds every position of a multi-slot type gets used', () => {
+  const seen = new Set();
+  for (const seed of SEEDS) {
+    for (const p of plan(CH1, seed).picks) if (p.slot === 'feature-icon') seen.add(p.nth);
+  }
+  const available = CH1.pages[0].slots['feature-icon'];
+  assert.strictEqual(seen.size, available,
+    `only ${seen.size} of ${available} feature-icon positions ever used: ${[...seen].sort()}`);
+});
+
+/* ── Vietnamese glyph coverage ──────────────────────────────────────────── */
+
+test('S01 never reskins a word with a generic font family', () => {
+  // Generic families (cursive/fantasy/monospace) resolve to whatever the OS picked, which
+  // often lacks precomposed Vietnamese glyphs. The browser then swaps fonts mid-word and the
+  // result reads as "this page is broken" rather than "this word is wrong" — the anomaly
+  // stops meaning anything. Named families with Vietnamese coverage only.
+  const GENERIC = ['cursive', 'fantasy', 'monospace', 'serif', 'sans-serif', 'system-ui'];
+  for (const entry of CH1.flavour.S01) {
+    const first = entry.family.split(',')[0].trim().replace(/^["']|["']$/g, '');
+    assert.ok(!GENERIC.includes(first),
+      `S01 family "${entry.family}" leads with the generic "${first}"`);
+  }
+});
+
+test('the LUMIÈRE copy really does contain stacked Vietnamese diacritics', () => {
+  // Guards the fixture behind the font work: if the copy were ever flattened to ASCII the
+  // font stacks would look fine and prove nothing.
+  const stacked = /[ằẳẵặầẩẫậềểễệồổỗộừửữựờởỡợắấéếóốớúứíì]/;
+  assert.ok(stacked.test(PAGE_INDEX.html),
+    'page copy has no stacked-diacritic characters to exercise the font stack');
 });

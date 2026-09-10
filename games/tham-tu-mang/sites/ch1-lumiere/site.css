@@ -1,14 +1,40 @@
 /* LUMIÈRE — style riêng của trang giả. File này được nạp BÊN TRONG shadow root nên các
    selector trần như h1 {} không bao giờ chạm tới chrome của trò chơi. */
 
+/* Phông chữ — vấn đề tiếng Việt, không phải vấn đề thẩm mỹ.
+   Georgia và Times New Roman KHÔNG chứa các glyph tiếng Việt dựng sẵn như ằ, ặ, ệ, ộ, ữ.
+   Gặp chữ thiếu, trình duyệt lặng lẽ thay bằng phông dự phòng ngay GIỮA TỪ; phông đó có
+   metric khác nên nhìn như bị thừa một khoảng trắng phía sau chữ.
+   Cả hai stack dưới đây đều phủ đủ tiếng Việt trên Windows và macOS, nên không bao giờ
+   phải thay phông giữa chừng. */
 :host {
   display: block;
   --cream: #faf6f1;
   --rose: #b98a86;
   --ink: #3a3330;
-  font: 15px/1.65 Georgia, "Times New Roman", serif;
+
+  /* Cambria/Constantia (Windows) và Charter/Iowan (macOS) đều đủ dấu tiếng Việt. */
+  --serif: Cambria, Constantia, "Charter", "Iowan Old Style", "Noto Serif", serif;
+  /* Tahoma và Segoe UI dựng dấu chồng rất gọn ở cỡ nhỏ — chính là chỗ lỗi lộ rõ nhất. */
+  --sans: "Segoe UI", Tahoma, "Noto Sans", Verdana, Arial, sans-serif;
+
+  font: 15px/1.7 var(--serif);
   color: var(--ink);
   background: var(--cream);
+}
+
+/* Chữ nhỏ dùng sans: dấu chồng (ằ, ặ, ộ) ở 11–13px trên phông serif bị bết vào nhau và
+   lệch chân, còn sans thì giữ được khoảng cách. */
+figcaption,
+.news-note,
+.feat span,
+.cmp th,
+.store-grid,
+.steps,
+nav,
+footer,
+.price s {
+  font-family: var(--sans);
 }
 
 * { box-sizing: border-box; }
@@ -23,7 +49,8 @@ nav a { color: #6f635d; text-decoration: none; font-size: 12px; letter-spacing: 
 
 .hero { display: flex; gap: 40px; align-items: center; padding: 60px 40px; }
 .hero-copy { flex: 1; }
-.hero h1 { font-size: 38px; line-height: 1.2; font-weight: 400; margin: 0 0 16px; }
+/* 1.2 cắt mất dấu trên chữ hoa có dấu chồng (Ằ, Ộ) ở cỡ lớn. */
+.hero h1 { font-size: 38px; line-height: 1.3; font-weight: 400; margin: 0 0 16px; }
 .price { font-size: 22px; margin: 22px 0 18px; }
 .price s { color: #a89c94; font-size: 15px; margin-left: 8px; }
 .buy {
@@ -33,13 +60,37 @@ nav a { color: #6f635d; text-decoration: none; font-size: 12px; letter-spacing: 
 .hero-shot { margin: 0; flex: 1; }
 .hero-shot img { width: 100%; height: auto; display: block; }
 
-.features { display: flex; gap: 30px; padding: 40px; background: #f4ece5; }
-.feat { flex: 1; text-align: center; }
+.features {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px 30px;
+  padding: 40px; background: #f4ece5;
+}
+.feat { text-align: center; }
 .feat .ico { font-size: 26px; display: block; margin-bottom: 8px; }
 .feat b { display: block; margin-bottom: 4px; }
 .feat span { color: #6f635d; font-size: 13px; }
 
-.ingredients, .voices, .faq, .news { padding: 50px 40px; }
+.ingredients, .voices, .faq, .news, .howto, .compare, .stores { padding: 50px 40px; }
+.howto, .stores { background: #fdfbf8; }
+
+/* Bóng đổ nền — cả trang đổ bóng về cùng một phía, để S04 (bóng ngược hướng) có gì mà lệch. */
+.voice img, .buy, .wide-shot img, .ing-grid img { box-shadow: 3px 4px 9px rgba(58, 51, 48, 0.14); }
+
+.steps { list-style: none; padding: 0; margin: 0 0 26px; }
+.steps li { padding: 9px 0; border-bottom: 1px solid #efe6dd; }
+.steps b { color: var(--rose); margin-right: 8px; }
+
+.wide-shot { margin: 0; }
+.wide-shot img { width: 100%; height: auto; display: block; }
+
+.cmp { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+.cmp th, .cmp td { padding: 10px 12px; border-bottom: 1px solid #e6ddd4; text-align: left; }
+.cmp th { font-weight: 400; color: #6f635d; font-size: 13px; letter-spacing: 0.08em; }
+.cmp td:first-child { color: #6f635d; }
+
+.buy.ghost { background: transparent; color: var(--ink); border: 1px solid #ddd0c6; }
+
+.store-grid { display: flex; gap: 22px; margin: 22px 0; }
+.store-grid div { flex: 1; font-size: 14px; line-height: 1.7; }
 h2 { font-weight: 400; font-size: 24px; margin: 0 0 18px; }
 .ing-grid { display: flex; gap: 20px; }
 .ing-grid figure { margin: 0; flex: 1; }

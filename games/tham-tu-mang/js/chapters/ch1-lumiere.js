@@ -7,8 +7,10 @@ export const CH1 = {
   title: 'LUMIÈRE',
   slug: 'ch1-lumiere',
   subtitle: 'Kem dưỡng ẩm · trang bán hàng',
-  min: 5,
-  max: 6,
+  // Trang đã dài ra đáng kể, nên số dị thường tăng theo: quét hết một trang lớn mất công hơn,
+  // và với 36 chỗ bám thì 5 dị thường trôi mất trong đó.
+  min: 6,
+  max: 8,
   exclude: [],
   force: ['S07'],
 
@@ -17,12 +19,12 @@ export const CH1 = {
     slots: {
       nav: 1,
       'hero-title': 1,
-      paragraph: 4,
-      price: 1,
-      cta: 1,
-      photo: 4,
-      avatar: 2,
-      'feature-icon': 3,
+      paragraph: 9,
+      price: 2,
+      cta: 3,
+      photo: 7,
+      avatar: 4,
+      'feature-icon': 6,
       faq: 1,
       footer: 1,
       newsletter: 1
@@ -57,11 +59,16 @@ export const CH1 = {
 
     // S01 — một chữ đổi font. Chữ lấy TỪ CHÍNH đoạn văn đó (xem anomalies/style.js), nên ở
     // đây chỉ khai báo các họ phông; không có danh sách chữ cố định nào để lệch khỏi nội dung.
+    //
+    // Phải là phông CÓ TÊN và đủ dấu tiếng Việt. Dùng cursive/fantasy/monospace chung chung
+    // thì trình duyệt hay rơi vào phông thiếu glyph, và chữ sẽ trông như bị lỗi hiển thị chứ
+    // không phải như bị đặt sai phông — người chơi đọc ra "trang này hỏng", không phải
+    // "chữ này sai", tức là dị thường mất sạch ý nghĩa.
     S01: [
-      { family: 'cursive' },
-      { family: 'fantasy' },
-      { family: 'monospace' },
-      { family: '"Courier New", monospace' }
+      { family: 'Consolas, "Courier New", monospace' },
+      { family: 'Verdana, Geneva, sans-serif' },
+      { family: 'Candara, "Segoe UI", sans-serif' },
+      { family: 'Impact, Haettenschweiler, sans-serif' }
     ],
 
     // S05 — chú thích tự tin mô tả một tấm ảnh khác.
@@ -94,12 +101,41 @@ export const CH1 = {
       { since: '02/02/2009', unsub: 'KHÔNG THỂ' }
     ],
 
+    // T04 — chỉ những điều trình duyệt biết thật. Xem FACTS trong anomalies/text.js.
+    T04: [
+      { fact: 'tz', text: 'Chúng tôi rất vui được phục vụ khách hàng ở khu vực {v}.' },
+      { fact: 'screen', text: 'Trang này hiển thị đẹp nhất ở {v}. Đúng bằng màn hình của bạn.' },
+      { fact: 'cores', text: 'Máy của bạn có {v} lõi. Chúng tôi chỉ cần một.' },
+      { fact: 'lang', text: 'Bản {v} đang được chuẩn bị riêng. Chúng tôi biết bạn cần nó.' }
+    ],
+
+    // T05 — chú thích ẩn nói ngược lại chữ nhìn thấy. Chỉ hiện khi rê chuột lên.
+    T05: [
+      'cô ấy chưa rời phòng thử kể từ tháng 3',
+      'ảnh này chụp sau khi cửa hàng đã đóng',
+      'không ai trong ảnh còn làm ở đây',
+      'chúng tôi không biết ai chụp tấm này'
+    ],
+
+    // S04 / S06 — không cần lời, nhưng giữ pool để mọi dị thường có cùng hình dạng dữ liệu.
+    S04: [{ note: 'bóng ngược hướng' }],
+    S06: [{ note: 'tràn ra lề' }],
+
+    // E05 — con trỏ sai chỗ.
+    E05: [
+      { cursor: 'not-allowed' },
+      { cursor: 'crosshair' },
+      { cursor: 'help' },
+      { cursor: 'progress' }
+    ],
+
     // M01 / M03 — chuyển động không cần lời, nhưng vẫn giữ pool để đồng nhất hình dạng.
     M01: [{ max: 6 }],
     M03: [{ scale: 1.012 }],
 
-    // I01 / I03 — ảnh mất màu, và hai cái tên chung một khuôn mặt.
+    // I01 / I03 / I04 — ảnh mất màu, hai cái tên chung một khuôn mặt, và ảnh mờ dần.
     I01: [{ note: 'grayscale' }],
+    I04: [{ note: 'mờ dần mỗi lần vào khung nhìn' }],
     I03: [
       { a: { name: 'Ngọc Anh', age: 28 }, b: { name: 'Thu Hà', age: 41 } },
       { a: { name: 'Mỹ Linh', age: 33 }, b: { name: 'Bảo Trân', age: 26 } }

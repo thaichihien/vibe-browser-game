@@ -14,7 +14,14 @@ function slotBudget(chapter) {
   return budget;
 }
 
-/** Chọn một chỗ trống cho dị thường này, hoặc null nếu không còn chỗ nào hợp lệ. */
+/**
+ * Chọn một chỗ trống cho dị thường này, hoặc null nếu không còn chỗ nào hợp lệ.
+ *
+ * Mỗi VỊ TRÍ còn trống là một lựa chọn riêng, không phải mỗi LOẠI slot. Bản trước chỉ sinh ra
+ * đúng một lựa chọn cho mỗi loại, với nth = số đã dùng, nên dị thường đầu tiên bám vào một
+ * loại luôn rơi đúng vào phần tử thứ nhất: trong ba emoji thì cái lạ luôn là cái đầu tiên, ván
+ * nào cũng vậy. Người chơi học được quy luật đó nhanh hơn nhiều so với học cách quan sát.
+ */
 function claimSlot(anomaly, budget, used, rng, preferPage = null) {
   const options = [];
   for (const [key, total] of budget) {
@@ -23,15 +30,20 @@ function claimSlot(anomaly, budget, used, rng, preferPage = null) {
     const type = key.slice(sep + 1);
     if (preferPage && pageId !== preferPage) continue;
     if (!anomaly.slots.includes(type)) continue;
-    const taken = used.get(key) || 0;
-    if (taken >= total) continue;
     // I03 cần ít nhất hai avatar trên trang để có hai cái tên chung một khuôn mặt.
     if (anomaly.needs && (anomaly.needs[type] || 0) > total) continue;
-    options.push({ pageId, type, key, nth: taken });
+
+    const taken = used.get(key) ?? new Set();
+    for (let nth = 0; nth < total; nth++) {
+      if (taken.has(nth)) continue;
+      options.push({ pageId, type, key, nth });
+    }
   }
   if (!options.length) return null;
+
   const chosen = shuffle(rng, options)[0];
-  used.set(chosen.key, (used.get(chosen.key) || 0) + 1);
+  if (!used.has(chosen.key)) used.set(chosen.key, new Set());
+  used.get(chosen.key).add(chosen.nth);
   return chosen;
 }
 

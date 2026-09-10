@@ -85,4 +85,43 @@ export const T03 = {
   }
 };
 
-export const TEXT_ANOMALIES = [T01, T02, T03];
+/* Những gì trình duyệt thành thật biết về người chơi, không cần mạng, không cần lưu trữ.
+   Một lời nói dối thì đoán được; một câu nói THẬT thì không. */
+const FACTS = {
+  tz: () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return null; } },
+  screen: () => (window.innerWidth ? `${window.innerWidth}×${window.innerHeight}` : null),
+  cores: () => navigator.hardwareConcurrency || null,
+  lang: () => navigator.language || null
+};
+
+export const T04 = {
+  id: 'T04', family: 'TEXT', label: 'Trang web biết về bạn nhiều hơn nó nên biết',
+  slots: ['paragraph', 'footer', 'tile'], weight: 3,
+  apply(ctx) {
+    // Chỉ dùng những quan sát ĐÚNG. Nếu trình duyệt không trả lời được thì bỏ qua mục đó
+    // thay vì bịa — nói bừa thì người chơi bắt được ngay, còn nói đúng thì không.
+    const usable = ctx.flavour.filter((f) => FACTS[f.fact]?.() != null);
+    if (!usable.length) return;
+
+    const entry = pick(ctx.rng, usable);
+    const line = document.createElement('span');
+    line.textContent = ' ' + entry.text.replace('{v}', String(FACTS[entry.fact]()));
+    ctx.slot.appendChild(line);
+    ctx.mark(line);
+  }
+};
+
+export const T05 = {
+  id: 'T05', family: 'TEXT', label: 'Chú thích ẩn nói ngược lại chữ nhìn thấy',
+  slots: ['avatar', 'photo', 'product-title'], weight: 2,
+  apply(ctx) {
+    const entry = pick(ctx.rng, ctx.flavour);
+    ctx.slot.setAttribute('title', entry);
+    // Một dấu hiệu rất mờ. Không có nó thì dị thường này chỉ tìm ra bằng cách rê chuột lên
+    // từng thứ một, mà một dị thường không thể tìm ra thì làm ván chơi hỏng chứ không khó.
+    ctx.slot.style.borderBottom = '1px dotted currentColor';
+    ctx.mark(ctx.slot);
+  }
+};
+
+export const TEXT_ANOMALIES = [T01, T02, T03, T04, T05];

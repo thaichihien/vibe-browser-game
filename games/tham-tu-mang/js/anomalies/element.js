@@ -34,4 +34,14 @@ export const E04 = {
   }
 };
 
-export const ELEMENT_ANOMALIES = [E01, E04];
+export const E05 = {
+  id: 'E05', family: 'ELEMENT', label: 'Con trỏ chuột đổi hình ở chỗ không nên',
+  slots: ['paragraph', 'cta', 'avatar', 'photo'], weight: 2,
+  apply(ctx) {
+    const entry = pick(ctx.rng, ctx.flavour);
+    ctx.slot.style.cursor = entry.cursor;
+    ctx.mark(ctx.slot);
+  }
+};
+
+export const ELEMENT_ANOMALIES = [E01, E04, E05];

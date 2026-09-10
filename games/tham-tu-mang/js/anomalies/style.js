@@ -52,4 +52,25 @@ export const S07 = {
   }
 };
 
-export const STYLE_ANOMALIES = [S01, S05, S07];
+export const S04 = {
+  id: 'S04', family: 'STYLE', label: 'Bóng đổ sai hướng so với cả trang',
+  slots: ['avatar', 'cta', 'photo', 'tile'], weight: 2,
+  apply(ctx) {
+    // Bóng đổ trên ảnh dễ thấy hơn trên chữ, nên ưu tiên tấm ảnh trong cùng figure.
+    const el = ctx.slot.closest('figure')?.querySelector('img') ?? ctx.slot;
+    el.style.boxShadow = '-4px -5px 9px rgba(58, 51, 48, 0.30)';
+    ctx.mark(el);
+  }
+};
+
+export const S06 = {
+  id: 'S06', family: 'STYLE', label: 'Một dòng chữ tràn ra ngoài lề',
+  slots: ['paragraph', 'footer', 'notice'], weight: 2,
+  apply(ctx) {
+    ctx.slot.style.position = 'relative';
+    ctx.slot.style.transform = `translateX(-${22 + Math.floor(ctx.rng() * 12)}px)`;
+    ctx.mark(ctx.slot);
+  }
+};
+
+export const STYLE_ANOMALIES = [S01, S04, S05, S06, S07];
