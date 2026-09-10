@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thám tử mạng</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="hud" hidden>
+    <a class="hud-back" href="../../index.html" title="Về hub">◄</a>
+    <div class="hud-title"><span id="hud-chapter"></span></div>
+    <div class="hud-hearts" id="hud-hearts" aria-label="Máu"></div>
+    <div class="hud-evidence">BẰNG CHỨNG <b id="hud-found">0</b>/<b id="hud-total">0</b></div>
+    <button id="mode-toggle" class="hud-mode" type="button" aria-pressed="false">CHẾ ĐỘ KHOANH</button>
+    <button id="give-up" class="hud-giveup" type="button" title="Kết thúc và xem toàn bộ đáp án">BỎ CUỘC</button>
+    <button id="mute" class="hud-mute" type="button" title="Tắt/bật tiếng">♪</button>
+  </header>
+
+  <main id="screen"></main>
+
+  <div id="viewport-wrap" hidden>
+    <div id="viewport"></div>
+    <canvas id="lasso"></canvas>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="overlay" hidden></div>
+
+<script type="module">
+  import { boot } from './js/main.js';
+  boot();
+</script>
+</body>
+</html>

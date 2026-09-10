@@ -1,0 +1,112 @@
+/* Đạo diễn — chọn 5..8 dị thường cho một lượt chơi. Spec §3.3.
+   Ràng buộc: ≥3 họ, ≤2 mỗi họ, mỗi phần tử slot chỉ một dị thường, mỗi trang ít nhất một.
+   Cách đi vòng tròn qua các họ (round-robin) thoả cả "≤2 mỗi họ" lẫn "≥3 họ" một cách tự
+   nhiên, thay vì chọn ngẫu nhiên rồi phải sửa chữa. */
+
+import { mulberry32, range, shuffle } from './rng.js';
+import { ANOMALIES, byId } from './registry.js';
+
+function slotBudget(chapter) {
+  const budget = new Map();          // "pageId:slotType" -> số phần tử của loại đó
+  for (const page of chapter.pages) {
+    for (const [type, n] of Object.entries(page.slots)) budget.set(`${page.id}:${type}`, n);
+  }
+  return budget;
+}
+
+/** Chọn một chỗ trống cho dị thường này, hoặc null nếu không còn chỗ nào hợp lệ. */
+function claimSlot(anomaly, budget, used, rng, preferPage = null) {
+  const options = [];
+  for (const [key, total] of budget) {
+    const sep = key.indexOf(':');
+    const pageId = key.slice(0, sep);
+    const type = key.slice(sep + 1);
+    if (preferPage && pageId !== preferPage) continue;
+    if (!anomaly.slots.includes(type)) continue;
+    const taken = used.get(key) || 0;
+    if (taken >= total) continue;
+    // I03 cần ít nhất hai avatar trên trang để có hai cái tên chung một khuôn mặt.
+    if (anomaly.needs && (anomaly.needs[type] || 0) > total) continue;
+    options.push({ pageId, type, key, nth: taken });
+  }
+  if (!options.length) return null;
+  const chosen = shuffle(rng, options)[0];
+  used.set(chosen.key, (used.get(chosen.key) || 0) + 1);
+  return chosen;
+}
+
+function place(anomaly, budget, used, rng, picks, preferPage = null) {
+  const slot = claimSlot(anomaly, budget, used, rng, preferPage);
+  if (!slot) return false;
+  picks.push({
+    id: anomaly.id, family: anomaly.family,
+    page: slot.pageId, slot: slot.type, nth: slot.nth
+  });
+  return true;
+}
+
+export function plan(chapter, seed, registry = ANOMALIES) {
+  const rng = mulberry32(seed);
+  const count = range(rng, chapter.min, chapter.max);
+
+  const budget = slotBudget(chapter);
+  const used = new Map();
+  const picks = [];
+  const takenIds = new Set();
+  const familyCount = {};
+
+  const bump = (family) => { familyCount[family] = (familyCount[family] || 0) + 1; };
+
+  const eligible = registry.filter((a) => {
+    if (chapter.exclude.includes(a.id)) return false;
+    return chapter.pages.some((p) => a.slots.some((s) => (p.slots[s] || 0) > 0));
+  });
+
+  // 1. Forced anomalies first — the tutorial depends on S07 being present every time.
+  for (const id of chapter.force || []) {
+    const a = byId(id);
+    if (!a || chapter.exclude.includes(id)) continue;
+    if (place(a, budget, used, rng, picks)) { takenIds.add(id); bump(a.family); }
+  }
+
+  // 2. Round-robin across shuffled families, two passes. One pass guarantees breadth
+  //    (>=3 families); the second fills to count without exceeding 2 per family.
+  const byFamily = new Map();
+  for (const a of eligible) {
+    if (takenIds.has(a.id)) continue;
+    if (!byFamily.has(a.family)) byFamily.set(a.family, []);
+    byFamily.get(a.family).push(a);
+  }
+  const families = shuffle(rng, [...byFamily.keys()]);
+
+  for (let pass = 0; pass < 2 && picks.length < count; pass++) {
+    for (const family of families) {
+      if (picks.length >= count) break;
+      if ((familyCount[family] || 0) >= 2) continue;
+      for (const a of shuffle(rng, byFamily.get(family))) {
+        if (takenIds.has(a.id)) continue;
+        if (place(a, budget, used, rng, picks)) {
+          takenIds.add(a.id);
+          bump(family);
+          break;
+        }
+      }
+    }
+  }
+
+  // 3. Every page must carry at least one, or a player can clear a page that was never dirty.
+  for (const page of chapter.pages) {
+    if (picks.some((p) => p.page === page.id)) continue;
+    const spare = shuffle(rng, eligible)
+      .find((a) => !takenIds.has(a.id) && (familyCount[a.family] || 0) < 2);
+    if (spare && place(spare, budget, used, rng, picks, page.id)) {
+      takenIds.add(spare.id);
+      bump(spare.family);
+    }
+  }
+
+  // `count` is the number ROLLED, not the number placed. Keeping them separate is what lets
+  // the test catch under-placement — a director that promises six and places four produces a
+  // chapter that cannot be won, and nothing on screen would say so.
+  return { seed, count, picks };
+}
