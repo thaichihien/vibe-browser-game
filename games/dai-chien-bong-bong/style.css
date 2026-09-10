@@ -1,0 +1,496 @@
+/* Đại Chiến Bong Bóng — teal-on-deep-water, the ARCADE.SYS neon house style. */
+
+:root {
+  --bg: #04121c;
+  --bg2: #071c2a;
+  --ink: #d8f4ff;
+  --dim: #7fa9be;
+  --line: #16394d;
+  --glow: #2dd4bf;
+  --p1: #7cf7ff;
+  --p2: #ffb3d9;
+  --warn: #ff6b6b;
+  --gold: #ffd166;
+}
+
+* { box-sizing: border-box; }
+
+/* An author `display` beats the UA sheet's `[hidden] { display: none }` no
+ * matter how weak its selector, so anything below that sets `display` has to
+ * opt back out by hand — otherwise the rules modal sits over the whole page
+ * forever and swallows every click. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% -10%, #0d3d52 0%, transparent 55%),
+    linear-gradient(180deg, var(--bg2), var(--bg) 60%);
+  color: var(--ink);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.arena-shell {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 14px 16px 40px;
+}
+
+/* ── topbar ───────────────────────────────────────────────────────────── */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.topbar .spacer { flex: 1; }
+.link {
+  color: var(--dim);
+  text-decoration: none;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+}
+.link:hover { color: var(--glow); }
+.brand {
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  font-size: 14px;
+  color: var(--glow);
+  text-shadow: 0 0 14px rgba(45, 212, 191, 0.45);
+}
+.ctl {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+.ctl:hover { border-color: var(--glow); color: var(--glow); }
+.ctl.back { margin-top: 22px; }
+
+/* ── menu ─────────────────────────────────────────────────────────────── */
+
+.hero { text-align: center; padding: 26px 0 10px; }
+.hero h1 {
+  margin: 4px 0 10px;
+  font-size: clamp(30px, 6vw, 52px);
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 26px rgba(45, 212, 191, 0.5);
+}
+.tagline { color: var(--dim); line-height: 1.65; margin: 0 auto 26px; max-width: 46ch; }
+
+.hero-art { position: relative; height: 92px; }
+.hero-art .ha { position: absolute; font-size: 42px; animation: float 3.6s ease-in-out infinite; }
+.ha.a { left: 26%; top: 24px; }
+.ha.b { left: 42%; top: 4px;  font-size: 34px; animation-delay: .4s; }
+.ha.c { left: 50%; top: 26px; font-size: 56px; animation-delay: .8s; }
+.ha.d { left: 66%; top: 24px; animation-delay: 1.2s; }
+.ha.e { left: 58%; top: 6px;  font-size: 30px; animation-delay: 1.6s; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-11px); } }
+
+.seat-pick { display: flex; gap: 10px; justify-content: center; margin-bottom: 22px; }
+.seat {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  color: var(--dim);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+.seat[aria-checked="true"] {
+  border-color: var(--glow);
+  color: var(--ink);
+  background: rgba(45, 212, 191, 0.12);
+  box-shadow: 0 0 18px rgba(45, 212, 191, 0.2) inset;
+}
+.big {
+  background: linear-gradient(135deg, #062b46, var(--glow));
+  border: 0;
+  color: #04121c;
+  font: inherit;
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 0.16em;
+  padding: 14px 42px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 8px 30px rgba(45, 212, 191, 0.32);
+}
+.big:hover { filter: brightness(1.12); }
+.menu-progress { color: var(--dim); font-size: 13px; margin-top: 18px; }
+
+/* ── chapter select ───────────────────────────────────────────────────── */
+
+.screen-title { text-align: center; letter-spacing: 0.18em; font-size: 15px; color: var(--dim); }
+.chapter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+.chapter {
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.25));
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.chapter:hover:not(:disabled) { border-color: var(--glow); transform: translateY(-2px); }
+.chapter:disabled { opacity: 0.42; cursor: not-allowed; }
+.chapter .ch-top { display: flex; align-items: center; gap: 10px; font-size: 26px; }
+.chapter .ch-name { font-size: 16px; font-weight: 700; letter-spacing: 0.04em; }
+.chapter .ch-boss { color: var(--dim); font-size: 13px; margin: 8px 0 6px; }
+.chapter .ch-stages { display: flex; gap: 6px; font-size: 12px; color: var(--dim); }
+.chapter .ch-stages span {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+.chapter .ch-stages span.done { border-color: var(--glow); color: var(--glow); }
+
+/* ── the board ────────────────────────────────────────────────────────── */
+
+.stage-top {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+.stage-top .chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 12px;
+  color: var(--dim);
+}
+.stage-top .chip.title { color: var(--ink); border-color: var(--glow); }
+.stage-top .goal { margin-left: auto; font-size: 16px; letter-spacing: 0; }
+.stage-top .goal b { font-size: 13px; color: var(--gold); margin: 0 6px 0 1px; }
+.stage-top .goal.boss { color: var(--warn); font-weight: 700; letter-spacing: 0.06em; }
+
+.board { display: flex; gap: 14px; align-items: flex-start; justify-content: center; }
+.panels { display: flex; flex-direction: column; gap: 12px; width: 216px; flex: none; }
+/* A flex item defaults to `min-width: auto`, which is the canvas's intrinsic
+ * 720px — so the bezel refuses to shrink and the page scrolls sideways no
+ * matter what `max-width` the canvas itself carries. */
+.board > * { min-width: 0; }
+
+.bezel {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 8px;
+  background: #02090f;
+  box-shadow: 0 0 44px rgba(45, 212, 191, 0.14), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  max-width: 100%;
+}
+#screen { display: block; width: 720px; max-width: 100%; height: auto; border-radius: 8px; }
+
+/* ── player cards ─────────────────────────────────────────────────────── */
+
+.pcard {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.3));
+}
+.pcard.p1 { border-top: 2px solid var(--p1); }
+.pcard.p2 { border-top: 2px solid var(--p2); }
+.pcard.absent { display: none; }
+.pcard.is-down { opacity: 0.45; filter: grayscale(0.7); }
+.pcard.is-bubbled { box-shadow: 0 0 0 1px var(--p1) inset; }
+
+.pcard-head { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+.pcard-face { font-size: 22px; }
+.pcard-name { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; white-space: nowrap; }
+.pcard-keys { margin-left: auto; font-size: 10px; color: var(--dim); }
+
+.lives { font-size: 13px; letter-spacing: 1px; margin-bottom: 8px; }
+.lives .dim { opacity: 0.28; }
+.lives i { font-style: normal; }
+
+.stats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
+.stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 7px;
+  padding: 3px 7px;
+}
+.stat b { font-size: 12px; color: var(--gold); }
+.stat.badge { background: rgba(45, 212, 191, 0.16); }
+
+.slots { display: flex; gap: 7px; }
+.slot {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 17px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.slot em {
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  font-style: normal;
+  font-size: 9px;
+  color: var(--dim);
+}
+.slot.empty { color: var(--dim); font-size: 13px; }
+.slot.ready { border-color: var(--glow); box-shadow: 0 0 12px rgba(45, 212, 191, 0.25); }
+/* The cooldown is a fill that rises behind the icon, not a number. */
+.slot.cooling::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: var(--fill, 0%);
+  background: rgba(45, 212, 191, 0.22);
+  border-radius: 0 0 8px 8px;
+}
+.slot.cooling { filter: grayscale(0.8); opacity: 0.75; }
+
+.pstate { min-height: 15px; margin-top: 7px; font-size: 11px; color: var(--gold); letter-spacing: 0.04em; }
+
+/* ── overlays ─────────────────────────────────────────────────────────── */
+
+.overlay {
+  position: absolute;
+  inset: 8px;
+  border-radius: 8px;
+  background: rgba(2, 9, 15, 0.86);
+  backdrop-filter: blur(3px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  gap: 12px;
+}
+.overlay h2 { margin: 0; font-size: 26px; letter-spacing: 0.1em; }
+.overlay .ov-icon { font-size: 54px; line-height: 1; }
+.overlay p { margin: 0; color: var(--dim); max-width: 40ch; line-height: 1.6; font-size: 14px; }
+.overlay .hint {
+  border-left: 2px solid var(--glow);
+  padding-left: 12px;
+  text-align: left;
+  color: var(--ink);
+  font-size: 13px;
+}
+.overlay .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+.overlay .ctl { padding: 10px 18px; font-size: 13px; }
+.overlay .ctl.primary {
+  background: linear-gradient(135deg, #062b46, var(--glow));
+  color: #04121c;
+  border: 0;
+  font-weight: 700;
+}
+
+/* ── rules modal ──────────────────────────────────────────────────────── */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 9, 15, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 20;
+}
+.modal-card {
+  position: relative;
+  max-width: 660px;
+  max-height: 86vh;
+  overflow-y: auto;
+  background: linear-gradient(160deg, #0a2436, #051520);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 26px 30px 30px;
+  line-height: 1.7;
+}
+.modal-card h2 { margin: 0 0 6px; letter-spacing: 0.12em; font-size: 18px; color: var(--glow); }
+.modal-card h3 { margin: 22px 0 8px; font-size: 14px; letter-spacing: 0.08em; color: var(--gold); }
+.modal-card ul { margin: 0; padding-left: 20px; }
+.modal-card li { margin-bottom: 8px; font-size: 14px; }
+.modal-card p { font-size: 14px; }
+.modal-card .note { color: var(--dim); font-size: 12.5px; }
+.modal-x {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: 0;
+  color: var(--dim);
+  font-size: 18px;
+  cursor: pointer;
+}
+.modal-x:hover { color: var(--warn); }
+.keys { border-collapse: collapse; font-size: 13px; }
+.keys th, .keys td { padding: 5px 12px 5px 0; text-align: left; color: var(--dim); font-weight: 400; }
+.keys td:first-child { color: var(--ink); }
+kbd {
+  display: inline-block;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 6px;
+  margin-right: 3px;
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  color: var(--ink);
+}
+
+/* ── narrow ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 1020px) {
+  .board { flex-direction: column; align-items: center; }
+  .panels { flex-direction: row; width: 100%; max-width: 720px; }
+  .pcard { flex: 1; }
+}
+@media (max-width: 520px) {
+  .panels { flex-direction: column; }
+  .arena-shell { padding: 10px 10px 30px; }
+}
+
+
+/* ── hover explanations ───────────────────────────────────────────────────
+ * Every stat, badge and skill slot carries a `data-tip`. Rendered from the
+ * element itself rather than a shared floating node, so it cannot end up
+ * orphaned when the HUD re-renders mid-hover (which it does, every frame).
+ */
+
+.tip { position: relative; }
+.tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 9px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  width: max-content;
+  max-width: 260px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #06202e;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55);
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: 0;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  z-index: 30;
+  /* `display: none`, not `visibility: hidden`. A hidden-but-laid-out tooltip
+   * still counts toward the document's scroll width, and a 240px box hanging
+   * off a card near the right edge silently gave the whole page a horizontal
+   * scrollbar on narrow screens. */
+  display: none;
+}
+/* No ::before arrow on purpose: a skill slot already spends its ::before on the
+ * cooldown fill, and two rules fighting over one pseudo-element is how the fill
+ * ends up floating above the card as a 5px triangle. The panel is the only
+ * thing tooltips appear over, so the arrow buys nothing anyway. */
+.tip:hover::after { display: block; transform: translateX(-50%) translateY(0); }
+
+/* A player card is narrower than a tooltip, so centring one on a stat near the
+ * card's left edge hangs it out over the board. Inside a card they anchor to
+ * the card's own edges instead, and cap their width to it. */
+.pcard .tip::after {
+  left: 0;
+  max-width: 240px;
+  transform: translateX(0) translateY(4px);
+}
+.pcard .tip:hover::after { display: block; transform: translateX(0) translateY(0); }
+.pcard .slots .slot:last-child::after { left: auto; right: 0; }
+
+/* ── chapter cards: a picker, never a gate ───────────────────────────── */
+.chapter .ch-boss-icon { font-size: 30px; }
+.chapter .ch-done { margin-left: auto; color: var(--glow); font-size: 17px; }
+.chapter .ch-boss b { color: var(--ink); }
+.chapter .ch-threat {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+}
+.chapter.cleared { border-color: rgba(45, 212, 191, 0.45); }
+
+/* ── rank ─────────────────────────────────────────────────────────────── */
+
+.stage-top .chip.score { color: var(--ink); font-variant-numeric: tabular-nums; }
+.stage-top .chip.score i { font-style: normal; color: var(--dim); font-size: 11px; }
+.stage-top .chip.score.ok { border-color: var(--gold); color: var(--gold); }
+.stage-top .chip.score.ok i { color: var(--gold); opacity: 0.7; }
+
+.rank-card { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.rank-badge {
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-weight: 900;
+  font-size: 44px;
+  letter-spacing: 0.02em;
+  color: #04121c;
+  background: var(--rk, var(--gold));
+  border-radius: 22px;
+  box-shadow: 0 0 40px color-mix(in srgb, var(--rk, #ffd166) 55%, transparent);
+}
+.rank-new { color: var(--gold); font-size: 13px; margin: 0; }
+.rank-new.dim { color: var(--dim); }
+
+.rank-table { border-collapse: collapse; font-size: 13px; }
+.rank-table td { padding: 5px 10px; color: var(--dim); }
+.rank-table td:first-child { color: var(--ink); text-align: left; }
+.rank-table td b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.rank-table .target { font-size: 11.5px; }
+.rank-table .mark { color: var(--warn); font-weight: 700; }
+.rank-table tr.ok .mark { color: var(--glow); }
+.rank-table tr.ok b { color: var(--glow); }
+
+.chapter .ch-rank {
+  margin-left: auto;
+  font-weight: 900;
+  font-size: 19px;
+  letter-spacing: 0.03em;
+  color: var(--gold);
+  text-shadow: 0 0 14px rgba(255, 209, 102, 0.5);
+}
+.chapter .ch-ss {
+  margin-top: 9px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--dim);
+}
