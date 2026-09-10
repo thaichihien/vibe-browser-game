@@ -1,0 +1,850 @@
+# Thám Tử Mạng — Design
+
+**Date:** 2026-09-10
+**Files:** `games/tham-tu-mang/` (folder game — `index.html`, `style.css`, `js/**`, `sites/**`)
+**Genre:** Observation / anomaly-hunting puzzle. No combat, no timer.
+**Language:** **Vietnamese UI and Vietnamese site content**, joining `jungle-game`,
+`co-ca-ngua`, `monster-battle` and `chrono-drifter`. The slug stays English.
+**Hub category:** new — `Puzzle`, glyph `▨` (monochrome, per the `CATEGORY_ICONS` rule).
+
+---
+
+## 1. Premise
+
+You are a moderator at a small outfit that audits websites nobody else will look at.
+A ticket arrives, you open the site, and you look at it. That is the whole job.
+
+Most of what is on the page is ordinary — a face cream that costs 340.000₫, a food blog
+with nine comments, a school posting its holiday schedule. Somewhere in it, between five
+and eight things are **wrong**. Not broken. Wrong.
+
+You circle what is wrong and file it. You have three hearts, and a circle is a claim: if what
+you circled is ordinary — or if you circled nothing at all — it costs one. Looking is free and
+unlimited; claiming is not. That is why circling is behind its own mode.
+
+The horror is load-bearing, not decorative: the game only works if the player genuinely
+cannot tell, at a glance, whether a thing is a design decision or a symptom. Every anomaly
+in §6 is built to survive the question *"…is that just how the site is?"* for a few seconds.
+
+---
+
+## 2. The core loop
+
+```
+chọn chương  →  trang web tải  →  CHẾ ĐỘ ĐỌC
+                                  cuộn · bấm · gõ · bôi đen · thử nghiệm
+                                  (không bao giờ mất máu)
+                                        │
+                    ┌───────────────────┴───────────────────┐
+                    ▼                                       ▼
+        bấm nút → CHẾ ĐỘ KHOANH                tương tác (form, giỏ hàng)
+                    │                                       │
+            kéo một vòng tròn                    dị thường phản ứng hiện ra
+                    │                                       │
+        ┌───────────┴───────────┐                           │
+        ▼                       ▼                           ▼
+   trúng dị thường        trúng nội dung sạch      ──► vẫn phải khoanh
+                          HOẶC không trúng gì
+        │                       │
+   +1 bằng chứng             −1 ♥
+        │
+   đủ 5–8 → HOÀN THÀNH                          0 ♥ → THẤT BẠI
+```
+
+Win: every anomaly in the run captured. Loss: hearts reach zero. No timer, ever.
+
+---
+
+## 3. Architecture
+
+### 3.1 The load-bearing decision — clean sites, runtime mutation
+
+**The websites are authored clean. Anomalies are applied at run start by a director.**
+
+The alternative — hand-authoring a cursed variant of each page — was rejected: it caps
+replay value at one, and it makes the 34-scenario library impossible to reuse across
+chapters. With runtime mutation, one honest site plus a shared library of 34 anomalies
+gives a different case every play, and an anomaly written once reads differently on six
+different sites.
+
+Two markup hooks carry the whole contract:
+
+- **`data-slot="<type>"`** — an attachment point. An anomaly declares which slot types it
+  can live on; the director only ever mutates a slot.
+- **`data-catch`** — ordinary content that is a *reasonable thing to be suspicious of*.
+  This is what makes a wrong capture cost a heart. Headlines, buttons, prices, avatars,
+  paragraphs and nav items all carry it. Structural wrappers and whitespace do not.
+
+An element can carry both.
+
+### 3.2 Site isolation — shadow root
+
+The fake site renders into an **open shadow root** on `#viewport`. Site CSS is a real
+`.css` file linked *inside* the shadow root (`<link rel="stylesheet">` works there), so each
+site's stylesheet can use plain `h1 { }` selectors without ever touching the detective HUD,
+and without a build step or hand-prefixed rules.
+
+Site markup lives in an ES module (`sites/ch1-lumiere/page.js`) exporting an HTML template
+string, because slots have to be injectable and because the repo has no precedent for
+`fetch`ing local files — every existing folder game inlines its content. Keeping markup in
+a module also lets `tests/` import a site and assert its slot inventory.
+
+Hit testing never uses `elementFromPoint` (which does not pierce shadow boundaries).
+It queries `shadow.querySelectorAll('[data-anom]')` and `[data-catch]` and tests their
+bounding rects against the lasso polygon. The shadow boundary therefore costs nothing.
+
+### 3.3 The director
+
+At run start, seeded from `Date.now()` (or a URL `?seed=` for reproducible testing):
+
+1. Roll the anomaly count from the chapter's range (§5 — Ch1 rolls 5–6, Ch6 rolls 7–8).
+2. Filter the 34-entry registry to anomalies whose `slots` the chapter can satisfy and
+   whose `id` is not in the chapter's `exclude` list.
+3. Pick, enforcing three constraints:
+   - **at least 3 of the 6 families** represented,
+   - **at most 2 from any one family**,
+   - **at most 1 anomaly per slot element** (no stacking).
+4. For multi-page chapters, assign each pick to a page; every page gets at least one.
+5. Call `apply(ctx)` per anomaly, which mutates the DOM and marks what it produced with
+   `data-anom="<id>"`.
+
+**Anomaly assignment is fixed for the whole run.** Navigating away from a page and back
+re-renders it with the same anomalies in the same places — backtracking must be safe, or
+the player can never verify a suspicion.
+
+The seeded PRNG is `mulberry32`; every random draw in a run goes through it, so a seed
+reproduces a case exactly.
+
+### 3.4 Imagery — hotlinked photographs
+
+The sites use **real photographs, hotlinked from a free image CDN.** Emoji product shots read
+as a toy; the whole premise depends on these pages looking like pages. This is a deliberate
+departure from the house rule at `CLAUDE.md:56` (*"emoji for all art… no network requests"*)
+and becomes its fourth documented exception — see §10.
+
+Two sources, both pinned so the same URL always returns the same photograph:
+
+| Use | Pattern |
+|---|---|
+| Topical (a lake, a classroom, a jar of cream) | `https://loremflickr.com/<w>/<h>/<keyword>?lock=<n>` |
+| Atmospheric fill, textures, abstract | `https://picsum.photos/id/<id>/<w>/<h>` |
+
+**Pinning is not optional.** `S05 anh-khong-khop-chu-thich` writes a caption that contradicts
+the photograph, and the new IMAGE family compares one photo against another. A random image
+per load makes both unauthorable.
+
+**Every `<img>` must degrade.** `magic-shooter.html` sets the precedent — a CDN game in this
+repo ships a tested CDN-failure fallback. Each image carries an `onerror` that swaps in a
+procedural SVG placeholder (layered gradients, `feTurbulence` grain, vignette) tinted to the
+site's palette. A player who is offline, behind a filtering network, or hitting a dead CDN
+gets a muted, stylised site — not a page of broken-image icons. **The fallback path is a
+playtest gate in its own right:** load every chapter once with the network throttled to
+offline and confirm each site still reads as a site.
+
+Emoji do not disappear — they stay where a real site would use an icon (feature bullets, nav
+glyphs, status dots), which is also what keeps `S07 emoji-lac-loai` legible.
+
+**Faces:** portraits are used only at small sizes and for `avatar` slots, and no anomaly ever
+captions a real person as dead, cursed or missing. `T05`'s tooltip and `T08`'s byline attach
+to names and text, not to a face. This is a content rule, not a technical one, and it exists
+because these are photographs of real people who did not consent to a horror game.
+
+**A caveat I cannot resolve from here:** my sandbox has no network, so I have never seen the
+photographs behind these URLs. The keywords and lock values are chosen blind. The first
+playtest of each chapter needs a pass to confirm each image is roughly the subject its caption
+claims — and to reroll any `lock` that came back as something absurd.
+
+### 3.5 Flavour pools
+
+An anomaly is generic; its *text* is chapter-specific. Each chapter exports pools keyed by
+anomaly id, so `T01 loi-nguyen-chen-giua` on the skincare site splices a line about mirrors,
+and on the school site splices a line about children arriving early. Pools are what make one
+library serve six genres without reading as copy-paste.
+
+```js
+// shape
+{ id: "T01", family: "TEXT", slots: ["paragraph"], weight: 3,
+  apply(ctx) { /* ctx = { root, slot, rng, flavour, mark, observe } */ } }
+```
+
+`ctx.mark(el)` sets `data-anom` and registers the element with the run. Anomalies never
+**mutate** run state — they cannot award a capture, cost a heart, or end a chapter.
+
+`ctx.observe` is a **read-only** view of the run — `{ hearts, found, total }` plus a subscribe
+hook — added for `T04 trang-web-biet-ve-ban`, whose Ch6 variant has the site quote the game's
+own state back at the player. It is the only channel between the run and an anomaly, it goes
+one way, and it exists so that one anomaly can be uncanny without any anomaly being able to
+cheat.
+
+**Anomaly modules may touch the DOM only inside `apply()`.** Never at module top level: the
+`registry.js` that imports all 34 of them is itself DOM-free and is imported directly by
+`tests/`, so a stray top-level `document` reference in any one anomaly file breaks the whole
+suite. This is the same contract `monster-battle`'s engine region keeps, and the bare import in
+the test file is what proves it.
+
+---
+
+## 4. Two modes, and what a circle claims
+
+### 4.1 The mode toggle
+
+The page has two modes, switched by a single HUD button (`CHẾ ĐỘ KHOANH`, off by default):
+
+- **CHẾ ĐỘ ĐỌC** — the ordinary web. Scroll, click links, submit forms, type, and *drag-select
+  text*. Nothing here can cost a heart, ever. All experimentation lives in this mode.
+- **CHẾ ĐỘ KHOANH** — the overlay arms. The cursor becomes a crosshair, the page takes a faint
+  vignette so the mode is never ambiguous, and pointer-drag draws instead of selecting.
+
+This separation is not just ergonomics — it is what makes `S03 chu-chon-duoc-nhieu-hon`
+possible at all. That anomaly is found by drag-selecting a headline and seeing hidden words
+appear under the selection. If dragging always meant "lasso", the player could never select
+text and `S03` would be undiscoverable. One overloaded gesture cannot serve both verbs.
+
+Scrolling still works in capture mode (wheel / two-finger / scrollbar); the overlay uses
+`touch-action: none` and pointer capture so a stroke never scrolls the page.
+
+### 4.2 Drawing, and the size cap
+
+In capture mode: pointer-down anchors the stroke, drag draws a freehand path on a `<canvas>`
+overlay above the shadow host, pointer-up closes it into a polygon.
+
+**A circle has a maximum extent.** From the anchor point, the overlay draws a faint budget
+ring showing how large the loop may get — a bounding box of roughly 300×200px, clamped
+further on small viewports. This is the rule that guarantees **one anomaly per circle**: the
+player cannot sweep one enormous loop around the whole page and take everything at once.
+Because the budget ring is visible from the first pixel of the stroke, the limit is
+communicated by the drawing itself rather than discovered by being punished.
+
+### 4.3 Resolution — exactly one target
+
+On release, collect every `[data-anom]` and `[data-catch]` element whose bounding-rect centre
+lies inside the polygon (ray-casting point-in-polygon). Centre-in-polygon rather than full
+containment: circling a long headline should not require enclosing every pixel of it.
+
+Then **score exactly one** — the element whose centre is nearest the polygon's centroid. Even
+if a tight loop happens to catch two neighbours, the claim resolves against the one the player
+most plainly meant.
+
+| Nearest enclosed element | Result |
+|---|---|
+| a `[data-anom]` | ✔ `BẰNG CHỨNG ĐÃ GHI` — counter ticks, heart kept |
+| a `[data-catch]` | ✘ `KHÔNG CÓ GÌ Ở ĐÂY` — **−1 ♥** |
+| nothing enclosed at all | ✘ `KHÔNG CÓ GÌ Ở ĐÂY` — **−1 ♥** |
+
+A circle is a claim, and an empty circle is a wrong claim. There is no free probing: the
+player cannot sweep the page with cheap loops to map where the anomalies are not.
+
+**Two gestures are voided before they ever become claims,** and neither costs a heart:
+
+- a stroke under ~12px across — that is a twitch or a stray click, not a circle. Feedback:
+  `VÒNG CHƯA KHÉP`.
+- a stroke that exceeded the budget ring — the player was shown the limit while drawing.
+  Feedback: `VÙNG KHOANH QUÁ RỘNG`.
+
+These are input handling, not scoring mercy: both are rejected *before* hit-testing, so
+neither reveals anything about the page. They cannot be used to probe.
+
+Captured anomalies keep a persistent evidence ring and a case number, so the player can see
+what they have already claimed.
+
+---
+
+## 5. Chapters
+
+Six sites, chosen so the same anomaly family reads differently in each. Sequential unlock:
+clearing chapter N unlocks N+1. Each clear stores a rank.
+
+| # | Site | Pages | Anomalies | Register | Threat |
+|---|---|---|---|---|---|
+| 1 | **LUMIÈRE** — kem dưỡng ẩm | 1 | 5–6 | landing page bán hàng | Cult |
+| 2 | **Bếp Nhà Mây** — blog nấu ăn | 2 | 5–7 | blog cá nhân | Người đã mất |
+| 3 | **SănĐồCũ.vn** — chợ đồ cũ | 3 | 6–7 | thương mại điện tử | Monster |
+| 4 | **Hồ Vắng** — khu du lịch sinh thái | 1 | 6–7 | trang đặt phòng | Alien |
+| 5 | **Tiểu học Hoa Ban** — trang thông báo | 1 | 6–8 | trang cơ quan | Cult |
+| 6 | **MegaLink** — trạng thái hệ thống | 1 | 7–8 | dashboard kỹ thuật | Thứ trong đường truyền |
+
+**Rank** per chapter, stored in `localStorage`:
+
+- **S** — cleared with 3 ♥
+- **A** — cleared with 2 ♥
+- **B** — cleared with 1 ♥
+- **—** — not yet cleared
+
+The chapter select is styled as a case archive: cleared chapters show rank, best seed and
+capture count; locked chapters show only a redacted title.
+
+### 5.1 Chapter 1 — LUMIÈRE
+
+Single page. A French-styled Vietnamese skincare landing page: hero with product shot, three
+benefit cards, an ingredient list, two testimonials, an FAQ accordion, a newsletter box,
+footer. Palette cream and rose, everything tasteful. The copy is real marketing copy —
+*"Dưỡng ẩm 72 giờ. Chiết xuất hoa cúc La Mã. Không cồn, không hương liệu."*
+
+Slots: `nav`, `hero-title`, `paragraph` ×4, `price`, `cta`, `photo` ×4 (hero sản phẩm +
+3 thành phần), `avatar` ×2 (2 lời chứng thực), `feature-icon` ×3, `faq`, `footer`, `newsletter`.
+
+Imagery: `loremflickr.com/…/skincare?lock=…` for the hero and ingredients, portraits for the
+two testimonials.
+
+The tutorial chapter: it opens with a briefing overlay teaching the two modes — read freely,
+press the button to claim, an empty circle costs a heart just as a wrong one does — and its
+first run is forced to include `S07 emoji-lac-loai` — the most legible anomaly in the
+library — so the player learns the verb on something unmistakable.
+
+### 5.2 Chapter 2 — Bếp Nhà Mây
+
+Two pages: `index` (post list, sidebar, a *"Tưởng nhớ Mây (1994–2021)"* widget) and `post`
+(a recipe for *canh chua cá lóc*, author byline, nine comments, a comment form).
+
+Slots: `post-title` ×4, `paragraph` ×5, `byline`, `date` ×4, `photo` ×5 (4 ảnh bài viết +
+1 ảnh món ăn), `avatar` ×3 (người bình luận), `comment` ×9, `comment-form`, `sidebar`, `footer`.
+
+Imagery: `loremflickr.com/…/vietnamesefood?lock=…` — the chapter that most needs its
+photographs to be real, and the one where a bad `lock` will be most obvious at playtest.
+
+Home of `R01 binh-luan-khong-ten`. The memorial widget is authored clean and always present —
+it is what makes `T08 chu-ky-nguoi-da-chet` land, and on runs where that anomaly is not drawn
+it is simply a sad detail. That asymmetry is intentional: the site must be able to be sad
+without being wrong.
+
+### 5.3 Chapter 3 — SănĐồCũ.vn
+
+Three pages: `listing` (grid of 12 second-hand items), `product` (one item, seller card,
+description, Q&A), `cart` (line items, shipping form, total).
+
+Slots: `product-title` ×12, `price` ×12, `photo` ×12 (ảnh từng món), `seller`,
+`avatar` (ảnh người bán), `paragraph` ×3, `qa` ×4, `cta` (nút mua), `cart-line`,
+`shipping-form`, `nav`, `footer`.
+
+Imagery: twelve pinned `loremflickr` shots across mismatched keywords (`furniture`, `camera`,
+`bicycle`, `doll`…) — second-hand listings photographed by twelve different people is exactly
+the visual incoherence a real marketplace has, and excellent camouflage.
+
+Home of `R02 gio-hang-tu-them`. The listing grid's sheer volume of prices and titles makes
+this the chapter where `T03 dem-nguoc-trong-van-ban` and `T06 chinh-ta-sai-tang-dan` are
+hardest to spot — twelve cards of noise.
+
+### 5.4 Chapter 4 — Khu du lịch sinh thái Hồ Vắng
+
+Single long page: hero over a lake, *"Vì sao chọn Hồ Vắng"*, a six-photo gallery, a booking
+widget (dates, guests, room type), a map block with coordinates, reviews, footer.
+
+Slots: `nav`, `hero-title`, `paragraph` ×4, `photo` ×7 (hero + 6 ảnh thư viện),
+`gallery-caption` ×6, `avatar` ×3 (người đánh giá), `booking-form`, `map`, `review` ×3, `cta`,
+`footer`.
+
+Imagery: `loremflickr.com/…/lake,fog?lock=…`. The richest photographic chapter in the game —
+seven pinned images against six captions is the ideal surface for both `S05` and the whole
+IMAGE family.
+
+Home of `R04 dat-cho-qua-so-nguoi`. Alien register: the anomalies here lean on sky, light,
+distance, and things counted wrong. The gallery captions are the richest surface in the game
+for `S05 anh-khong-khop-chu-thich`.
+
+### 5.5 Chapter 5 — Trường Tiểu học Hoa Ban
+
+Single page, deliberately ugly in the way real Vietnamese school sites are: a marquee header,
+a red-bordered notice table, a *"Thông báo mới nhất"* list of eight dated items, a principal's
+message, a photo strip from a khai giảng ceremony, a visitor counter, and a footer with a hit
+counter and a `Best viewed in 1024×768` line.
+
+Slots: `notice` ×8, `date` ×8, `paragraph` ×2, `photo` ×4 (ảnh lễ khai giảng),
+`gallery-caption` ×4, `avatar` (ảnh hiệu trưởng), `cta` (*"Xem tất cả thông báo"*), `nav`,
+`counter`, `footer`, `marquee`.
+
+Imagery: `loremflickr.com/…/school,classroom?lock=…`, deliberately low-resolution and slightly
+over-compressed, the way a school site's photographs always are. Per §3.4, no photograph here
+is ever captioned as a missing or harmed child.
+
+The hardest chapter tonally, and it has one rule: **nothing happens to a child on screen.**
+The horror is entirely in what the administration writes down and how calmly it writes it —
+dates that do not exist, attendance arithmetic that does not close, a notice addressed to the
+parents of students who are not listed. Institutional voice doing all the work.
+
+### 5.6 Chapter 6 — MegaLink — Trạng thái hệ thống
+
+Single page: a status dashboard. Eight service tiles (`Hoạt động bình thường`, green), a
+90-day uptime bar per service, an incident history list, a live latency number that updates
+every two seconds, a subscribe box.
+
+Slots: `nav` (có ô tìm kiếm), `tile` ×8, `uptime-bar` ×8, `incident` ×5, `latency`,
+`paragraph` ×2, `subscribe`, `footer`.
+
+Imagery: **none.** A status dashboard has no photographs, so `photo` and `avatar` are absent
+and the whole IMAGE family is ineligible here — the finale is pure text, colour and motion.
+That is a deliberate tonal choice as much as a realistic one: after five chapters of looking
+at pictures, the last site has nothing to look at.
+
+The finale, and the only chapter where the page is *already* moving on its own — the latency
+number ticks, tiles pulse on refresh. Genuine motion as camouflage for the MOTION family,
+which is why it rolls 7–8. Home of `R05 huy-dang-ky-khong-huy`.
+
+---
+
+## 6. The anomaly library — 34 scenarios
+
+Six families. `slots` lists what the anomaly can attach to; the director only offers it to a
+chapter that has one. The flavour lines below are the authored pools, not placeholders.
+
+The brief asked for 30. The library grew to 34 when the sites gained real photographs (§3.4),
+which made a sixth family possible — those four are the only additions.
+
+### TEXT — 8
+
+**T01 · `loi-nguyen-chen-giua`** — slots: `paragraph`, `notice`
+One sentence inside an ordinary paragraph is replaced with a liturgical or cursed line, in
+the same font, the same size, the same rhythm. Reads as normal copy until parsed.
+- Ch1: *"Thoa đều lên da mặt mỗi tối, tránh vùng mắt. Đừng thoa lên gương. Gương sẽ thoa lại."*
+- Ch4: *"Hồ sâu 4 mét ở khu vực trung tâm. Chúng tôi đã ngừng đo vào năm 2019."*
+- Ch5: *"Kính mong quý phụ huynh đưa đón đúng giờ. Nếu con quý vị đã ở trong sân trước 6 giờ sáng, đó không phải con quý vị."*
+
+**T02 · `chu-thay-doi-khi-doc-lai`** — slots: `paragraph`, `post-title`, `notice`
+An `IntersectionObserver` swaps the text when the element leaves and re-enters the viewport.
+The second version is worse, and there is no third.
+
+**Authoring rule — the rewrite must change the *shape* of the block, not a character in it.**
+Different length, different line count, or different punctuation, so that peripheral vision
+registers *"that paragraph is not the one I scrolled past"* without the player having
+memorised it. A one-digit or one-word edit fails this test: it demands the player recite the
+page from memory, which is not observation, it is luck. Every pool entry below is visibly
+longer than what it replaces, and every one changes voice — institutional to personal, or
+plural to singular — because a change in **who is speaking** is what the eye catches when it
+cannot catch a digit.
+
+- Ch5: *"Toàn trường có 412 học sinh, 24 giáo viên và 8 phòng học."*
+  → *"Toàn trường có 412 học sinh. Chúng tôi không biết em thứ 413 vào bằng lối nào. Chúng tôi đã đếm lại bốn lần."*
+- Ch2: *"Mẹ tôi dạy tôi công thức này từ hồi tôi còn bé."*
+  → *"Mẹ tôi chưa bao giờ nấu món này. Tôi không biết tôi học nó ở đâu. Tôi đã nấu nó ba lần trong tuần này."*
+- Ch1: *"Sản phẩm phù hợp với mọi loại da."*
+  → *"Sản phẩm phù hợp với mọi loại da. Kể cả da không còn ở trên người."*
+- Ch4: *"Hồ Vắng đón khách quanh năm."*
+  → *"Hồ Vắng đón khách quanh năm. Chưa có mùa nào tất cả khách đều về."*
+
+**T03 · `dem-nguoc-trong-van-ban`** — slots: `paragraph`, `price`, `tile`
+A number embedded in body copy decrements roughly every nine seconds. Nothing on the page ever
+acknowledges it. The horror is not that it reaches zero — it is that the number **stops being
+the kind of thing that can be counted**, while the sentence around it stays perfectly polite.
+
+Five phases, each held for a few ticks. The sentence never changes; only the number does:
+
+| Phase | Values | What it reads as |
+|---|---|---|
+| 1 · đếm ngược thật | 12 → 11 → 10 → 9 | an ordinary urgency widget |
+| 2 · phân số | 8,5 → 8,25 → 8,125 → 8,0625 | it is halving, not counting — nothing is leaving, something is being *divided* |
+| 3 · âm | 0 → −1 → −4 → −11 → −47 | fewer than none, and accelerating |
+| 4 · ký hiệu khoa học | −1,7e3 → −4,4e9 → **6,02e23** | a number no shopping page has ever needed |
+| 5 · không còn là số | `∅` → `NaN` → `∞` → `∅` | it gives up on being a quantity at all |
+
+Phase 4's landing value is deliberate: **6,02e23** is Avogadro's number. *"Còn 6,02e23 người
+đang xem món này"* does not read as a bug — it reads as *everything, all at once, is looking at
+this*. A player who recognises it gets the worst moment in the chapter; a player who does not
+still sees a number that has no business being there.
+
+- Ch3: *"Còn **12** người đang xem món này"*
+- Ch4: *"Còn **8** phòng trống cho cuối tuần này."*
+- Ch6: *"**412** người dùng đang kết nối tới cụm máy chủ Hà Nội."*
+
+Formatting follows Vietnamese convention throughout — comma as the decimal separator — because
+the moment it renders `8.5` instead of `8,5` it stops looking like a Vietnamese site's own
+widget and starts looking like a bug in the game.
+
+**T04 · `trang-web-biet-ve-ban`** — slots: `paragraph`, `tile`, `footer`
+*(was `goi-ten-nguoi-choi`, a clock reading — replaced: the hour is the least interesting
+thing a browser knows about you, and a line that only says "it is 23:00" is a parlour trick
+the player dismisses in a second.)*
+
+The site states, flatly and in customer-service register, something about the player it has no
+business knowing — and every one of these is **true**, obtained from the browser with no
+network and no storage. The line is not a threat. It is a page being helpful.
+
+The anomaly draws **two** observations from the pool at spawn. Each appears only once its
+condition is met, so the paragraph the player first read was innocent — then it grows a
+sentence. Once it appears it stays, so it can be circled.
+
+| Observation | Source | Line |
+|---|---|---|
+| múi giờ | `Intl…resolvedOptions().timeZone` | *"Chúng tôi rất vui được phục vụ khách hàng ở khu vực Asia/Ho_Chi_Minh."* |
+| cỡ màn hình | `innerWidth × innerHeight` | *"Trang này hiển thị đẹp nhất ở 1512×982. Đúng bằng màn hình của bạn."* |
+| rời tab | `visibilitychange` đếm | *"Bạn đã rời khỏi trang này 3 lần. Chúng tôi vẫn đợi."* |
+| bất động | không có `mousemove` 45s | *"Bạn vẫn ở đó chứ? Bạn đã không cử động trong 47 giây."* |
+| cuộn qua | `IntersectionObserver` đếm | *"Bạn đã cuộn qua đoạn này hai lần mà không đọc."* |
+| hệ điều hành | `navigator.platform` | *"Bản dành cho máy của bạn đang được chuẩn bị. Chúng tôi biết bạn cần nó."* |
+| số nhân | `hardwareConcurrency` | *"Máy của bạn có 8 lõi. Chúng tôi chỉ cần một."* |
+
+**And the one that breaks the fourth wall — reserved for Ch6, at most one per playthrough:**
+the site reads the *game's* state and refers to it.
+
+- *"Bạn còn 2 trái tim."*
+- after a wrong capture: *"Bạn vừa khoanh nhầm. Không sao. Chúng tôi cũng không chắc."*
+- at 5 of 7 captured: *"Bạn đã tìm được 5. Bạn có chắc chỉ có 7 không?"*
+
+This is the single strongest line in the library and it is rationed accordingly: a fake website
+acknowledging the detective game around it only works once, and only in the finale, where the
+premise has already collapsed. Used earlier it would teach the player that the sites are aware,
+which is exactly the suspicion the first five chapters are built to withhold.
+
+**Constraint:** every line must be something the browser genuinely knows. Nothing invented,
+nothing about the player's identity, location beyond a timezone string, or anything the page
+would have to phone home for. A bluff is guessable; a true statement is not.
+
+**T05 · `van-ban-an-trong-tooltip`** — slots: `avatar`, `gallery-caption`, `product-title`, `photo`
+A `title=` tooltip contradicts what is visible. It surfaces only on hover, and the anomaly
+element is the thing you hover — so the player must be exploring with the cursor to find it.
+- Ch1: visible *"Khách hàng hài lòng"* / tooltip *"cô ấy chưa rời phòng thử kể từ tháng 3"*
+- Ch4: visible *"Bình minh trên hồ"* / tooltip *"chụp lúc 2 giờ sáng"*
+
+**T06 · `chinh-ta-sai-tang-dan`** — slots: `notice` (list), `product-title` (grid)
+Diacritics decay down a list. The first item is perfect Vietnamese; each subsequent item loses
+more `dấu` until the last is bare consonants — the site forgetting how to write.
+- Ch5: *"Thông báo nghỉ lễ"* → *"Thong bao nghi le"* → *"thng bo ngh l"* → *"t b n l"*
+
+**T07 · `ngay-thang-khong-ton-tai`** — slots: `date`, `incident`
+A date stated flatly that cannot exist, or should not: `31/02/2019`, `00/00/0000`, a post
+dated tomorrow, an incident resolved before it began.
+- Ch2: *"Đăng ngày 31/02/2019"*
+- Ch6: *"Sự cố #4471 — bắt đầu 03:12, đã khắc phục lúc 03:04."*
+
+**T08 · `chu-ky-nguoi-da-chet`** — slots: `byline`, `comment`, `notice`
+A byline or signature belonging to someone the same page says is gone. Pure cross-reference
+horror — it requires the chapter to have authored the memorial line as ordinary content.
+- Ch2: byline *"Mây · 3 ngày trước"* against the sidebar's *"Tưởng nhớ Mây (1994–2021)"*
+- Ch5: a notice signed by a principal the *"Lịch sử nhà trường"* block lists as former.
+
+### STYLE — 7
+
+**S01 · `mot-chu-khac-font`** — slots: `paragraph`, `hero-title`, `notice`
+One word inside a sentence renders in a different generic family (`cursive` / `fantasy` /
+`monospace`) with altered letter-spacing. No webfonts — the fallback stacks do it. Usually
+the word is an ordinary one; that is the point. *"Chúng tôi rất **mong** được phục vụ."*
+
+**S02 · `mau-rut-dan-khi-cuon`** — slots: any section-level slot
+A section desaturates as it scrolls into view (`filter: saturate()` driven by scroll position)
+and does not recover on the way back. The page loses colour behind you.
+
+**S03 · `chu-chon-duoc-nhieu-hon`** — slots: `hero-title`, `post-title`, `notice`
+Selecting the text reveals more text than is rendered — an absolutely-positioned layer at
+`opacity: 0` that `::selection` makes visible. Drag-selecting a headline shows words
+underneath it. Found only by players who select text while they read, which is possible only
+because CHẾ ĐỘ ĐỌC leaves dragging to the browser (§4.1).
+
+**S04 · `bong-do-sai-huong`** — slots: `tile`, `avatar`, `cta`, `product-title`
+Every shadow on the page falls one way; one card's `box-shadow` falls the other, lit by
+something else in the room.
+
+**S05 · `anh-khong-khop-chu-thich`** — slots: `gallery-caption`, `avatar`, `photo`
+Image and caption disagree — and now that the photographs are real (§3.4), they disagree
+*flatly*, which is far worse than the emoji version this anomaly started as. The caption is
+specific, confident, and describes a different photograph.
+- Ch4: a photograph of an empty car park captioned *"Nhà hàng nổi giữa hồ"*
+- Ch3: a photograph of a chair captioned *"Máy ảnh Canon AE-1, còn hộp"*
+
+Because the caption is authored and the photo is pinned by `lock`, the mismatch is written
+against a known image — the reason §3.4 forbids unpinned URLs.
+
+**S06 · `chu-vien-dinh-ngoai-le`** — slots: `paragraph`, `notice`, `footer`
+A line sits slightly outside its container, translated into the margin with
+`overflow: visible`, as if it tried to leave the page and got most of the way.
+
+**S07 · `emoji-lac-loai`** — slots: `feature-icon`, `tile`, `nav`
+The site's emoji vocabulary breaks. Among ✨🌿💧🧴 one bullet is 🩸 or 🕳️ or 👁️ or 🦷 — same
+size, same alignment, styled identically. The most legible anomaly in the library, which is
+why Ch1's first run forces it.
+
+### MOTION — 5
+
+**M01 · `phan-tu-theo-con-tro`** — slots: `avatar`, `tile`, `cta`
+An element drifts a few pixels toward the cursor, lagging heavily, capped at about 6px of
+travel. Never fast enough for the player to be sure they saw it.
+
+**M02 · `carousel-chay-nguoc`** — slots: `gallery-caption` (gallery), `tile` (tile row)
+A rotating element advances forward N times, then once goes *backwards* to a slide that was
+never in the deck, then resumes as if nothing happened. Roughly a 20s cycle.
+
+**M03 · `nhip-tho`** — slots: `tile`, `avatar`, `cta`, `map`
+A block scales between 1.000 and 1.012 on a 4s ease-in-out. Sub-perceptual until stared at.
+Breathing.
+
+**M04 · `bong-tre-nhip`** — slots: `cta`, `tile`
+The element animates on one period, its shadow on a slightly longer one, so the shadow arrives
+late — the thing casting it is not quite the thing you can see.
+
+**M05 · `cuon-nguoc-mot-chut`** — slots: any section-level slot
+Once per run, scrolling down past this element makes the page scroll back up about 40px on its
+own, once. Because a one-shot event cannot be circled after the fact, it leaves a permanent
+tell: a ghost duplicate of the element, offset upward at 8% opacity — a scroll scar. The scar
+is the capturable element.
+
+### ELEMENT — 5
+
+**E01 · `nut-o-le`** — slots: `paragraph`, `footer`, `nav` (it positions relative to them)
+A button parked out in the page margin, outside any layout, unstyled by the site's button
+rules: *"GỌI LẠI"*, *"ĐỪNG BẤM"*, *"XÁC NHẬN LẦN NỮA"*. Clicking opens a dialog written in the
+wrong voice. Clicking never scores — it still has to be circled.
+
+**E02 · `o-nhap-khong-nen-co`** — slots: `comment-form`, `booking-form`, `shipping-form`,
+`subscribe`, `newsletter`
+A form field that has no business in this form, styled exactly like its neighbours:
+*"Nhóm máu"*, *"Tên người sẽ nhận đồ của bạn"*, *"Đêm qua bạn mơ thấy gì?"*,
+*"Số người sẽ về cùng bạn"*.
+
+**E03 · `muc-menu-thu-mot-mot`** — slots: `nav`
+An extra nav item: `TRANG CHỦ · SẢN PHẨM · VỀ CHÚNG TÔI · `**`TẦNG HẦM`**. Clicking shows a 404
+written in the first person — *"Tôi không tìm thấy trang đó. Tôi đã tìm rất lâu."*
+
+**E04 · `chan-trang-thua`** — slots: `footer`
+The footer contains a line no footer contains: a coordinate pair, a licence number that is a
+scripture reference, *"Bản quyền © 1834–2026"*, *"Số người đang xem: 1 (bạn) và 4"*.
+
+**E05 · `con-tro-doi-hinh`** — slots: `paragraph`, `avatar`, `cta`, `map`
+A region where the cursor becomes wrong: `crosshair` over body copy, `not-allowed` over the buy
+button, `help` over a photograph of a face, `progress` over the footer.
+
+### REACTIVE — 5
+
+All five are **two-stage**: the site is honest until the player experiments, the experiment
+makes the anomaly *appear*, and it must then be circled to count. Experimenting is always
+free — no interaction can ever cost a heart.
+
+**R01 · `binh-luan-khong-ten`** — slots: `comment-form` · Ch2
+Submit the comment form with the name field empty. The comment posts — but not under
+`Ẩn danh`, and not with your text. It appears as *"Mây · vừa xong"* and its body replies to
+something the player has not said: *"Không sao đâu. Chị vẫn ở đây mà."*
+
+**R02 · `gio-hang-tu-them`** — slots: `cart-line` · Ch3
+Add anything to the cart. The cart shows your item and one more you did not add — same seller,
+and the shipping address prefilled is the one from the seller's card.
+
+**R03 · `tim-kiem-tra-ve-chinh-minh`** — slots: `nav` (search box) · Ch3, Ch6
+Search anything. Among plausible results sits one whose title is the player's exact query
+prefixed with *"chúng tôi đã tìm thấy"*, or one titled with the current clock time.
+
+**R04 · `dat-cho-qua-so-nguoi`** — slots: `booking-form` · Ch4
+Set guests above the stated maximum. Instead of clamping, the widget accepts it and the summary
+reads *"12 khách (11 người)"*. Lowering the number again does not fix the parenthetical.
+
+**R05 · `huy-dang-ky-khong-huy`** — slots: `subscribe`, `newsletter` · Ch1, Ch6
+Submit any email. The confirmation says you have been subscribed since a date years before
+today, and the unsubscribe link's text is *"KHÔNG THỂ"*.
+
+### IMAGE — 4
+
+Only possible because the photographs are real and their URLs are parameterised. Each of these
+would need a second hand-made asset if the art were static files, and none of them are possible
+with emoji at all.
+
+**I01 · `anh-mat-mau`** — slots: `photo`
+One photograph in a set is served with `?grayscale` while every sibling is in colour. Not a
+filter applied in CSS — the image itself arrives without colour, so it survives inspection.
+- Ch4: five gallery photos of a lake in summer, and one of them is grey.
+
+**I02 · `anh-doi-khi-quay-lai`** — slots: `photo`
+The image's `src` swaps to a different pinned `lock` when it leaves and re-enters the viewport
+— `T02` for pictures. The photograph you scrolled past is not the one you scroll back to, and
+its caption never changes.
+
+**I03 · `cung-mot-nguoi`** — slots: `avatar` (chapter must have ≥2)
+Two testimonials, two reviewers, two commenters — different names, different ages, different
+stories, and the identical photograph. The cheapest possible tell that the site's people are
+not people, and the one players report as the most unsettling in the family.
+- Ch1: *"Ngọc Anh, 28"* and *"Thu Hà, 41"* wearing the same face.
+
+**I04 · `anh-mo-dan`** — slots: `photo`
+The photograph's `?blur` climbs by one step each time it enters the viewport — `1`, `2`, `4` —
+and never resets. Looking at it is what does it.
+
+### 6.1 Coverage check
+
+**34 anomalies across six families.** Derived by matching each anomaly's `slots` against each
+chapter's declared inventory above — not estimated. `T05` and `S05` also accept `photo` since
+§3.4 made photographs real. The last two rows are what the director test in §8 asserts.
+
+| Family | Ch1 | Ch2 | Ch3 | Ch4 | Ch5 | Ch6 |
+|---|---|---|---|---|---|---|
+| TEXT (8) | 5 | 7 | 6 | 5 | 8 | 5 |
+| STYLE (7) | 7 | 6 | 6 | 7 | 7 | 5 |
+| MOTION (5) | 4 | 3 | 4 | 5 | 5 | 5 |
+| ELEMENT (5) | 5 | 4 | 5 | 5 | 4 | 5 |
+| REACTIVE (5) | 1 | 1 | 2 | 1 | 0 | 2 |
+| IMAGE (4) | 4 | 4 | 3 | 4 | 3 | 0 |
+| **eligible** | **26** | **25** | **26** | **27** | **27** | **22** |
+| max roll | 6 | 7 | 7 | 7 | 8 | 8 |
+| families available | 6 | 6 | 6 | 6 | 5 | 5 |
+
+Every chapter clears the director's "≥3 families, ≤2 per family" rule at its maximum roll with
+room to spare — the tightest is Ch6, whose five families give a capacity of 10 against a roll
+of 8.
+
+**Adding photographs resolved the Chapter 5 problem.** Before the IMAGE family, Ch5 had four
+families against a maximum roll of 8, filling every family to its cap with zero slack — the
+director could paint itself into a corner. Its four ceremony photographs give it a fifth
+family and real headroom. That was an unintended benefit of the imagery decision, and it is the
+main reason the coverage table is now worth trusting.
+
+Two deliberate absences remain, both of them characterisation rather than oversight:
+
+- **Ch5 has no REACTIVE anomaly.** It is a read-only bulletin board — nothing to submit,
+  nothing to interact with, only to read.
+- **Ch6 has no IMAGE anomaly** and no `photo` or `avatar` slots at all. A status dashboard has
+  no photographs, so the finale is pure text, colour and motion.
+- **Ch2 has no `nav` slot,** so `E03` and `S07` never appear there; a personal blog with a
+  single-line header is the reason, and its deep `comment` inventory more than covers the loss.
+
+---
+
+## 7. File plan
+
+```
+games/tham-tu-mang/
+  index.html                 shell: HUD, viewport host, overlays. No game logic.
+  style.css                  HUD / menu / overlay styling only — never the sites
+  js/
+    main.js                  boot, screen routing (menu ↔ chapter ↔ end)
+    state.js                 run state: hearts, captured set, current page
+    storage.js               localStorage — progress, ranks, mute
+    audio.js                 Web Audio synth; mute flag `thamTuMang.muted`
+    engine/
+      rng.js                 mulberry32 + helpers (pick, shuffle, range)   ← DOM-free
+      hittest.js             point-in-polygon, centroid, nearest-target,
+                             stroke bounds, budget-ring clamp             ← DOM-free
+      registry.js            imports all 34 anomalies, exports ANOMALIES   ← DOM-free
+      img.js                 pinned CDN url builders + SVG fallback markup ← DOM-free
+      director.js            roll count, filter, pick, assign to pages     ← DOM-free
+      run.js                 capture resolution, hearts, win/loss
+      site.js                shadow root, page mount/swap, slot indexing
+    anomalies/
+      text.js                T01–T08
+      style.js               S01–S07
+      motion.js              M01–M05
+      element.js             E01–E05
+      reactive.js            R01–R05
+      image.js               I01–I04
+    ui/
+      menu.js                case archive / chapter select
+      hud.js                 hearts, evidence counter, chapter title
+      mode.js                CHẾ ĐỘ ĐỌC ↔ CHẾ ĐỘ KHOANH toggle, vignette, cursor
+      lasso.js               pointer capture, canvas stroke, budget ring, polygon close
+      overlay.js             briefing, rules, game over, chapter clear
+      toast.js               capture feedback
+    chapters/
+      index.js               manifest: order, unlock rules, count ranges
+      ch1-lumiere.js         slots, flavour pools, exclude list
+      ch2-bep-nha-may.js
+      ch3-san-do-cu.js
+      ch4-ho-vang.js
+      ch5-hoa-ban.js
+      ch6-megalink.js
+  sites/
+    ch1-lumiere/      page.js                                   site.css
+    ch2-bep-nha-may/  index.page.js  post.page.js               site.css
+    ch3-san-do-cu/    listing.page.js  product.page.js  cart.page.js  site.css
+    ch4-ho-vang/      page.js                                   site.css
+    ch5-hoa-ban/      page.js                                   site.css
+    ch6-megalink/     page.js                                   site.css
+
+tests/tham-tu-mang.test.mjs   imports the DOM-free engine modules directly
+```
+
+Also changed:
+
+- `index.html` — one entry appended to the `games` array; `Puzzle: "▨"` added to
+  `CATEGORY_ICONS`.
+- `README.md` — one line in the game list.
+
+### 7.1 Hub entry
+
+```js
+{
+  icon: "🔎",
+  title: "Thám tử mạng",
+  description: "Soi sáu trang web bình thường và khoanh tròn những thứ không nên ở đó.",
+  category: "Puzzle",
+  tags: ["Quan sát", "Kinh dị", "Tiếng Việt"],
+  added: "2026-09-10",
+  color: "linear-gradient(135deg, #0d1117, #4fa88b)",
+  path: "games/tham-tu-mang/index.html"
+}
+```
+
+The final stop `#4fa88b` — a sickly evidence-tape green — is distinct from every existing card.
+
+---
+
+## 8. Testing
+
+The four `engine/` modules marked DOM-free are the testable surface, imported directly by
+`tests/tham-tu-mang.test.mjs` the way `tests/chrono-drifter.test.mjs` imports its engine. The
+bare import is itself the proof that they stay DOM-free.
+
+- **`hittest.js`** — point-in-polygon against convex, concave and self-intersecting strokes; a
+  rect centre exactly on a polygon edge; strokes below the 12px floor and strokes past the
+  budget ring both rejected *before* any hit-test runs; and the single-target rule — given a
+  polygon enclosing several elements, the one nearest the centroid is chosen, deterministically
+  and with ties broken stably.
+- **`director.js`** — over 500 seeded rolls per chapter: count within range, never two
+  anomalies on one slot element, ≥3 families, ≤2 per family, every page of a multi-page
+  chapter gets at least one, and the same seed yields an identical plan.
+- **`registry.js`** — exactly 34 entries across six families, unique ids, every `slots` value
+  appears in at least one chapter's inventory, every anomaly eligible for at least one chapter.
+- **`img.js`** — every generated URL is pinned (a `lock=` or an `/id/`), because an unpinned
+  URL silently breaks `S05` and the IMAGE family; `?grayscale` and `?blur=` compose correctly
+  onto a pinned base; and every image spec carries fallback SVG markup.
+- **Content rules that are actually assertable** — two of §6's authoring rules are mechanical,
+  so they are tests rather than hopes:
+  - **`T02`'s shape rule** — for every chapter's `T02` pool, the replacement must differ from
+    the original by more than 12 characters. This is the one that catches a future
+    *"412 → 413"*: a swap the player could only find by having memorised the page passes review
+    easily and fails this assertion immediately.
+  - **`T03`'s descent** — the generator, fed a starting value, produces the five phases in
+    order, formats every decimal with a comma per Vietnamese convention (never `8.5`), and
+    lands on `6,02e23` before giving up on being a number.
+  - **`T04`'s rationing** — the fourth-wall variant that reads run state is eligible in Ch6 and
+    nowhere else, and appears at most once per playthrough. Asserted across every seed, because
+    the whole effect dies if it can fire twice or fire early.
+- **`chapters/*.js`** — each chapter's declared slot inventory can satisfy its own maximum roll
+  under the director's constraints (the §6.1 table, asserted rather than trusted).
+
+`tests/syntax.test.mjs` covers `.html` script bodies; the folder game's modules are covered by
+being imported at all.
+
+**Manual playtest gates**, per this project's verification policy — static checks plus a human
+playtest at milestones: after Ch1 is playable, and again once all six chapters exist. What a
+playtest is looking for is not bugs but calibration — whether an anomaly is invisible, or so
+obvious it is free.
+
+---
+
+## 9. Non-goals
+
+- **No timer, no score multiplier, no combo.** The game is looking, not reacting.
+- **No difficulty settings.** The chapter order is the difficulty curve.
+- **No bundled assets.** Photographs are hotlinked and pinned (§3.4), never committed; Web
+  Audio for all sound; emoji retained for icons. The repo gains no binary files.
+- **No image the game cannot survive losing.** Every photograph is decoration plus an anomaly
+  surface, never the only carrier of a clue — the fallback path must remain playable, not
+  merely loadable.
+- **No hint button.** The HUD gives a count and nothing else; that was decided deliberately,
+  and the chapter ramp is what carries a stuck player, not an assist.
+- **No procedural site generation.** Six hand-written sites; only the anomalies are rolled.
+- **No child harmed on screen in Ch5.** Stated here so it survives into implementation.
+
+## 10. Known constraints
+
+- **This game needs a server.** ES modules do not load over `file://`. `games/last-quarter/`
+  already has this constraint, and GitHub Pages is unaffected. Note that `python3` is not
+  installed on this machine — use `npx serve` or any static server.
+- **`CATEGORY_ICONS` must stay monochrome.** `Puzzle: "▨"`, not an emoji, or the hub sidebar's
+  uniform look breaks.
+- **`CLAUDE.md` needs updating as part of this work.** Line 56 says games make no network
+  requests and lists three exceptions; this game is the fourth, and the first for images rather
+  than audio or a library. Shipping without amending that line leaves the next person reading a
+  rule the codebase no longer follows.
+- **The game now depends on a third party staying up.** `loremflickr.com` and `picsum.photos`
+  are free services with no uptime guarantee, and either could change its URL scheme or vanish.
+  The `onerror` fallback is what keeps that from being fatal, which is why §3.4 makes the
+  offline pass a playtest gate rather than a nice-to-have. If a service dies permanently, the
+  fix is one URL builder in `engine/img.js` — that is the reason the builders are centralised
+  there instead of inlined into six sites.
+- **Image URLs are unverified.** Written blind from a sandbox with no network; keywords and
+  `lock` values need a human pass at first playtest (§3.4).
+- **Anomaly text is the game.** Thirty mechanics are worth nothing if the copy is generic. The
+  flavour pools in §6 are content, not examples to be paraphrased at implementation time.
