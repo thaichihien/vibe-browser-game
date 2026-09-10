@@ -23,6 +23,7 @@ Một bộ sưu tập mini game viết bằng HTML/CSS/JavaScript thuần và vi
 - `quan-an/` - Quán ăn nhìn từ trên xuống: chạy ca phục vụ 3,5 phút, làm hết nhiệm vụ để sang tên quán, rồi mua bàn ghế, nhân viên và công thức bằng giá Việt Nam thật.
 - `animal-kings/` - RTS nhập vai Vua: tự tay thu hoạch, đi gặp thương nhân/thợ xây/đội trưởng, chiêu mộ đoàn tùy tùng. 5 vương quốc muông thú, 4 mức AI, không có bản đồ nhỏ — tin từ xa phải có liên lạc chạy về.
 - `chrono-drifter/` - RPG theo lượt của một kẻ trôi thời gian: mỗi lần bấm chơi là một thời đại, một dạng trận và một phe ngẫu nhiên. 30 thời đại, 632 nhân vật, vòng khắc chế 9 hệ đổi tên theo từng thời đại, và 26 món đồ hiện đại mua bằng ⧗ mảnh thời gian. Toàn bộ cơ chế được ghi lại trong [wiki](docs/chrono-drifter-wiki.md).
+- `tham-tu-mang/` - trò quan sát: mở một trang web bình thường và khoanh tròn 5-8 thứ không nên ở đó. Dị thường được rải ngẫu nhiên mỗi lượt nên cùng một trang chơi lần nào cũng khác. Ba trái tim; khoanh nhầm vào nội dung sạch, hoặc khoanh vào khoảng trống, đều mất một trái tim. Cần chạy qua server (ES modules).
 
 ## Chạy local
 
