@@ -58,12 +58,18 @@ audio or font assets, and no network requests — with **four exceptions**:
 `games/magic-shooter.html` loads Three.js from a CDN (test its CDN-failure fallback when
 touching it), `games/grid-storm/` ships ~17 MB of background music in `music/*.mp3`,
 `games/farmer-dream.html` ships ~16 MB in `games/music/farmer-dream/`, and
-`games/tham-tu-mang/` **hotlinks photographs** from `loremflickr.com` and `picsum.photos`
+`games/tham-tu-mang/` **hotlinks photographs** from `picsum.photos` and `randomuser.me`
 instead of bundling them — the first exception for images rather than audio or a library.
-Every URL there must stay **pinned** (a `lock=` or an `/id/`), because its captions are
-written against a known photograph and an unpinned URL silently breaks them; every `<img>`
-carries an `onerror` fallback to a procedural SVG, so the game degrades to a stylised site
-rather than a page of broken-image icons. Both music players
+Every URL there must stay **pinned** — a `lock=`, an `/id/`, or a portrait index — because
+its captions are written against a known photograph and an unpinned URL silently breaks
+them; every `<img>` carries an `onerror` fallback to a procedural SVG, so the game degrades
+to a stylised site rather than a page of broken-image icons. `img.js` still exports a
+`loremflickr` builder for chapters 2–6, but **chapter 1 no longer uses it**: loremflickr
+burns an attribution strip and a licence badge into every frame, so a page of its photos
+reads as scraped stock rather than a brand's own site, and its keywords do not reliably
+return the subject asked for (`portrait,woman` returned a newsstand). Prefer picsum, whose
+`/id/` names a specific curated photograph, and write each caption against the photo you
+actually looked at. Both music players
 treat a failed track as "skip to the next one", so the games still run if the files are
 missing. Single-file games keep their audio under `games/music/<slug>/` rather than a
 sibling folder, which would read as a folder game. `games/jungle-king.backup.html` is a

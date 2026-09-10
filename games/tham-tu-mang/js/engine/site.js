@@ -79,6 +79,26 @@ function hitGeometry(el) {
 }
 
 /**
+ * Can the player actually SEE this, right now?
+ *
+ * A rect is not enough. Chrome lays out the contents of a closed <details> and gives them
+ * real, non-zero rects at the position they would occupy if it were open — the collapsed FAQ
+ * answers in chapter 1 report 26×18 boxes sitting in what looks like blank page. Without this
+ * check the lasso resolves against things nobody can see, which breaks the game in both
+ * directions at once: circling apparently empty space silently SCORES an anomaly the player
+ * never saw, and the aim ring outlines nothing while they draw. A claim has to be about
+ * something on screen.
+ *
+ * The anomaly is not lost — opening the accordion is ordinary read-mode exploration, and
+ * targets() is recomputed at the start of every stroke, so it becomes circleable the moment
+ * it is on screen.
+ */
+function isVisible(el) {
+  if (typeof el.checkVisibility !== 'function') return true;   // older engines: rects only
+  return el.checkVisibility({ contentVisibilityAuto: true, visibilityProperty: true });
+}
+
+/**
  * Every element the lasso can resolve against, as plain numbers for hittest.js.
  * A captured anomaly stays in the list so re-circling it is a no-op rather than a heart.
  */
@@ -86,6 +106,7 @@ export function targets(shadow) {
   const out = [];
   let n = 0;
   for (const el of shadow.querySelectorAll('[data-anom], [data-catch]')) {
+    if (!isVisible(el)) continue;                       // collapsed / hidden — see isVisible
     const { points, rects } = hitGeometry(el);
     if (!points.length) continue;                       // hidden markers are not targets
     out.push({

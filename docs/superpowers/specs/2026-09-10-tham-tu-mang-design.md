@@ -122,12 +122,30 @@ as a toy; the whole premise depends on these pages looking like pages. This is a
 departure from the house rule at `CLAUDE.md:56` (*"emoji for all art… no network requests"*)
 and becomes its fourth documented exception — see §10.
 
-Two sources, both pinned so the same URL always returns the same photograph:
+Three sources, all pinned so the same URL always returns the same photograph:
 
 | Use | Pattern |
 |---|---|
-| Topical (a lake, a classroom, a jar of cream) | `https://loremflickr.com/<w>/<h>/<keyword>?lock=<n>` |
-| Atmospheric fill, textures, abstract | `https://picsum.photos/id/<id>/<w>/<h>` |
+| Scenes and objects | `https://picsum.photos/id/<id>/<w>/<h>` |
+| Faces, for `avatar` slots | `https://randomuser.me/api/portraits/women|men/<n>.jpg` |
+| Keyword search, chapters 2–6 only | `https://loremflickr.com/<w>/<h>/<keyword>?lock=<n>` |
+
+**Revised after the chapter 1 playtest (2026-09-10).** The design originally led with
+loremflickr for topical shots. Seen on a real screen, it is the wrong default twice over:
+
+- It **burns an attribution strip and a licence badge into every frame**. Eleven of those on
+  one page reads as scraped stock, which is the opposite of the premise — the site has to
+  pass as a brand's own.
+- Its **keywords do not reliably return the subject asked for**. Chapter 1's four
+  `portrait,*` shots came back as one usable portrait, a newsstand, a figure photographed
+  from thirty metres, and a black-and-white silhouette holding a camera. That silently
+  killed `I03`, which needs two names to share one recognisable face, and one already-grey
+  photograph would have made `I01` unwinnable.
+
+picsum is curated, unwatermarked, and `/id/` names a specific photograph; randomuser gives
+clean face-forward headshots, which is what a testimonial block actually uses. loremflickr
+stays in `img.js` for later chapters that want keyword search, but a caption must never be
+written against a loremflickr URL nobody has looked at.
 
 **Pinning is not optional.** `S05 anh-khong-khop-chu-thich` writes a caption that contradicts
 the photograph, and the new IMAGE family compares one photo against another. A random image
@@ -149,10 +167,12 @@ captions a real person as dead, cursed or missing. `T05`'s tooltip and `T08`'s b
 to names and text, not to a face. This is a content rule, not a technical one, and it exists
 because these are photographs of real people who did not consent to a horror game.
 
-**A caveat I cannot resolve from here:** my sandbox has no network, so I have never seen the
-photographs behind these URLs. The keywords and lock values are chosen blind. The first
-playtest of each chapter needs a pass to confirm each image is roughly the subject its caption
-claims — and to reroll any `lock` that came back as something absurd.
+**Captions are written against the photograph, never the other way round.** This is the rule
+the blind-URL problem above was violating. A clean caption that already contradicts its photo
+poisons `S05`, whose entire job is to be the one caption that does not match: if four of the
+five disagree anyway, the anomaly is invisible. Look at the image, then write the caption.
+Chapter 1's images were re-picked on this basis and verified on screen; chapters 2–6 have not
+been, and every new `photo` slot needs the same pass.
 
 ### 3.5 Flavour pools
 
@@ -208,12 +228,39 @@ Scrolling still works in capture mode (wheel / two-finger / scrollbar); the over
 In capture mode: pointer-down anchors the stroke, drag draws a freehand path on a `<canvas>`
 overlay above the shadow host, pointer-up closes it into a polygon.
 
-**A circle has a maximum extent.** From the anchor point, the overlay draws a faint budget
-ring showing how large the loop may get — a bounding box of roughly 300×200px, clamped
-further on small viewports. This is the rule that guarantees **one anomaly per circle**: the
-player cannot sweep one enormous loop around the whole page and take everything at once.
-Because the budget ring is visible from the first pixel of the stroke, the limit is
-communicated by the drawing itself rather than discovered by being punished.
+**The overlay draws exactly one thing: the player's own stroke.** No budget rectangle, no
+closing-tolerance ring, no guide furniture of any kind. Both rules below are still communicated
+by the drawing rather than by punishment — that part was never in question — but through the
+**colour of the line itself**. An earlier build drew a dashed box for the size cap and a dashed
+ring for the closing tolerance, and the result was that every capture turned into a diagram
+laid over the page. The player is supposed to be looking at the website.
+
+**The stroke is an open path, and the closing line is never painted.** An early build called
+`closePath()` before stroking, which draws a straight chord from the cursor back to the anchor —
+a hard line cutting across the page that follows the cursor the whole way round. A playtester
+read it as part of their own drawing, and it is not: it is the renderer guessing at a shape that
+has not been made yet. Once the loop *would* close, the enclosed region is shown by **filling**
+it faintly — `fill()` closes the path implicitly, so the area being claimed is visible without a
+line drawn across the stroke.
+
+**A loop must come back to where it started.** Finish near the anchor and the gesture is a
+claim; stop short and the stroke is voided. The tolerance is **relative** — `max(28px, 25% of
+the stroke box's diagonal)` — because the same 40px gap is a rounding error on a 300px loop and
+a gaping hole on a 50px one.
+
+So the line carries all of it: **grey** while the loop is still open, **green** the moment it
+would close, **red** once it is past the budget. It is drawn over a light halo so it reads on
+both a cream landing page and Ch6's black dashboard.
+
+Closure is judged **only on release**. A loop in progress is open almost the whole way round,
+so applying the rule live would blank the aim outline for all but the last few pixels of every
+stroke — hiding the one thing the preview exists to show.
+
+**A circle has a maximum extent** — a bounding box of roughly 300×200px, clamped further on
+small viewports. This is the rule that guarantees **one anomaly per circle**: the player cannot
+sweep one enormous loop around the whole page and take everything at once. The limit is
+communicated by the drawing itself rather than discovered by being punished — the stroke turns
+red the moment it crosses the cap, while the player is still holding the button down.
 
 ### 4.3 Resolution — exactly one target
 
@@ -234,15 +281,19 @@ most plainly meant.
 A circle is a claim, and an empty circle is a wrong claim. There is no free probing: the
 player cannot sweep the page with cheap loops to map where the anomalies are not.
 
-**Two gestures are voided before they ever become claims,** and neither costs a heart:
+**Three gestures are voided before they ever become claims,** and none costs a heart:
 
 - a stroke under ~12px across — that is a twitch or a stray click, not a circle. Feedback:
-  `VÒNG CHƯA KHÉP`.
-- a stroke that exceeded the budget ring — the player was shown the limit while drawing.
+  `NÉT QUÁ NGẮN`.
+- a stroke that exceeded the size cap — the line turned red while they were drawing it.
   Feedback: `VÙNG KHOANH QUÁ RỘNG`.
+- a loop that never came back to its anchor (§4.2) — the player did not finish the gesture,
+  and closing it for them would score a claim they never committed to. Feedback:
+  `VÒNG CHƯA KHÉP`, which is now used for its literal meaning.
 
-These are input handling, not scoring mercy: both are rejected *before* hit-testing, so
-neither reveals anything about the page. They cannot be used to probe.
+These are input handling, not scoring mercy: all three are rejected *before* hit-testing, so
+none reveals anything about the page. They cannot be used to probe — and neither can the live
+aim outline, which names *what* is under the loop but never whether it is an anomaly.
 
 Captured anomalies keep a persistent evidence ring and a case number, so the player can see
 what they have already claimed.
@@ -387,7 +438,9 @@ Six families. `slots` lists what the anomaly can attach to; the director only of
 chapter that has one. The flavour lines below are the authored pools, not placeholders.
 
 The brief asked for 30. The library grew to 34 when the sites gained real photographs (§3.4),
-which made a sixth family possible — those four are the only additions.
+which made a sixth family possible — those four were the only additions. The chapter 1
+playtest then traded one for one: `S04` was **withdrawn** and `R06` was **added**, so the
+library is still **34** — STYLE dropped to 6, REACTIVE rose to 6.
 
 ### TEXT — 8
 
@@ -488,8 +541,17 @@ nothing about the player's identity, location beyond a timezone string, or anyth
 would have to phone home for. A bluff is guessable; a true statement is not.
 
 **T05 · `van-ban-an-trong-tooltip`** — slots: `avatar`, `gallery-caption`, `product-title`, `photo`
-A `title=` tooltip contradicts what is visible. It surfaces only on hover, and the anomaly
-element is the thing you hover — so the player must be exploring with the cursor to find it.
+The visible caption says one thing; a line hiding behind it — surfaced only by hovering — says
+another, and the other one is the truth. The page never corrects what it wrote. It just adds
+something, for you.
+
+**The site draws this tooltip itself; it is not a `title=` attribute.** The native tooltip
+waits nearly a second, renders in the system font, and looks like part of the *browser* — and
+a playtester reported simply not understanding what the anomaly was. Anything that reads as
+browser chrome cannot read as a symptom of the page. It now appears after 180ms, under the
+cursor, in the site's own typeface. The static tell (a faint dotted underline) stays: without
+it the anomaly is findable only by hovering every element on the page, and since a win needs
+*all* anomalies, an undiscoverable one does not make a run hard — it makes it unwinnable.
 - Ch1: visible *"Khách hàng hài lòng"* / tooltip *"cô ấy chưa rời phòng thử kể từ tháng 3"*
 - Ch4: visible *"Bình minh trên hồ"* / tooltip *"chụp lúc 2 giờ sáng"*
 
@@ -498,11 +560,17 @@ Diacritics decay down a list. The first item is perfect Vietnamese; each subsequ
 more `dấu` until the last is bare consonants — the site forgetting how to write.
 - Ch5: *"Thông báo nghỉ lễ"* → *"Thong bao nghi le"* → *"thng bo ngh l"* → *"t b n l"*
 
-**T07 · `ngay-thang-khong-ton-tai`** — slots: `date`, `incident`
-A date stated flatly that cannot exist, or should not: `31/02/2019`, `00/00/0000`, a post
-dated tomorrow, an incident resolved before it began.
+**T07 · `ngay-thang-khong-ton-tai`** — slots: `date`, `incident`, `hours`
+A date or a time stated flatly that cannot exist, or should not: `31/02/2019`, `00/00/0000`, a
+post dated tomorrow, an incident resolved before it began.
 - Ch2: *"Đăng ngày 31/02/2019"*
 - Ch6: *"Sự cố #4471 — bắt đầu 03:12, đã khắc phục lúc 03:04."*
+- Ch1: a shop's opening hours — *"09:00 – 24:60"*, *"08:00 – 09:-30"*, *"08^2:00 – 20:00"*
+
+The `hours` slot is the best surface it has: three shops listed side by side in one identical
+`HH:MM – HH:MM` template, so the eye reads all three as a block and nobody checks the digits.
+**Only the closing time is ever corrupted.** A line wrong at both ends reads as junk data; a
+line that starts correct and then goes wrong reads as a shop that really does close then.
 
 **T08 · `chu-ky-nguoi-da-chet`** — slots: `byline`, `comment`, `notice`
 A byline or signature belonging to someone the same page says is gone. Pure cross-reference
@@ -510,7 +578,7 @@ horror — it requires the chapter to have authored the memorial line as ordinar
 - Ch2: byline *"Mây · 3 ngày trước"* against the sidebar's *"Tưởng nhớ Mây (1994–2021)"*
 - Ch5: a notice signed by a principal the *"Lịch sử nhà trường"* block lists as former.
 
-### STYLE — 7
+### STYLE — 6 (S04 withdrawn)
 
 **S01 · `mot-chu-khac-font`** — slots: `paragraph`, `hero-title`, `notice`
 One word inside a sentence renders in a different generic family (`cursive` / `fantasy` /
@@ -527,9 +595,14 @@ Selecting the text reveals more text than is rendered — an absolutely-position
 underneath it. Found only by players who select text while they read, which is possible only
 because CHẾ ĐỘ ĐỌC leaves dragging to the browser (§4.1).
 
-**S04 · `bong-do-sai-huong`** — slots: `tile`, `avatar`, `cta`, `product-title`
-Every shadow on the page falls one way; one card's `box-shadow` falls the other, lit by
-something else in the room.
+**S04 · `bong-do-sai-huong`** — ~~slots: `tile`, `avatar`, `cta`, `product-title`~~
+**WITHDRAWN after the chapter 1 playtest (2026-09-10).** Every shadow on the page falls one
+way; one card's `box-shadow` falls the other. On screen it does not read as a symptom — it
+reads as a card styled slightly differently, which every real site has. It fails §1's test in
+reverse: the answer to *"…is that just how the site is?"* was always **yes**, so the anomaly
+was only ever a heart tax on players who noticed it and doubted themselves. Deleted from the
+registry rather than excluded per chapter, so the director cannot place it anywhere. If it is
+ever restored it needs a second tell, not a darker shadow. **The library is 33.**
 
 **S05 · `anh-khong-khop-chu-thich`** — slots: `gallery-caption`, `avatar`, `photo`
 Image and caption disagree — and now that the photographs are real (§3.4), they disagree
@@ -599,7 +672,7 @@ scripture reference, *"Bản quyền © 1834–2026"*, *"Số người đang xem
 A region where the cursor becomes wrong: `crosshair` over body copy, `not-allowed` over the buy
 button, `help` over a photograph of a face, `progress` over the footer.
 
-### REACTIVE — 5
+### REACTIVE — 6
 
 All five are **two-stage**: the site is honest until the player experiments, the experiment
 makes the anomaly *appear*, and it must then be circled to count. Experimenting is always
@@ -623,8 +696,23 @@ Set guests above the stated maximum. Instead of clamping, the widget accepts it 
 reads *"12 khách (11 người)"*. Lowering the number again does not fix the parenthetical.
 
 **R05 · `huy-dang-ky-khong-huy`** — slots: `subscribe`, `newsletter` · Ch1, Ch6
-Submit any email. The confirmation says you have been subscribed since a date years before
-today, and the unsubscribe link's text is *"KHÔNG THỂ"*.
+Submit a real email address. The confirmation says you have been subscribed since a date years
+before today, and the unsubscribe link's text is *"KHÔNG THỂ"*.
+
+The field is `required` and `type="email"`, so native constraint validation runs *before* the
+submit event: an empty or malformed address cannot fire the anomaly. That is deliberate — the
+anomaly has to sit behind a real interaction, not a stray click on the button.
+
+**R06 · `lien-ket-di-tim-thu-ban-khong-go`** — slots: `nav`, `cta` · Ch1
+Click an ordinary nav item or an ordinary button, and the browser opens a new tab searching for
+something the player never typed. The page offers no explanation; when they come back, the
+thing they clicked no longer says what it used to.
+
+Two-stage like the rest of the family: the experiment is free, and the **trace it leaves** is
+what must be circled. Without the label change there would be nothing on the page to claim —
+opening a tab and leaving no mark is an anomaly that does not exist. It opens in a **new tab**
+so the run in progress survives, and `sealNavigation()` already stops the click from
+navigating this one.
 
 ### IMAGE — 4
 
@@ -660,15 +748,19 @@ chapter's declared inventory above — not estimated. `T05` and `S05` also accep
 
 | Family | Ch1 | Ch2 | Ch3 | Ch4 | Ch5 | Ch6 |
 |---|---|---|---|---|---|---|
-| TEXT (8) | 5 | 7 | 6 | 5 | 8 | 5 |
-| STYLE (7) | 7 | 6 | 6 | 7 | 7 | 5 |
+| TEXT (8) | 6 | 7 | 6 | 5 | 8 | 5 |
+| STYLE (6) | 6 | 5 | 5 | 6 | 6 | 4 |
 | MOTION (5) | 4 | 3 | 4 | 5 | 5 | 5 |
 | ELEMENT (5) | 5 | 4 | 5 | 5 | 4 | 5 |
-| REACTIVE (5) | 1 | 1 | 2 | 1 | 0 | 2 |
+| REACTIVE (6) | 2 | 1 | 3 | 2 | 0 | 3 |
 | IMAGE (4) | 4 | 4 | 3 | 4 | 3 | 0 |
-| **eligible** | **26** | **25** | **26** | **27** | **27** | **22** |
-| max roll | 6 | 7 | 7 | 7 | 8 | 8 |
+| **eligible** | **27** | **24** | **26** | **27** | **26** | **22** |
+| max roll | 6–8 | 7 | 7 | 7 | 8 | 8 |
 | families available | 6 | 6 | 6 | 6 | 5 | 5 |
+
+Ch1's TEXT rose to 6 because `T07` gained the `hours` slot, and its REACTIVE to 2 because
+`R06` accepts `nav` and `cta`. Ch1's roll is 6–8 rather than the 5–6 originally specified —
+the page roughly doubled in size after its first playtest (§5.1).
 
 Every chapter clears the director's "≥3 families, ≤2 per family" rule at its maximum roll with
 room to spare — the tightest is Ch6, whose five families give a capacity of 10 against a roll
@@ -683,7 +775,9 @@ main reason the coverage table is now worth trusting.
 Two deliberate absences remain, both of them characterisation rather than oversight:
 
 - **Ch5 has no REACTIVE anomaly.** It is a read-only bulletin board — nothing to submit,
-  nothing to interact with, only to read.
+  nothing to interact with, only to read. `R06` technically fits its `nav` and `cta`, so when
+  Ch5 is built it must carry `R06` in its `exclude` list to keep that characterisation; the
+  table above counts it as 0 on that basis.
 - **Ch6 has no IMAGE anomaly** and no `photo` or `avatar` slots at all. A status dashboard has
   no photographs, so the finale is pure text, colour and motion.
 - **Ch2 has no `nav` slot,** so `E03` and `S07` never appear there; a personal blog with a

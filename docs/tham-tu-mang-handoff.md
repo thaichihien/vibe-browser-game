@@ -1,14 +1,14 @@
 # Thám Tử Mạng — handoff
 
-**Written:** 2026-09-10 · **Last updated:** 2026-09-10, after the first playtests
+**Written:** 2026-09-10 · **Last updated:** 2026-09-10, after the chapter 1 visual rebuild
 **For:** a fresh Claude session picking this up on another machine.
 
 You are inheriting a **half-built game**: the engine and Chapter 1 are done and tested,
 Chapters 2–6 do not exist. Read this file, then the spec, then start.
 
-**If you can drive a browser, read §8 first.** Three things could not be verified from the
-machine this was built on, because that sandbox had no network and no browser. They are the
-highest-value work available and they gate everything else.
+**§8 is now mostly done.** Two of its three items — the image pass and the offline gate —
+were closed on a machine with a browser and a network. §8.3, difficulty calibration, still
+needs a human playing. Read §8 for what changed before touching chapter 1's look.
 
 ---
 
@@ -36,7 +36,7 @@ run. That is the load-bearing architectural idea and §7 explains what it forbid
 
 | File | Why |
 |---|---|
-| `docs/superpowers/specs/2026-09-10-tham-tu-mang-design.md` | The design. 34 anomalies, 6 chapters, all copy. **Authoritative.** |
+| `docs/superpowers/specs/2026-09-10-tham-tu-mang-design.md` | The design. 33 anomalies, 6 chapters, all copy. **Authoritative.** |
 | `docs/superpowers/plans/2026-09-10-tham-tu-mang-stage1.md` | The Stage 1 build plan, executed. Stages 2–3 described but not written. |
 | `CLAUDE.md` | Repo house rules. §56 was amended for this game — see §7. |
 
@@ -93,16 +93,24 @@ js/
 sites/ch1-lumiere/  page.js (markup) · site.css
 ```
 
-**The 19 anomalies built** (of 34 designed):
+**The 20 anomalies built** (of 34 designed):
 
 | Family | Built |
 |---|---|
-| TEXT | `T01` cursed sentence · `T02` rewrites on re-read · `T03` number stops being a number · `T04` the site knows a true fact about you · `T05` tooltip contradicts the caption |
-| STYLE | `S01` one word wrong font · `S04` shadow falls the wrong way · `S05` caption ≠ photo · `S06` line escapes into the margin · `S07` stray emoji |
+| TEXT | `T01` cursed sentence · `T02` rewrites on re-read · `T03` number stops being a number · `T04` the site knows a true fact about you · `T05` hover reveals a line that contradicts the page · `T07` an opening time that cannot exist |
+| STYLE | `S01` one word wrong font · `S05` caption ≠ photo · `S06` a line walking off the page · `S07` stray emoji |
 | MOTION | `M01` drifts toward cursor · `M03` breathing |
 | ELEMENT | `E01` button in the margin · `E04` impossible footer line · `E05` wrong cursor |
-| REACTIVE | `R05` newsletter says you subscribed years ago |
-| IMAGE | `I01` one photo drained of colour · `I03` two names, one face · `I04` photo blurs each time you look |
+| REACTIVE | `R05` newsletter says you subscribed years ago · `R06` a link searches for something you never typed |
+| IMAGE | `I01` one photo is decades older than its neighbours · `I03` two names, one face · `I04` photo blurs each time you look |
+
+**`S04` was withdrawn** after the second playtest — see §9.13. The registry holds 20, not 19,
+and `STAGE1_IDS` in the test file is the list of record.
+
+**Two anomalies are now `deferred`** (`R05`, `R06`), so a run can contain two that do not
+exist on the page until the player interacts. Both are REACTIVE and the director caps a family
+at two, so two is the ceiling. Worth watching at playtest: a run holding both demands that the
+player submit the newsletter form *and* click the right link before they can win.
 
 **Chapter 1 is bigger than the spec's sketch.** After the first playtest it grew to ~36 slot
 elements across ten sections (hero, six feature bullets, how-to steps, four ingredient photos,
@@ -141,9 +149,11 @@ These look like bugs. They are not. They were each raised, questioned, and reaff
 2. **Circling is behind a mode button.** Not ergonomics — it is what leaves drag-select
    available to the player. Without it `S03` (selecting a headline reveals hidden text, spec
    §6) is undiscoverable. Do not make dragging draw by default.
-3. **The lasso has a maximum size** (`MAX_W`/`MAX_H` in `hittest.js`), shown as a dashed budget
-   ring while drawing. Without it one giant loop takes every anomaly at once. A too-large
-   stroke is voided *before* hit-testing, so it leaks nothing and costs nothing.
+3. **The lasso has a maximum size** (`MAX_W`/`MAX_H` in `hittest.js`). Without it one giant
+   loop takes every anomaly at once. A too-large stroke is voided *before* hit-testing, so it
+   leaks nothing and costs nothing. It used to be shown as a dashed budget rectangle; the user
+   had that removed along with every other guide (§9.15) — the cap is now signalled by the
+   stroke turning red. **The cap itself is the decision; drawing a box around it was not.**
 4. **Giving up is not rankable.** If it were, "look at the answers" would be the optimal
    opening move.
 5. **Photos are hotlinked, not bundled.** The user chose this over procedural SVG after being
@@ -153,10 +163,16 @@ These look like bugs. They are not. They were each raised, questioned, and reaff
 ## 7. Invariants — breaking these breaks the game silently
 
 - **No module may touch the DOM at import time.** The import test enforces it repo-wide.
-- **Every image URL must be pinned** — a `lock=` or an `/id/`. `img.js` throws on an unpinned
-  request, deliberately. An unpinned URL returns a different photo per load, which silently
-  breaks `S05` (a caption written against a *known* photograph) and the whole IMAGE family.
+- **Every image URL must be pinned** — a `lock=`, an `/id/`, or a portrait index. `img.js`
+  throws on an unpinned request, deliberately. An unpinned URL returns a different photo per
+  load, which silently breaks `S05` (a caption written against a *known* photograph) and the
+  whole IMAGE family. Pinning is necessary but not sufficient: a pinned URL nobody has
+  **looked at** is just as broken — see §8.1 for how that played out.
 - **Every `<img>` needs its `onerror` fallback.** Use `imgHtml()`; never hand-write an `<img>`.
+- **A hit target must be something the player can actually see.** `targets()` filters on
+  `Element.checkVisibility()`, not just a non-zero rect — a closed `<details>` lays its
+  contents out and reports real boxes for them (§9.8). Anything that offers hidden elements to
+  the lasso lets a player score what they never saw.
 - **An anomaly must actually mark something.** `ctx.mark(el)` is what makes it capturable. If
   `apply()` can return without marking, the evidence counter promises a number that can never
   be reached and the run becomes unwinnable. `reconcile()` in `run.js` is the safety net — it
@@ -181,10 +197,24 @@ These look like bugs. They are not. They were each raised, questioned, and reaff
 
 Nothing here was verifiable from the original machine. All three are cheap for you.
 
-### 8.1 Reroll the image `lock` values — highest value
+### 8.1 Reroll the image `lock` values — ✅ DONE, and the source changed
 
-**Every photograph in the game was chosen blind.** The build sandbox had no network, so these
-keyword/lock pairs in `sites/ch1-lumiere/page.js` have never been looked at by anyone:
+**Every photograph in the game had been chosen blind.** Looked at on a real screen, they were
+worse than "some will be absurd": *squalane* was a bronze pig statue, *cream texture* was a
+woman in a red dress on a street, the *lab* shot was already black and white — which alone
+would have made `I01` (one photo drained of colour) unwinnable — and of the four portraits,
+one was a **newsstand**, so `I03` (two names, one face) had nothing to collapse. On top of
+that, loremflickr burns an attribution strip and a licence badge into every frame, so the
+whole page read as scraped stock rather than a brand's own site.
+
+**Chapter 1 no longer uses loremflickr.** Scenes and objects come from `picsum.photos/id/<id>`
+(curated, unwatermarked, and the id names one specific photograph); the four testimonial faces
+come from `randomuser.me`, which is what a real testimonial block uses. `flickr()` stays in
+`img.js` for chapters 2–6. Every image was viewed at its final crop, and **each caption was
+then written against the photograph** — see the rule added to spec §3.4, which is the part
+that matters more than the ids.
+
+For the record, the pairs that were replaced:
 
 | Where | Call |
 |---|---|
@@ -204,28 +234,31 @@ The four testimonial portraits matter most: `I03` swaps one avatar's photo onto 
 two names share a face, and that only unsettles if the portraits are plainly *different people*
 to begin with.
 
-Load the page, look at them, and change any `lock` number whose photo is absurd or off-subject.
-This matters beyond looks: `S05` writes a caption that contradicts the photograph, and that
-joke only lands if the photograph is recognisably *something*. Note that the same keyword with
-a different `lock` gives a different picture — that is the only knob you need.
+**Chapters 2–6 must not replicate the old pattern.** Pick the photograph first, look at it,
+then write the caption. Chapter 2 is a food blog and will be the most sensitive to it.
 
-**Do this before building Chapters 2–6**, or you will replicate an unvalidated pattern across
-five more sites. Chapter 2 is a food blog and will be the most sensitive to it.
+### 8.2 Verify the offline fallback — ✅ DONE, passes
 
-### 8.2 Verify the offline fallback
+Ran with `picsum.photos` and `randomuser.me` both aborted at the network layer, scrolling the
+whole page so the `loading="lazy"` images actually request and fail. **All 11 images fall back**
+to the tinted SVG placeholder at their correct display sizes, and the page still reads as a
+website whose photographs have not arrived — not as a broken one. Spec §3.4's gate is met.
 
-Throttle to offline in devtools and reload. Every `<img>` should become a tinted SVG
-placeholder with grain, and the site should still read as a *website* — not a stack of grey
-rectangles. If it reads as broken, the fix is in `fallbackSvg()` in `js/engine/img.js`.
-This is a stated playtest gate in spec §3.4, never yet run.
+One trap if you re-run this: without scrolling, only the two above-the-fold images have been
+requested, so a stationary check reports 2 of 11 and looks like a failure. It is not.
 
-### 8.3 Calibrate difficulty
+### 8.3 Calibrate difficulty — still open, needs a human
 
 Chapter 1 has been played, which is where bugs 1–7 in §9 came from, but it has **not** been
-played since it doubled in size and gained six anomaly types. Open questions: are 6–8 anomalies
-findable across the longer page without frustration? Is `M03` (breathing, 1.2% scale)
-perceptible at all, or invisible? Is `T05` findable now that its only tell is a faint dotted
-underline? Does `E05` (wrong cursor) register on anything other than the buy button?
+played since it doubled in size, gained six anomaly types, and was visually rebuilt (§11). Three of the four open questions were answered by the second playtest and are now fixed
+rather than open — `M03` was invisible (§9.11), `T05` was not understood at all (§9 and spec
+§6 T05), and `S06` read as a bug (§9.12). What is still genuinely open:
+
+- Are 6–8 anomalies findable across the longer page without frustration?
+- Does `E05` (wrong cursor) register on anything other than the buy button?
+- A run can now hold **two** deferred anomalies (`R05` and `R06`), neither of which exists on
+  the page until the player interacts. Does that feel like exploration, or like a run you
+  cannot finish?
 
 The lever is **`CH1.min`/`CH1.max`** in `js/chapters/ch1-lumiere.js` — *not* the heart rule,
 which the user decided (§6.1). If an individual anomaly is invisible or trivially obvious, tune
@@ -282,6 +315,68 @@ rendering, geometry, or the gap between data and page.
    glyphs, so the browser substituted a font mid-word. Fixed by the `--serif`/`--sans` stacks
    (§7). **Lesson: a Vietnamese-language game cannot use a default English font stack.**
 
+Six more from the second playtest, all of them calibration or correctness rather than
+crashes — and again, none catchable by a green test suite:
+
+8. **A collapsed `<details>` handed out phantom hit targets.** Chrome lays out the contents of
+   a closed `<details>` and gives them real non-zero rects at the position they *would* occupy
+   if it were open. Chapter 1's FAQ answers are `paragraph` slots, so an anomaly landing there
+   reported a 26×18 box sitting in what looks like blank page. This broke the game in both
+   directions at once: circling apparently empty space **silently scored an anomaly the player
+   had never seen**, and the aim ring outlined nothing while they drew. `targets()` in
+   `site.js` now checks `Element.checkVisibility()` before offering anything. The anomaly is
+   not lost — opening the accordion is ordinary read-mode exploration, and `targets()` is
+   recomputed at the start of every stroke. **Lesson: a rect is not proof that anything is on
+   screen.**
+9. **Three of `S01`'s four fonts were silently doing nothing.** `Consolas` and `Candara` are
+   not installed on macOS at all, so the "wrong font" rendered in the paragraph's own font;
+   `Impact` is installed but has **no precomposed Vietnamese glyphs**, so it substituted
+   mid-word and read as a rendering fault rather than a wrong word. The pool is now five
+   stacks measured on a real machine — present, and drawing every stacked diacritic
+   themselves. **Lesson: naming a font is not the same as having it, and having it is not the
+   same as it covering Vietnamese. Measure per glyph.**
+10. **`I03` punished the player for being right.** After the face swap the two portraits are
+    pixel-identical, so nothing can tell the player which one is "the" anomaly — but only the
+    swapped one was marked. Circling the pair you correctly spotted was a coin flip, and the
+    results screen then agreed you had been wrong. Both halves are now marked; `run.found`
+    keys on the anomaly id, so either scores once and the other returns `ĐÃ GHI RỒI`.
+    **Lesson: if two things are indistinguishable by construction, both must be the answer.**
+11. **`M03` was invisible.** 1.2% over 4s measured out at ~2px on a button — the open question
+    in §8.3, now answered: not subtle, absent. It breathes at ~4.5% over 3.2s with a hold at
+    the top of the inhale, measured at 8.2px of swing. **Lesson: sub-perceptual is not subtle,
+    and an anomaly nobody can see does not make a run hard, it makes it unwinnable.**
+12. **`S06` read as a CSS bug, not an anomaly.** A block shifted once into the margin and then
+    sitting still is *exactly* what a broken stylesheet looks like. It now walks: further out
+    and further tilted every time the player scrolls away and back, capped so it can never
+    leave the screen. **Lesson: what separates "broken" from "wrong" is intent, and intent
+    shows as change over time.**
+13. **`S04` was withdrawn entirely.** A shadow falling the other way does not read as a
+    symptom, it reads as a card styled slightly differently — which every real site has. It
+    failed the premise's test in reverse: the answer to "…or is that just how the site is?"
+    was always yes. Deleted from the registry rather than merely excluded, so the director
+    cannot place it in later chapters either. **Lesson: an anomaly that is indistinguishable
+    from ordinary design variation is not a hard anomaly, it is a heart tax.**
+
+14. **The lasso drew a chord from the cursor to the anchor, and auto-closed any arc.** Two
+    faults in one gesture. `draw()` called `closePath()` before `stroke()`, so a hard straight
+    line swept across the page following the cursor for the whole stroke — the player read it
+    as part of their own drawing when it was the renderer guessing at an unfinished shape. And
+    on release, an arc that never came back was silently completed into a polygon and **scored**,
+    so a gesture the player abandoned halfway could cost them a heart. The stroke is now traced
+    open (the claimed area is shown by filling, which closes the path without painting a line
+    across it), and an unclosed loop is a third void verdict, `NOT_CLOSED`, rejected before
+    hit-testing like the other two. Tolerance is relative — `max(28px, 25% of the stroke box
+    diagonal)`. `VÒNG CHƯA KHÉP` now means what it says; the too-short stroke took the honest
+    `NÉT QUÁ NGẮN`. **Lesson: do not render a shape the player has not finished making, and do
+    not score one either.**
+15. **The drawing guides were clutter.** The fix for 14 shipped a dashed ring at the anchor for
+    the closing tolerance, on top of the existing dashed budget rectangle. Two guide shapes plus
+    the stroke turned every capture into a diagram laid over the page — and the player is
+    supposed to be looking at the website. Both are gone. The overlay now draws **only the
+    player's stroke**, and it carries both rules in its colour: grey while open, green once it
+    would close, red past the cap, over a light halo so it reads on cream and on black alike.
+    **Lesson: "communicate the rule by drawing" did not have to mean drawing more things.**
+
 ## 10. Known limitation for Chapter 2
 
 `sealNavigation()` blocks **every** link. Chapters 2 and 3 are multi-page (spec §5.2, §5.3) and
@@ -295,7 +390,54 @@ must re-render the same anomalies in the same places, or a player can never veri
 `main.js` currently mounts only `chapter.pages[0]`; `PAGES` at the top of `main.js` is the map
 to extend.
 
-## 11. Current state
+## 11. The chapter 1 visual rebuild — and the four CSS rules it left behind
+
+The user's verdict on the first build was that it looked ugly and did not read as a modern
+site. That is not a cosmetic complaint. **Every anomaly in spec §6 is built to survive the
+question *"…or is that just how the site is?"*** — and on a page that already looks
+provisional, that question never gets asked, because anything could be a mistake. A site that
+does not pass as a site takes the whole mechanic down with it.
+
+What was actually wrong, in order of damage:
+
+1. **No content container.** Every section ran the full window width, so at 1440px the
+   comparison table stretched 1400px for three short columns and body text ran to 1400px lines.
+2. **Images upscaled.** Sources were requested at 520–640px and stretched with
+   `width:100%`, so a 640px storefront shot rendered 1400px wide and soft.
+3. **The photographs themselves** — see §8.1.
+4. Flat 1990s styling: no radius, no cards, no elevation, no spacing scale, a 15px serif body.
+
+The rebuild is `sites/ch1-lumiere/site.css` (rewritten) and `page.js` (new photography,
+section eyebrows, card grids). **Slot inventory is byte-identical** — same counts, same
+`data-slot` values, same `figure > img + figcaption` nesting — so the director, the
+registry↔chapter↔markup cross-check and all 444 tests were unaffected throughout.
+
+**Four CSS rules exist for the anomalies, not for looks.** They are commented at the top of
+`site.css` too; breaking any of them breaks an anomaly *silently*, with tests still green:
+
+- **The baseline `box-shadow` sits on the `<img>` itself, and falls down-right.** `S04`
+  overrides it inline with an up-left shadow. Put the baseline on a wrapper instead and the
+  two shadows coexist, so nothing reads as "lit from the wrong side".
+- **No `overflow: hidden` on anything wrapping a `data-slot`.** `S06` translates a line out
+  into the margin and `E01` parks an absolutely-positioned button there; a clipping ancestor
+  deletes both.
+- **No `transform` in `:hover` for `cta` / `avatar`.** `M01` and `M03` drive those elements'
+  transforms. Hover on colour and shadow instead.
+- **Every photo stays inside a `<figure>` with its `<figcaption>`.** `I01`, `I03`, `I04` and
+  `S04` all reach the image via `ctx.slot.closest('figure')`.
+
+One layout trap worth knowing: `imgHtml()` writes `width`/`height` attributes on every
+`<img>`, and the browser applies them as presentational hints — `height: 840px` on the hero.
+That **overrides `aspect-ratio`**, so the hero rendered at its full 840px until `img { height:
+auto }` was added. The attributes must stay (they reserve space before the image arrives, and
+size the fallback SVG), so the `height: auto` is load-bearing.
+
+Verified in a browser, not just by tests: six seeds render with no console errors, no
+zero-size or off-page anomaly, and no horizontal overflow at 1440 / 1024 / 820 / 500px; a
+lasso around an anomaly scores it and keeps all three hearts; a lasso over empty margin costs
+one and toasts `KHÔNG CÓ GÌ Ở ĐÂY`.
+
+## 12. Current state
 
 Branch **`feat/tham-tu-mang`**, off `main`. Not pushed, no PR opened. The work is committed in
 readable steps: spec+plan, engine+chapter 1, hub registration, this handoff, then a fix commit

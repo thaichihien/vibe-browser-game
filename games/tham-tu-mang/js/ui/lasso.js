@@ -1,7 +1,9 @@
-/* Vẽ vòng khoanh. Vòng tròn ngân sách (budget ring) hiện ra ngay từ pixel đầu tiên, nên
-   giới hạn kích thước được truyền đạt bằng chính nét vẽ chứ không phải bằng hình phạt. */
+/* Vẽ vòng khoanh. Chỉ vẽ đúng một thứ: chính nét của người chơi.
+   Cả hai luật — trần kích thước và phải khép vòng — vẫn được truyền đạt bằng chính nét vẽ
+   chứ không phải bằng hình phạt, nhưng bằng MÀU của nét: xám khi vòng chưa khép, xanh khi
+   đã đủ khép, đỏ khi vượt trần. */
 
-import { strokeVerdict, MAX_W, MAX_H, bounds } from '../engine/hittest.js';
+import { strokeVerdict, MAX_W, MAX_H, bounds, isClosed } from '../engine/hittest.js';
 
 /**
  * hooks.onStart()                      -> snapshot handed back to the other two hooks
@@ -34,30 +36,56 @@ export function initLasso(canvas, mode, hooks) {
 
   const clear = () => ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  function draw() {
-    clear();
-    if (!anchor) return;
-
-    // Budget ring — how large this loop is allowed to get.
-    ctx.save();
-    ctx.setLineDash([4, 5]);
-    ctx.strokeStyle = 'rgba(233, 229, 223, 0.28)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(anchor.x - MAX_W / 2, anchor.y - MAX_H / 2, MAX_W, MAX_H);
-    ctx.restore();
-
-    if (points.length < 2) return;
-    const b = bounds(points);
-    const over = b.w > MAX_W || b.h > MAX_H;
-    ctx.save();
-    ctx.strokeStyle = over ? '#d4553f' : '#4fa88b';
-    ctx.lineWidth = 2.5;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
+  /* Trace the stroke as an OPEN path.
+     The first version called closePath() before stroke(), which draws a straight chord from
+     the cursor back to the anchor — a hard line cutting across the page that follows the
+     cursor the whole way round. Players read it as part of what they were drawing, and it is
+     not: it is the renderer guessing at a shape they have not finished making yet. */
+  function trace() {
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
     for (const p of points.slice(1)) ctx.lineTo(p.x, p.y);
-    ctx.closePath();
+  }
+
+  function draw() {
+    clear();
+    if (!anchor || points.length < 2) return;
+
+    /* Only the stroke. No budget rectangle, no closing-tolerance ring.
+       Both rules are still communicated by the drawing rather than by punishment — that was
+       always the point — but through the COLOUR OF THE LINE ITSELF rather than through extra
+       dashed furniture drawn over the page. Two guide shapes plus the stroke turned every
+       capture into a diagram, and the player is supposed to be looking at the website. */
+    const b = bounds(points);
+    const over = b.w > MAX_W || b.h > MAX_H;
+    const closed = isClosed(points);
+
+    /* The claimed area, shown by filling rather than by drawing the closing line. fill()
+       closes the path implicitly, so the player sees the region the loop would take without
+       a chord being painted across their stroke. */
+    if (closed && !over) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(53, 138, 112, 0.13)';
+      trace();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    // A light halo under the line: the sites run from cream (Ch1) to a black dashboard (Ch6),
+    // and a single flat colour disappears into one end or the other.
+    trace();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    /* Grey while the loop is still open, green once it would close, red past the budget.
+       This line is now the ONLY tell for either rule, so it has to be legible before the
+       player has any reason to know the rules exist. */
+    ctx.strokeStyle = over ? '#c2452f' : closed ? '#358a70' : 'rgba(46, 55, 69, 0.78)';
+    ctx.lineWidth = 2.5;
+    trace();
     ctx.stroke();
     ctx.restore();
   }
@@ -95,7 +123,8 @@ export function initLasso(canvas, mode, hooks) {
     requestAnimationFrame(() => {
       queued = false;
       if (!drawing) return;
-      hooks.onPreview(snapshot, toViewport(points), strokeVerdict(points));
+      hooks.onPreview(snapshot, toViewport(points),
+        strokeVerdict(points, undefined, { requireClosed: false }));
     });
   });
 

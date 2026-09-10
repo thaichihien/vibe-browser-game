@@ -83,12 +83,19 @@ test('every module imports without touching the DOM', async () => {
 
 /* ── Task 2: lasso geometry ─────────────────────────────────────────────── */
 
-import { MIN_STROKE, MAX_W, MAX_H, bounds, strokeVerdict, pointInPolygon, centroid,
+import { MIN_STROKE, MAX_W, MAX_H, CLOSE_MIN, bounds, strokeVerdict, pointInPolygon, centroid,
+         closureGap, closureSlack, isClosed, VOID_VERDICTS,
          nearestEnclosed } from '../games/tham-tu-mang/js/engine/hittest.js';
 
 const square = (x, y, s) => [
   { x, y }, { x: x + s, y }, { x: x + s, y: y + s }, { x, y: y + s }
 ];
+
+/* What a finished stroke looks like: the pen came back to where it started.
+   `square` is four corners of a POLYGON — its closure is implicit, and it is still the right
+   fixture for pointInPolygon. A stroke is a path, and strokeVerdict now judges whether the
+   player actually closed it, so stroke fixtures have to say so explicitly. */
+const loop = (x, y, s) => [...square(x, y, s), { x, y }];
 
 test('bounds measures the stroke box', () => {
   const b = bounds(square(10, 20, 40));
@@ -110,8 +117,44 @@ test('a stroke past the budget ring is TOO_BIG', () => {
   ]), 'TOO_BIG');
 });
 
-test('a stroke inside both gates is OK', () => {
-  assert.strictEqual(strokeVerdict(square(0, 0, 100)), 'OK');
+test('a stroke inside every gate is OK', () => {
+  assert.strictEqual(strokeVerdict(loop(0, 0, 100)), 'OK');
+});
+
+test('a loop that never came back to its start is NOT_CLOSED, not a claim', () => {
+  // Three quarters of a 100px box: the pen stopped 100px from where it began.
+  const arc = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }];
+  assert.strictEqual(strokeVerdict(arc), 'NOT_CLOSED');
+});
+
+test('closing tolerance scales with the size of the loop', () => {
+  // The same gap is a rounding error on a big loop and a gaping hole on a small one.
+  assert.ok(closureSlack(loop(0, 0, 300)) > closureSlack(loop(0, 0, 40)));
+  assert.strictEqual(closureSlack(loop(0, 0, 20)), CLOSE_MIN, 'small loops get the floor');
+});
+
+test('a loop closed to within its slack counts as closed', () => {
+  const nearly = [...square(0, 0, 100), { x: CLOSE_MIN - 4, y: 0 }];
+  assert.ok(closureGap(nearly) < closureSlack(nearly));
+  assert.strictEqual(isClosed(nearly), true);
+  assert.strictEqual(strokeVerdict(nearly), 'OK');
+});
+
+test('closure is judged on release, never while the stroke is still being drawn', () => {
+  // A loop in progress is open almost the whole way round. If the preview applied the closure
+  // rule, the aim outline would blank out for all but the last few pixels of every stroke —
+  // hiding the one thing the preview exists to show.
+  const arc = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }];
+  assert.strictEqual(strokeVerdict(arc, undefined, { requireClosed: false }), 'OK');
+  assert.strictEqual(strokeVerdict(arc), 'NOT_CLOSED');
+});
+
+test('the size gates are still checked before closure, so neither can leak', () => {
+  // An unclosed stroke that is also too big must report the cheaper rejection first: both are
+  // void, and both are decided without ever looking at the page.
+  const huge = [{ x: 0, y: 0 }, { x: MAX_W + 50, y: 0 }, { x: MAX_W + 50, y: 50 }];
+  assert.strictEqual(strokeVerdict(huge), 'TOO_BIG');
+  for (const v of ['TOO_SMALL', 'TOO_BIG', 'NOT_CLOSED']) assert.ok(VOID_VERDICTS.includes(v));
 });
 
 test('pointInPolygon handles a convex loop', () => {
@@ -168,7 +211,7 @@ test('a target centre exactly on an edge does not throw', () => {
 
 /* ── Task 3: pinned image urls and the offline fallback ─────────────────── */
 
-import { flickr, picsum, isPinned, fallbackSvg, imgHtml }
+import { flickr, picsum, portrait, isPinned, fallbackSvg, imgHtml }
   from '../games/tham-tu-mang/js/engine/img.js';
 
 test('flickr urls are pinned with a lock', () => {
@@ -184,9 +227,23 @@ test('picsum urls are pinned with an id', () => {
   assert.strictEqual(isPinned(url), true);
 });
 
+test('portrait urls are pinned by their path', () => {
+  // No parameter to forget: the path itself names one photograph.
+  assert.strictEqual(portrait({ set: 'women', n: 27 }),
+    'https://randomuser.me/api/portraits/women/27.jpg');
+  assert.strictEqual(isPinned(portrait({ set: 'women', n: 27 })), true);
+  assert.strictEqual(isPinned(portrait({ set: 'men', n: 4 })), true);
+});
+
+test('portrait refuses a missing index or an unknown set', () => {
+  assert.throws(() => portrait({ set: 'women' }), /n is required/);
+  assert.throws(() => portrait({ set: 'people', n: 3 }), /unknown set/);
+});
+
 test('an unpinned url is rejected by isPinned', () => {
   assert.strictEqual(isPinned('https://loremflickr.com/600/400/lake'), false);
   assert.strictEqual(isPinned('https://picsum.photos/600/400'), false);
+  assert.strictEqual(isPinned('https://randomuser.me/api/portraits/women/'), false);
 });
 
 test('an unpinned request throws rather than returning a random photo', () => {
@@ -247,6 +304,7 @@ test('chapter 1 declares the slot inventory the spec gives it', () => {
   assert.strictEqual(slots['feature-icon'], 6);
   assert.strictEqual(slots.nav, 1);
   assert.strictEqual(slots.newsletter, 1);
+  assert.strictEqual(slots.hours, 3);
 });
 
 test('chapter 1 rolls 6 to 8', () => {
@@ -284,7 +342,7 @@ test('T02 replacements change the SHAPE of the block, not one character', () => 
 
 import { ANOMALIES, byId } from '../games/tham-tu-mang/js/engine/registry.js';
 
-const STAGE1_IDS = ['T01','T02','T03','T04','T05','S01','S04','S05','S06','S07','M01','M03','E01','E04','E05','R05','I01','I03','I04'];
+const STAGE1_IDS = ['T01','T02','T03','T04','T05','T07','S01','S05','S06','S07','M01','M03','E01','E04','E05','R05','R06','I01','I03','I04'];
 const FAMILIES = ['TEXT','STYLE','MOTION','ELEMENT','REACTIVE','IMAGE'];
 
 test('the registry holds exactly the stage 1 anomalies', () => {
@@ -502,6 +560,17 @@ test('circling nothing costs a heart too — an empty circle is a wrong claim', 
   assert.strictEqual(run.hearts, 2);
 });
 
+test('an unclosed loop is voided before hit-testing and costs nothing', () => {
+  // The stroke sits right on top of clean content, so if closure were judged after hit-testing
+  // this would be a WRONG and a lost heart. Cancelling has to happen first, and cost nothing.
+  const run = runWith(3);
+  const targets = [{ id: 't1', anomaly: false, anomId: null, cx: 50, cy: 50 }];
+  const r = resolve(run, box(0, 0, 100), 'NOT_CLOSED', targets);
+  assert.strictEqual(r.outcome, 'NOT_CLOSED');
+  assert.strictEqual(run.hearts, 3);
+  assert.strictEqual(run.found.size, 0, 'a cancelled gesture must not score either');
+});
+
 test('a stroke below the floor is voided before hit-testing and costs nothing', () => {
   const run = runWith(3);
   const targets = [{ id: 't1', anomaly: false, anomId: null, cx: 5, cy: 5 }];
@@ -573,6 +642,15 @@ test('the LUMIÈRE page ships exactly the slots chapter 1 declares', () => {
 test('the page marks ordinary content as catchable', () => {
   const catches = [...PAGE_INDEX.html.matchAll(/data-catch/g)].length;
   assert.ok(catches >= 10, `only ${catches} data-catch elements — wrong captures need targets`);
+});
+
+test('the four testimonial portraits are four different photographs', () => {
+  // I03 puts one avatar's face onto another so that two names share it. If the portraits
+  // were not plainly different people to begin with, there is nothing for it to collapse.
+  const faces = [...PAGE_INDEX.html.matchAll(/randomuser\.me\/api\/portraits\/\w+\/(\d+)\.jpg/g)]
+    .map((m) => m[1]);
+  assert.strictEqual(faces.length, 4, 'chapter 1 declares four avatar slots');
+  assert.strictEqual(new Set(faces).size, 4, `two testimonials already share a face: ${faces}`);
 });
 
 test('every image on the page is pinned', () => {
@@ -717,10 +795,11 @@ test('S01 declares no fixed word list — it must read the page it lands on', ()
   }
 });
 
-test('R05 is the only stage 1 anomaly marked deferred', () => {
+test('only the two-stage reactive anomalies are marked deferred', () => {
   const deferred = ANOMALIES.filter((a) => a.deferred).map((a) => a.id);
-  assert.deepStrictEqual(deferred, ['R05'],
+  assert.deepStrictEqual(deferred, ['R05', 'R06'],
     'only two-stage reactive anomalies may be absent from the DOM after apply()');
+  for (const id of deferred) assert.strictEqual(byId(id).family, 'REACTIVE');
 });
 
 /* ── Resolution: anomaly priority and scribble-to-select ────────────────── */
@@ -832,6 +911,33 @@ test('over many seeds every position of a multi-slot type gets used', () => {
 });
 
 /* ── Vietnamese glyph coverage ──────────────────────────────────────────── */
+
+test('the withdrawn S04 is gone from the registry, not merely unused', () => {
+  // Withdrawn after playtest: a shadow falling the other way reads as a styling choice,
+  // never as a symptom. Leaving it registered would let the director keep placing it.
+  assert.strictEqual(byId('S04'), null);
+  assert.ok(!('S04' in CH1.flavour), 'chapter 1 still carries a dead S04 flavour pool');
+});
+
+test('T07 only ever corrupts the closing time, never the opening one', () => {
+  // A line wrong at both ends reads as junk data; one that starts right and then goes wrong
+  // reads as a shop that really does close then.
+  for (const entry of CH1.flavour.T07) {
+    assert.strictEqual(typeof entry, 'string');
+    // Impossible either because it is not a clock reading at all (09:-30, 08^2:00, 19:∞),
+    // or because it is shaped like one and still cannot happen (26:79, 24:60).
+    const m = entry.match(/^(\d{1,2}):(\d{2})$/);
+    const impossible = !m || Number(m[1]) > 23 || Number(m[2]) > 59;
+    assert.ok(impossible,
+      `T07 entry "${entry}" is a perfectly ordinary time — it has to be impossible`);
+  }
+});
+
+test('R06 sends the browser somewhere the player never typed', () => {
+  for (const entry of CH1.flavour.R06) {
+    assert.ok(entry.q && entry.label, 'R06 needs a query and a replacement label');
+  }
+});
 
 test('S01 never reskins a word with a generic font family', () => {
   // Generic families (cursive/fantasy/monospace) resolve to whatever the OS picked, which

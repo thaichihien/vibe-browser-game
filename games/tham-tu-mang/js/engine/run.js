@@ -2,10 +2,11 @@
    kiểm thử được mà không cần trình duyệt. Spec §4.3.
 
    Hai kết quả duy nhất tốn máu: khoanh trúng nội dung sạch, và khoanh không trúng gì.
-   Vòng quá nhỏ hoặc quá rộng bị loại TRƯỚC khi dò trúng, nên chúng không hé lộ gì về trang
-   và không thể dùng để dò tìm. */
+   Vòng quá nhỏ, quá rộng, hoặc CHƯA KHÉP LẠI đều bị loại TRƯỚC khi dò trúng, nên chúng không
+   hé lộ gì về trang và không thể dùng để dò tìm. Một nét vẽ dở dang là một cử chỉ người chơi
+   chưa làm xong; khép nó lại hộ họ tức là tính điểm một lời khai họ chưa hề đưa ra. */
 
-import { nearestEnclosed } from './hittest.js';
+import { nearestEnclosed, VOID_VERDICTS } from './hittest.js';
 
 /**
  * Đối chiếu kế hoạch với thực tế sau khi đã áp dụng xong.
@@ -49,7 +50,9 @@ export function giveUp(run) {
 
 export function resolve(run, stroke, verdict, targetList) {
   if (run.over) return { outcome: 'ALREADY' };
-  if (verdict === 'TOO_SMALL' || verdict === 'TOO_BIG') return { outcome: verdict };
+  // Voided before any hit-testing: too short, past the budget ring, or a loop that never came
+  // back to where it started. None costs a heart and none reveals anything about the page.
+  if (VOID_VERDICTS.includes(verdict)) return { outcome: verdict };
 
   const hit = nearestEnclosed(stroke, targetList);
 

@@ -111,17 +111,84 @@ export const T04 = {
   }
 };
 
+/* ── T05: dòng chữ chỉ hiện khi rê chuột ───────────────────────────────
+   CÁI NÀY LÀ GÌ, nói cho gọn: chú thích nhìn thấy nói một đằng, còn dòng chữ nấp sau nó —
+   chỉ hiện khi rê chuột lên — nói một nẻo, và nẻo kia mới là sự thật. Chú thích ghi
+   "Khách hàng hài lòng"; rê chuột lên thì trang nói thêm "cô ấy chưa rời phòng thử kể từ
+   tháng 3". Trang web không sửa lại lời nó đã viết. Nó chỉ nói thêm, cho riêng bạn.
+
+   Bản đầu dùng thuộc tính title= của trình duyệt và người chơi không hiểu chuyện gì đang
+   xảy ra — hợp lý: tooltip mặc định đợi gần một giây mới hiện, hiện ra bằng phông hệ thống
+   ở một góc màn hình, và trông y hệt một cái tooltip bình thường của trình duyệt, tức là
+   trông như một phần của TRÌNH DUYỆT chứ không phải của TRANG. Thứ trông như chrome của
+   trình duyệt thì không thể là dị thường của trang được.
+
+   Nên nó tự vẽ lấy: hiện sau 180ms, ngay dưới chỗ đang rê, bằng phông và màu của trang.
+   Cái tell tĩnh (gạch chân chấm) vẫn giữ, vì không có nó thì chỉ tìm ra bằng cách rê chuột
+   lên từng thứ một — mà phải tìm ĐỦ mới thắng, nên một dị thường không tìm ra được không
+   làm ván khó lên, nó làm ván không thắng nổi. */
 export const T05 = {
-  id: 'T05', family: 'TEXT', label: 'Chú thích ẩn nói ngược lại chữ nhìn thấy',
+  id: 'T05', family: 'TEXT', label: 'Rê chuột lên thì trang nói ngược lại chính nó',
   slots: ['avatar', 'photo', 'product-title'], weight: 2,
   apply(ctx) {
     const entry = pick(ctx.rng, ctx.flavour);
-    ctx.slot.setAttribute('title', entry);
-    // Một dấu hiệu rất mờ. Không có nó thì dị thường này chỉ tìm ra bằng cách rê chuột lên
-    // từng thứ một, mà một dị thường không thể tìm ra thì làm ván chơi hỏng chứ không khó.
+    ctx.slot.removeAttribute('title');
     ctx.slot.style.borderBottom = '1px dotted currentColor';
     ctx.mark(ctx.slot);
+
+    let tip = null;
+    let timer = 0;
+
+    const hide = () => { clearTimeout(timer); tip?.remove(); tip = null; };
+    const show = () => {
+      if (tip) return;
+      tip = document.createElement('div');
+      tip.className = 'ghost-tip';
+      tip.textContent = entry;
+      ctx.root.appendChild(tip);
+      // position:fixed, nên toạ độ khung nhìn của phần tử dùng thẳng được.
+      const r = ctx.slot.getBoundingClientRect();
+      tip.style.left = `${Math.max(12, Math.round(r.left))}px`;
+      tip.style.top = `${Math.round(r.bottom) + 8}px`;
+    };
+
+    ctx.slot.addEventListener('pointerenter', () => { timer = setTimeout(show, 180); });
+    ctx.slot.addEventListener('pointerleave', hide);
   }
 };
 
-export const TEXT_ANOMALIES = [T01, T02, T03, T04, T05];
+/* ── T07: một mốc thời gian không thể tồn tại ──────────────────────────
+   Giờ mở cửa là chỗ tốt nhất cho nó: ba cửa hàng xếp cạnh nhau, cùng một khuôn mẫu
+   "HH:MM – HH:MM", nên mắt đọc cả ba như một khối và không ai soi từng chữ số. Con số sai
+   không hét lên; nó chỉ nằm đó, được trình bày lịch sự y như hai con số đúng bên cạnh.
+
+   Giờ mở cửa được GIỮ NGUYÊN, chỉ giờ đóng cửa bị thay — vì một dòng mà cả hai đầu đều sai
+   thì đọc ra là dữ liệu rác, còn một dòng bắt đầu đúng rồi mới sai thì đọc ra là một cửa
+   hàng thật sự đóng cửa vào lúc đó. */
+export const T07 = {
+  id: 'T07', family: 'TEXT', label: 'Một mốc thời gian không thể tồn tại',
+  slots: ['hours', 'date', 'incident'], weight: 3,
+  apply(ctx) {
+    const entry = pick(ctx.rng, ctx.flavour);
+    const RANGE = /(\d{1,2}:\d{2})(\s*[–—-]\s*)(\d{1,2}:\d{2})/;
+
+    // Lấy đúng nút văn bản chứa khoảng giờ, để <b> tên thành phố và các <br> còn nguyên.
+    const walker = document.createTreeWalker(ctx.slot, NodeFilter.SHOW_TEXT);
+    let node = null;
+    while (walker.nextNode()) {
+      if (RANGE.test(walker.currentNode.nodeValue)) { node = walker.currentNode; break; }
+    }
+    if (!node) return;
+
+    const m = node.nodeValue.match(RANGE);
+    const head = node.nodeValue.slice(0, m.index);
+    const tail = node.nodeValue.slice(m.index + m[0].length);
+
+    const span = document.createElement('span');
+    span.textContent = `${m[1]}${m[2]}${entry}`;
+    node.replaceWith(document.createTextNode(head), span, document.createTextNode(tail));
+    ctx.mark(span);
+  }
+};
+
+export const TEXT_ANOMALIES = [T01, T02, T03, T04, T05, T07];

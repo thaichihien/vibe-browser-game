@@ -1,5 +1,7 @@
-/* Họ MOTION. Chuyển động phải ở dưới ngưỡng nhận biết — đủ để thấy khi nhìn chằm chằm,
+/* Họ MOTION. Chuyển động phải ở dưới ngưỡng chắc chắn — đủ để thấy khi nhìn thẳng vào nó,
    không đủ để chắc chắn khi liếc qua. */
+
+import { pick } from '../engine/rng.js';
 
 export const M01 = {
   id: 'M01', family: 'MOTION', label: 'Phần tử trôi theo con trỏ chuột', slots: ['avatar', 'tile', 'cta'], weight: 2,
@@ -23,7 +25,17 @@ export const M01 = {
 export const M03 = {
   id: 'M03', family: 'MOTION', label: 'Phần tử đang thở', slots: ['tile', 'avatar', 'cta', 'map'], weight: 2,
   apply(ctx) {
-    ctx.slot.style.animation = 'tho 4s ease-in-out infinite';
+    /* Bản đầu phóng 1,2% trong 4 giây và người chơi báo là KHÔNG THỂ THẤY. Dưới ngưỡng nhận
+       biết thì không phải là tinh tế, chỉ là không tồn tại — mà vì phải tìm ĐỦ mọi dị thường
+       mới thắng, một dị thường không nhìn thấy được không làm ván khó lên, nó làm ván hỏng.
+
+       Bản này thở thật: biên độ đủ để bắt được bằng mắt ngoại vi, và nhịp có NGHỈ ở hai đầu
+       (hít — giữ — thở ra) thay vì dao động đều. Nhịp đều đọc ra là hiệu ứng giao diện;
+       quãng nghỉ mới là cái làm nó đọc ra là hơi thở. */
+    const entry = pick(ctx.rng, ctx.flavour);
+    ctx.slot.style.setProperty('--tho-scale', String(entry.scale));
+    ctx.slot.style.animation = `tho ${entry.seconds}s ease-in-out infinite`;
+    ctx.slot.style.transformOrigin = 'center center';
     ctx.mark(ctx.slot);
   }
 };

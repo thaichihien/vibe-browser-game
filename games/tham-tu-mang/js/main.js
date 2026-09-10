@@ -21,11 +21,14 @@ import { PAGE_INDEX } from '../sites/ch1-lumiere/page.js';
 const PAGES = { 'ch1-lumiere': { index: PAGE_INDEX } };
 
 const FEEDBACK = {
-  CAPTURED:  ['BẰNG CHỨNG ĐÃ GHI', 'good'],
-  WRONG:     ['KHÔNG CÓ GÌ Ở ĐÂY', 'bad'],
-  ALREADY:   ['ĐÃ GHI RỒI', 'void'],
-  TOO_SMALL: ['VÒNG CHƯA KHÉP', 'void'],
-  TOO_BIG:   ['VÙNG KHOANH QUÁ RỘNG', 'void']
+  CAPTURED:   ['BẰNG CHỨNG ĐÃ GHI', 'good'],
+  WRONG:      ['KHÔNG CÓ GÌ Ở ĐÂY', 'bad'],
+  ALREADY:    ['ĐÃ GHI RỒI', 'void'],
+  // 'VÒNG CHƯA KHÉP' nay dành đúng cho nghĩa đen của nó: nét vẽ không quay về chỗ bắt đầu.
+  // Nét quá ngắn là chuyện khác — một cú giật tay hoặc một cú bấm lạc, nên nói thẳng như vậy.
+  TOO_SMALL:  ['NÉT QUÁ NGẮN', 'void'],
+  NOT_CLOSED: ['VÒNG CHƯA KHÉP', 'void'],
+  TOO_BIG:    ['VÙNG KHOANH QUÁ RỘNG', 'void']
 };
 
 export function boot() {
@@ -84,8 +87,9 @@ export function boot() {
       const [message, kind] = FEEDBACK[result.outcome];
 
       if (result.outcome === 'CAPTURED') {
-        const el = shadow.querySelector(`[data-anom="${result.anomId}"]`);
-        if (el) el.classList.add('evidence-ring');
+        for (const el of shadow.querySelectorAll(`[data-anom="${result.anomId}"]`)) {
+          el.classList.add('evidence-ring');
+        }
       }
       toast(message, kind);
       beep(kind);
@@ -119,7 +123,15 @@ export function boot() {
 
     // The <link> inside the shadow root resolves against the DOCUMENT, not against this
     // module — so the href is relative to games/tham-tu-mang/index.html, not to js/main.js.
-    shadow = mount(viewport, PAGES[chapter.id][chapter.pages[0].id], `./sites/${chapter.slug}/`);
+    const page = PAGES[chapter.id][chapter.pages[0].id];
+    shadow = mount(viewport, page, `./sites/${chapter.slug}/`);
+
+    /* The honest site first, anomalies on top of it — the same order the architecture states:
+       sites are authored clean and mutated at run start. A page's behaviour() is how it
+       answers ordinary interaction (a form that thanks you, a cart that adds an item); without
+       it, a form that swallows an email and says nothing is an anomaly nobody placed. */
+    page.behaviour?.(shadow);
+
     run = newRun(chapter, seed, built.picks);
 
     const rng = mulberry32(seed ^ 0x5f3759df);
@@ -164,9 +176,11 @@ export function boot() {
      lời. Đây là chỗ duy nhất trò chơi tiết lộ vị trí, và nó chỉ nói khi ván đã xong. */
   function reveal() {
     for (const pick of run.picks) {
-      const el = shadow.querySelector(`[data-anom="${pick.id}"]`);
-      if (!el) continue;
-      el.classList.add(run.found.has(pick.id) ? 'evidence-ring' : 'missed-ring');
+      const ring = run.found.has(pick.id) ? 'evidence-ring' : 'missed-ring';
+      // querySelectorAll, not querySelector: I03 marks both halves of the identical pair.
+      for (const el of shadow.querySelectorAll(`[data-anom="${pick.id}"]`)) {
+        el.classList.add(ring);
+      }
     }
   }
 

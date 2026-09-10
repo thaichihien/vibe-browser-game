@@ -26,7 +26,9 @@ export const S01 = {
     const span = document.createElement('span');
     span.textContent = word;
     span.style.fontFamily = entry.family;
-    span.style.letterSpacing = '0.06em';
+    span.style.letterSpacing = entry.spacing ?? '0.06em';
+    if (entry.style) span.style.fontStyle = entry.style;
+    if (entry.weight) span.style.fontWeight = String(entry.weight);
 
     const at = text.indexOf(word);
     ctx.slot.textContent = '';
@@ -52,25 +54,53 @@ export const S07 = {
   }
 };
 
-export const S04 = {
-  id: 'S04', family: 'STYLE', label: 'Bóng đổ sai hướng so với cả trang',
-  slots: ['avatar', 'cta', 'photo', 'tile'], weight: 2,
-  apply(ctx) {
-    // Bóng đổ trên ảnh dễ thấy hơn trên chữ, nên ưu tiên tấm ảnh trong cùng figure.
-    const el = ctx.slot.closest('figure')?.querySelector('img') ?? ctx.slot;
-    el.style.boxShadow = '-4px -5px 9px rgba(58, 51, 48, 0.30)';
-    ctx.mark(el);
-  }
-};
-
 export const S06 = {
-  id: 'S06', family: 'STYLE', label: 'Một dòng chữ tràn ra ngoài lề',
+  id: 'S06', family: 'STYLE', label: 'Một dòng chữ đang rời khỏi trang',
   slots: ['paragraph', 'footer', 'notice'], weight: 2,
   apply(ctx) {
+    /* Bản đầu chỉ dịch cả khối sang trái một lần rồi đứng yên, và người chơi đọc nó ra là
+       LỖI GIAO DIỆN chứ không phải dị thường — hoàn toàn đúng, vì một khối chữ lệch lề đứng
+       im chính xác là cái mà một trang web hỏng CSS trông như thế.
+
+       Cái tách "hỏng" khỏi "sai" là ý chí. Nên ở đây nó không đứng yên: mỗi lần người chơi
+       cuộn đi rồi cuộn lại, dòng chữ đã ra xa thêm một đoạn và nghiêng thêm một chút, như
+       thể nó đang cố đi ra khỏi trang và mỗi lần bạn quay lưng nó lại đi thêm được một quãng.
+       Một lỗi CSS thì không nhích. Có trần cứng để nó không bao giờ ra khỏi màn hình — một
+       dị thường trôi mất khỏi chỗ khoanh được thì cũng thành không thắng nổi. */
+    const entry = pick(ctx.rng, ctx.flavour);
+    const STEP = entry.step ?? 16;
+    const MAX = entry.max ?? 88;
+
     ctx.slot.style.position = 'relative';
-    ctx.slot.style.transform = `translateX(-${22 + Math.floor(ctx.rng() * 12)}px)`;
+    ctx.slot.style.willChange = 'transform';
+
+    let out = 20 + Math.floor(ctx.rng() * 10);
+    const paint = () => {
+      const tilt = -(out / MAX) * 2.4;          // càng ra xa càng nghiêng
+      ctx.slot.style.transform = `translateX(-${out}px) rotate(${tilt.toFixed(2)}deg)`;
+    };
+    paint();
     ctx.mark(ctx.slot);
+
+    let away = false;
+    const watch = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) { away = true; continue; }
+        if (!away) continue;
+        away = false;
+        out = Math.min(out + STEP, MAX);
+        paint();
+      }
+    }, { threshold: 0.25 });
+    watch.observe(ctx.slot);
   }
 };
 
-export const STYLE_ANOMALIES = [S01, S04, S05, S06, S07];
+/* S04 `bóng-đổ-sai-hướng` đã bị RÚT sau lần chơi thử ngày 10/09/2026.
+   Một cái bóng đổ ngược hướng so với phần còn lại của trang không đọc ra là "sai" — nó đọc
+   ra là một thẻ được style hơi khác, tức là đúng thứ mà mọi trang thật đều có vài chỗ. Nó
+   không sống sót qua câu hỏi "…hay trang nó vốn thế?" theo hướng ngược lại: câu trả lời
+   luôn luôn là "ừ, chắc vậy". Xem spec §6 STYLE. Nếu khôi phục, nó cần một cái tell thứ hai
+   chứ không phải một cái bóng đậm hơn. */
+
+export const STYLE_ANOMALIES = [S01, S05, S06, S07];

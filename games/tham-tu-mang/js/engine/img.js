@@ -6,6 +6,7 @@
 
 const FLICKR = 'https://loremflickr.com';
 const PICSUM = 'https://picsum.photos';
+const PORTRAITS = 'https://randomuser.me/api/portraits';
 
 export function flickr({ w, h, kw, lock, grayscale = false, blur = 0 }) {
   if (lock === undefined || lock === null) {
@@ -28,9 +29,34 @@ export function picsum({ w, h, id, grayscale = false, blur = 0 }) {
   return `${PICSUM}/id/${id}/${w}/${h}${q}`;
 }
 
-/** A url is pinned if it names a specific photograph: a lock= param, or an /id/ segment. */
+/**
+ * A testimonial headshot.
+ *
+ * Why a third source rather than a `portrait` keyword on loremflickr: that keyword does not
+ * reliably return a person. Chapter 1's four "portraits" were, in practice, one woman, a
+ * newsstand, someone photographed from thirty metres away, and a black-and-white figure
+ * holding a camera — which quietly killed I03, whose whole effect is two names wearing one
+ * recognisable face. loremflickr also burns an attribution strip and a licence badge into
+ * every frame, and a page of watermarked stock does not read as a brand's own site.
+ *
+ * These are pinned by construction: the path names one exact photograph, so there is no
+ * parameter to forget.
+ */
+export function portrait({ set = 'women', n }) {
+  if (n === undefined || n === null) {
+    throw new Error('portrait(): n is required — unpinned urls are a bug');
+  }
+  if (set !== 'women' && set !== 'men') {
+    throw new Error(`portrait(): unknown set ${set}`);
+  }
+  return `${PORTRAITS}/${set}/${n}.jpg`;
+}
+
+/** A url is pinned if it names a specific photograph: a lock=, an /id/, or a portrait index. */
 export function isPinned(url) {
-  return /[?&]lock=\d+/.test(url) || /picsum\.photos\/id\/\d+\//.test(url);
+  return /[?&]lock=\d+/.test(url)
+    || /picsum\.photos\/id\/\d+\//.test(url)
+    || /randomuser\.me\/api\/portraits\/(?:women|men)\/\d+\.jpg$/.test(url);
 }
 
 /** A stylised stand-in built entirely from gradients and grain — no network, no assets. */

@@ -9,6 +9,35 @@ export const MIN_STROKE = 12;
 export const MAX_W = 300;
 export const MAX_H = 200;
 
+/**
+ * How near the end of the stroke has to come back to where it started before the loop counts
+ * as closed. A claim is a CIRCLE; an arc that never came back is a gesture the player did not
+ * finish, and finishing it for them means scoring something they had not committed to.
+ *
+ * Relative, not absolute: the same 40px gap is a rounding error on a 300px loop and a gaping
+ * hole on a 50px one. The floor keeps small, quick loops from being impossible to close.
+ */
+export const CLOSE_MIN = 28;
+export const CLOSE_FRACTION = 0.25;
+
+/** How far the last point may sit from the first before the loop stops counting as closed. */
+export function closureSlack(points) {
+  const b = bounds(points);
+  return Math.max(CLOSE_MIN, CLOSE_FRACTION * Math.hypot(b.w, b.h));
+}
+
+/** The gap the player left between where they finished and where they started. */
+export function closureGap(points) {
+  if (!points || points.length < 2) return Infinity;
+  const a = points[0];
+  const z = points[points.length - 1];
+  return Math.hypot(z.x - a.x, z.y - a.y);
+}
+
+export function isClosed(points) {
+  return closureGap(points) <= closureSlack(points);
+}
+
 export function bounds(points) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const p of points) {
@@ -20,12 +49,24 @@ export function bounds(points) {
   return { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY };
 }
 
-/** Both rejections happen BEFORE any hit-testing, so neither leaks anything about the page. */
-export function strokeVerdict(points, cap = { w: MAX_W, h: MAX_H }) {
+/** Every verdict that is voided instead of scored. None of them costs a heart. */
+export const VOID_VERDICTS = ['TOO_SMALL', 'TOO_BIG', 'NOT_CLOSED'];
+
+/**
+ * All three rejections happen BEFORE any hit-testing, so none of them leaks anything about
+ * the page and none can be used to probe it.
+ *
+ * `requireClosed` is false while the stroke is still being drawn: a loop in progress is open
+ * almost the whole way round, and blanking the aim outline until the last few pixels would
+ * hide from the player the one thing the preview exists to tell them. Closure is judged on
+ * release, which is when the claim is actually made.
+ */
+export function strokeVerdict(points, cap = { w: MAX_W, h: MAX_H }, { requireClosed = true } = {}) {
   if (!points || points.length < 3) return 'TOO_SMALL';
   const b = bounds(points);
   if (b.w < MIN_STROKE && b.h < MIN_STROKE) return 'TOO_SMALL';
   if (b.w > cap.w || b.h > cap.h) return 'TOO_BIG';
+  if (requireClosed && !isClosed(points)) return 'NOT_CLOSED';
   return 'OK';
 }
 

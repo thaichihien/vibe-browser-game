@@ -27,7 +27,8 @@ export const CH1 = {
       'feature-icon': 6,
       faq: 1,
       footer: 1,
-      newsletter: 1
+      newsletter: 1,
+      hours: 3
     }
   }],
 
@@ -64,11 +65,22 @@ export const CH1 = {
     // thì trình duyệt hay rơi vào phông thiếu glyph, và chữ sẽ trông như bị lỗi hiển thị chứ
     // không phải như bị đặt sai phông — người chơi đọc ra "trang này hỏng", không phải
     // "chữ này sai", tức là dị thường mất sạch ý nghĩa.
+    // Ba trong bốn phông của bản đầu HỎNG, và hỏng theo kiểu không nhìn ra được từ mã nguồn:
+    //   · Consolas và Candara KHÔNG CÓ trên macOS, nên trình duyệt rơi thẳng về phông kế
+    //     tiếp và "chữ sai phông" hiện ra bằng đúng phông của cả đoạn — dị thường vô hình.
+    //   · Impact CÓ trên macOS nhưng KHÔNG có glyph tiếng Việt dựng sẵn (ệ ộ ữ ằ ặ ẩ ỡ ợ),
+    //     nên nó thay phông giữa chừng và chữ trông như bị lỗi hiển thị.
+    // Bốn phông dưới đây đã được đo trên máy thật: có mặt, và tự vẽ được toàn bộ dấu chồng.
+    // Mỗi stack đi kèm một phông Windows đủ dấu ở vị trí thứ hai.
+    //
+    // Thân trang giờ là SANS, nên tương phản mạnh nhất là máy chữ và chữ viết tay — không
+    // phải một sans khác hơi khác (đó chính là lý do Verdana/Candara đọc ra là "y như thường").
     S01: [
-      { family: 'Consolas, "Courier New", monospace' },
-      { family: 'Verdana, Geneva, sans-serif' },
-      { family: 'Candara, "Segoe UI", sans-serif' },
-      { family: 'Impact, Haettenschweiler, sans-serif' }
+      { family: '"Courier New", "American Typewriter", Courier', spacing: '0.12em' },
+      { family: 'Papyrus, "Brush Script MT", "Segoe Print"', spacing: '0.04em' },
+      { family: '"Brush Script MT", "Savoye LET", "Segoe Script"', spacing: '0.02em', style: 'italic' },
+      { family: '"Chalkboard SE", "Comic Sans MS", "Marker Felt"', spacing: '0.03em' },
+      { family: 'Luminari, Papyrus, "Trattatello"', spacing: '0.08em' }
     ],
 
     // S05 — chú thích tự tin mô tả một tấm ảnh khác.
@@ -117,9 +129,22 @@ export const CH1 = {
       'chúng tôi không biết ai chụp tấm này'
     ],
 
-    // S04 / S06 — không cần lời, nhưng giữ pool để mọi dị thường có cùng hình dạng dữ liệu.
-    S04: [{ note: 'bóng ngược hướng' }],
-    S06: [{ note: 'tràn ra lề' }],
+    // S06 — không cần lời, nhưng pool điều khiển việc nó đi ra xa tới đâu và mỗi lần bao nhiêu.
+    // (S04 `bóng đổ sai hướng` đã bị rút — xem ghi chú cuối anomalies/style.js.)
+    S06: [
+      { step: 18, max: 96 },
+      { step: 12, max: 72 }
+    ],
+
+    // T07 — giờ đóng cửa không thể tồn tại. Giờ MỞ cửa giữ nguyên; chỉ vế sau sai.
+    T07: ['26:79', '09:-30', '08^2:00', '24:60', '19:∞', '0:-00'],
+
+    // R06 — bấm vào thì trình duyệt đi tìm một thứ bạn không gõ, và chỗ vừa bấm đổi chữ.
+    R06: [
+      { q: 'demon summon', label: 'TRIỆU HỒI' },
+      { q: 'demon summon ritual', label: 'GỌI VỀ' },
+      { q: 'how to summon a demon', label: 'ĐÃ GỌI RỒI' }
+    ],
 
     // E05 — con trỏ sai chỗ.
     E05: [
@@ -131,10 +156,18 @@ export const CH1 = {
 
     // M01 / M03 — chuyển động không cần lời, nhưng vẫn giữ pool để đồng nhất hình dạng.
     M01: [{ max: 6 }],
-    M03: [{ scale: 1.012 }],
+    // 1,012 trong 4 giây là dưới ngưỡng nhìn thấy — người chơi báo là không thấy gì cả.
+    M03: [
+      { scale: 1.045, seconds: 3.2 },
+      { scale: 1.038, seconds: 2.6 }
+    ],
 
     // I01 / I03 / I04 — ảnh mất màu, hai cái tên chung một khuôn mặt, và ảnh mờ dần.
-    I01: [{ note: 'grayscale' }],
+    // I01 — CDN trả ảnh đen trắng, rồi CSS đẩy nó thành một tấm ảnh của mấy chục năm trước.
+    I01: [
+      { filter: 'sepia(0.55) contrast(1.32) brightness(0.88) saturate(1.4)' },
+      { filter: 'sepia(0.38) contrast(1.45) brightness(0.82)' }
+    ],
     I04: [{ note: 'mờ dần mỗi lần vào khung nhìn' }],
     I03: [
       { a: { name: 'Ngọc Anh', age: 28 }, b: { name: 'Thu Hà', age: 41 } },
