@@ -20,6 +20,18 @@ function sealNavigation(shadow) {
   SEALED.add(shadow);
 
   shadow.addEventListener('click', (e) => {
+    /* The fake site's OWN links have to work — chapters 2 and 3 are multi-page, and a blog
+       whose post titles do not open the post is not a blog. They are marked `data-goto` and
+       routed through a page swap; the browser is still never allowed to navigate, so the run
+       survives. Everything else stays sealed.
+       preventDefault only stops the browser: anomaly handlers on the same link still run,
+       which is what R06 depends on. */
+    const nav = e.composedPath().find((n) => n.dataset?.goto);
+    if (nav) {
+      e.preventDefault();
+      shadow.dispatchEvent(new CustomEvent('site:goto', { detail: nav.dataset.goto }));
+      return;
+    }
     const link = e.composedPath().find((n) => n.tagName === 'A' && n.hasAttribute('href'));
     if (link) e.preventDefault();
   }, true);
@@ -34,15 +46,56 @@ function sealNavigation(shadow) {
   }, true);
 }
 
-export function mount(host, page, baseHref) {
+/**
+ * Mount EVERY page of the chapter at once, and navigate by showing one of them.
+ *
+ * The alternative — re-rendering a page each time the player navigates to it — loses three
+ * things at once, and all three are load-bearing:
+ *
+ *   1. **Anomaly assignment must be fixed for the whole run** (spec §3.3). Re-rendering means
+ *      re-running apply(), and an anomaly that picks its word or its position from `rng` would
+ *      land somewhere else the second time. A player who cannot go back and check a suspicion
+ *      cannot play carefully.
+ *   2. **Reactive traces would evaporate.** R01's comment and R06's changed label exist only in
+ *      the DOM; navigating away and back would erase evidence the player had already earned.
+ *   3. **reconcile() could not run.** It drops anomalies that failed to attach, and it runs once
+ *      at start — with one page mounted it would drop every anomaly belonging to the others and
+ *      quietly shrink the evidence count.
+ *
+ * Hidden pages cost nothing: targets() skips anything `checkVisibility()` calls hidden, so they
+ * offer no hit targets, and their IntersectionObservers do not fire until the page is shown.
+ */
+export function mount(host, pages, baseHref) {
   const shadow = host.shadowRoot ?? host.attachShadow({ mode: 'open' });
-  shadow.innerHTML = `<link rel="stylesheet" href="${baseHref}${page.css}">${page.html}`;
+  shadow.innerHTML =
+    `<link rel="stylesheet" href="${baseHref}${pages[0].css}">` +
+    pages.map((p) => `<div class="tt-page" data-page="${p.id}">${p.html}</div>`).join('');
   sealNavigation(shadow);
+  showPage(shadow, pages[0].id);
   return shadow;
 }
 
-export function slotElement(shadow, type, nth) {
-  return shadow.querySelectorAll(`[data-slot="${type}"]`)[nth] ?? null;
+/** display:none rather than [hidden], which a site stylesheet can override without meaning to. */
+export function showPage(shadow, pageId) {
+  for (const el of shadow.querySelectorAll('[data-page]')) {
+    el.style.display = el.dataset.page === pageId ? '' : 'none';
+  }
+}
+
+export function pageElement(shadow, pageId) {
+  return shadow.querySelector(`[data-page="${pageId}"]`);
+}
+
+/** Which page an element lives on — the results panel needs it to navigate before scrolling. */
+export function pageIdOf(el) {
+  return el?.closest('[data-page]')?.dataset.page ?? null;
+}
+
+/** Slot lookup is PER PAGE: `paragraph[2]` means the third paragraph of that page, not of the
+    chapter. The director assigns pageId alongside the index, and the two have to agree. */
+export function slotElement(shadow, pageId, type, nth) {
+  const page = pageElement(shadow, pageId);
+  return page?.querySelectorAll(`[data-slot="${type}"]`)[nth] ?? null;
 }
 
 /**

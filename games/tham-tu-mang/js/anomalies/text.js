@@ -169,26 +169,77 @@ export const T07 = {
   id: 'T07', family: 'TEXT', label: 'Một mốc thời gian không thể tồn tại',
   slots: ['hours', 'date', 'incident'], weight: 3,
   apply(ctx) {
-    const entry = pick(ctx.rng, ctx.flavour);
-    const RANGE = /(\d{1,2}:\d{2})(\s*[–—-]\s*)(\d{1,2}:\d{2})/;
+    /* Hai hình dạng, hai kho chữ riêng — KHÔNG trộn chung. Một cái giờ đặt vào chỗ ngày
+       tháng thì không đọc ra là "ngày này không có thật", nó đọc ra là trang bị lỗi dữ liệu,
+       và lỗi dữ liệu thì người chơi bỏ qua. */
+    const KINDS = [
+      { key: 'time', re: /(\d{1,2}:\d{2})(\s*[–—-]\s*)(\d{1,2}:\d{2})/, keep: 2 },
+      { key: 'date', re: /(\d{1,2}\/\d{1,2}\/\d{4})/, keep: 0 },
+      // Danh sách lưu trữ của blog: "Tháng 3, 2026". Không phải dd/mm/yyyy, nên nếu thiếu
+      // dạng này thì T07 rơi vào đó sẽ lặng lẽ không khớp gì và bị reconcile() loại đi.
+      { key: 'month', re: /(Tháng\s+\d{1,2},\s*\d{4})/, keep: 0 }
+    ];
 
-    // Lấy đúng nút văn bản chứa khoảng giờ, để <b> tên thành phố và các <br> còn nguyên.
+    // Lấy đúng nút văn bản chứa mốc thời gian, để <b> và các <br> quanh nó còn nguyên.
     const walker = document.createTreeWalker(ctx.slot, NodeFilter.SHOW_TEXT);
     let node = null;
-    while (walker.nextNode()) {
-      if (RANGE.test(walker.currentNode.nodeValue)) { node = walker.currentNode; break; }
+    let kind = null;
+    while (walker.nextNode() && !node) {
+      for (const k of KINDS) {
+        if (!k.re.test(walker.currentNode.nodeValue)) continue;
+        if (!(ctx.flavour?.[k.key] || []).length) continue;
+        node = walker.currentNode;
+        kind = k;
+        break;
+      }
     }
     if (!node) return;
 
-    const m = node.nodeValue.match(RANGE);
+    const m = node.nodeValue.match(kind.re);
     const head = node.nodeValue.slice(0, m.index);
     const tail = node.nodeValue.slice(m.index + m[0].length);
+    const wrong = pick(ctx.rng, ctx.flavour[kind.key]);
 
+    /* Giờ MỞ cửa giữ nguyên, chỉ vế sau sai (keep = 2 phần đầu của match). Một dòng sai ở cả
+       hai đầu đọc ra là dữ liệu rác; một dòng bắt đầu đúng rồi mới sai đọc ra là một cửa hàng
+       thật sự đóng cửa vào lúc đó. Ngày tháng thì chỉ có một mốc nên thay trọn (keep = 0). */
     const span = document.createElement('span');
-    span.textContent = `${m[1]}${m[2]}${entry}`;
+    span.textContent = m.slice(1, 1 + kind.keep).join('') + wrong;
     node.replaceWith(document.createTextNode(head), span, document.createTextNode(tail));
     ctx.mark(span);
   }
 };
 
-export const TEXT_ANOMALIES = [T01, T02, T03, T04, T05, T07];
+/* ── T08: chữ ký của người không còn nữa ───────────────────────────────
+   Kinh dị bằng ĐỐI CHIẾU, không bằng hình ảnh. Không có gì trên màn hình biến dạng: chỉ là
+   một cái tên, đặt cạnh một cái ngày, ở đúng chỗ mà mọi blog đều đặt tên tác giả. Nó chỉ trở
+   thành dị thường khi người chơi đã đọc một chỗ KHÁC trên trang — ô tưởng niệm ở thanh bên —
+   và tự mình nối hai thứ lại.
+
+   Vì thế chương phải tự viết sẵn ô tưởng niệm như NỘI DUNG SẠCH, luôn luôn có mặt. Ở những
+   ván không bốc trúng T08, nó chỉ là một chi tiết buồn. Sự bất đối xứng đó là cố ý: trang
+   web phải buồn được mà không cần phải sai. */
+export const T08 = {
+  id: 'T08', family: 'TEXT', label: 'Chữ ký của người không còn nữa',
+  slots: ['byline', 'comment', 'notice'], weight: 3,
+  apply(ctx) {
+    const entry = pick(ctx.rng, ctx.flavour);
+
+    /* Markup hợp đồng: chỗ nào có tên người thì bọc trong [data-who], thời điểm thì
+       [data-when]. Đánh dấu ĐÚNG cái tên chứ không phải cả khối bình luận — thứ người chơi
+       nhìn ra là cái tên, nên đó phải là thứ họ khoanh được. */
+    const who = ctx.slot.matches('[data-who]') ? ctx.slot : ctx.slot.querySelector('[data-who]');
+    if (!who) {           // không có hợp đồng thì vẫn phải bám được vào đâu đó
+      ctx.slot.textContent = entry.name;
+      ctx.mark(ctx.slot);
+      return;
+    }
+
+    who.textContent = entry.name;
+    const when = ctx.slot.querySelector('[data-when]');
+    if (when && entry.when) when.textContent = entry.when;
+    ctx.mark(who);
+  }
+};
+
+export const TEXT_ANOMALIES = [T01, T02, T03, T04, T05, T07, T08];

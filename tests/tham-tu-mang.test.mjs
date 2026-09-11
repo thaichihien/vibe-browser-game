@@ -320,10 +320,19 @@ test('CHAPTERS lists chapter 1 first', () => {
   assert.strictEqual(CHAPTERS[0].id, CH1.id);
 });
 
-test('every flavour pool is a non-empty array', () => {
-  for (const [id, pool] of Object.entries(CH1.flavour)) {
-    assert.ok(Array.isArray(pool), `${id} flavour must be an array`);
-    assert.ok(pool.length > 0, `${id} flavour is empty`);
+test('every flavour pool holds something to draw from', () => {
+  // Most pools are a flat array. T07's is keyed by the SHAPE of the timestamp it corrupts
+  // ({ time, date }), because a clock reading dropped into a date field reads as junk data
+  // rather than as a date that cannot exist — see anomalies/text.js.
+  for (const chapter of CHAPTERS) {
+    for (const [id, pool] of Object.entries(chapter.flavour)) {
+      const lists = Array.isArray(pool) ? [pool] : Object.values(pool);
+      assert.ok(lists.length > 0, `${chapter.id}/${id} flavour is empty`);
+      for (const list of lists) {
+        assert.ok(Array.isArray(list), `${chapter.id}/${id} flavour must be an array`);
+        assert.ok(list.length > 0, `${chapter.id}/${id} flavour is empty`);
+      }
+    }
   }
 });
 
@@ -342,10 +351,10 @@ test('T02 replacements change the SHAPE of the block, not one character', () => 
 
 import { ANOMALIES, byId } from '../games/tham-tu-mang/js/engine/registry.js';
 
-const STAGE1_IDS = ['T01','T02','T03','T04','T05','T07','S01','S05','S06','S07','M01','M03','E01','E04','E05','R05','R06','I01','I03','I04'];
+const STAGE1_IDS = ['T01','T02','T03','T04','T05','T07','T08','S01','S05','S06','S07','M01','M03','E01','E04','E05','R01','R05','R06','I01','I03','I04'];
 const FAMILIES = ['TEXT','STYLE','MOTION','ELEMENT','REACTIVE','IMAGE'];
 
-test('the registry holds exactly the stage 1 anomalies', () => {
+test('the registry holds exactly the anomalies that are built', () => {
   assert.deepStrictEqual(ANOMALIES.map((a) => a.id).sort(), [...STAGE1_IDS].sort());
 });
 
@@ -665,6 +674,22 @@ test('every image carries an onerror fallback', () => {
   for (const [tag] of imgs) assert.match(tag, /onerror=/, `image without a fallback: ${tag}`);
 });
 
+test('the page answers ordinary interaction without a script tag in its markup', () => {
+  // A form that swallows an email and says nothing is an anomaly nobody placed — and it also
+  // kills R05, because if the clean branch is silent then ANY confirmation is the anomaly and
+  // the player never has to read the date. Site markup may not carry <script>, so the honest
+  // behaviour lives in a behaviour() hook that main.js calls after mounting.
+  assert.strictEqual(typeof PAGE_INDEX.behaviour, 'function');
+  assert.ok(!/<script/i.test(PAGE_INDEX.html));
+});
+
+test('importing a site never touches the DOM, behaviour hook included', () => {
+  // The hook may only reach for the document when it is CALLED. If it ran at import, this
+  // file — which has no DOM at all — would already have thrown above.
+  assert.strictEqual(PAGE_INDEX.behaviour.length, 1, 'behaviour(shadow) takes its root as an argument');
+  assert.throws(() => PAGE_INDEX.behaviour(undefined), /Cannot read|undefined/);
+});
+
 test('the page makes no network request other than images', () => {
   assert.ok(!/<script/i.test(PAGE_INDEX.html), 'site markup must not carry scripts');
   assert.ok(!/<link[^>]+href="http/i.test(PAGE_INDEX.html), 'no remote stylesheets');
@@ -679,6 +704,252 @@ test('every anomaly the director can place has a slot that exists on the page', 
         `seed ${seed}: ${p.id} wants ${p.slot}[${p.nth}], page has ${present[p.slot] || 0}`);
     }
   }
+});
+
+/* ── Chapter 2: two pages, and the cross-page reference ─────────────────── */
+
+import { CH2 } from '../games/tham-tu-mang/js/chapters/ch2-bep-nha-may.js';
+import { CH2_PAGES, CH2_INDEX, CH2_POST } from '../games/tham-tu-mang/sites/ch2-bep-nha-may/pages.js';
+const CH2_BY_ID = Object.fromEntries(CH2_PAGES.map((p) => [p.id, p]));
+import { unlockedUpTo, isUnlocked, unlockAllRequested }
+  from '../games/tham-tu-mang/js/chapters/index.js';
+
+const CH2_MARKUP = CH2_BY_ID;
+
+test('both LUMIÈRE pages and both Bếp Nhà Mây pages ship exactly the slots they declare', () => {
+  /* The assertion that catches "the director placed an anomaly on paragraph[3] of a page that
+     only has three paragraphs" — which silently drops the anomaly and shrinks the evidence
+     count with nothing on screen to say so. It has to be per PAGE, not per chapter: slot
+     indexes restart on every page. */
+  for (const page of CH2.pages) {
+    assert.deepStrictEqual(slotCounts(CH2_MARKUP[page.id].html), page.slots,
+      `chapter 2 page "${page.id}" markup does not match its declaration`);
+  }
+});
+
+test('chapter 2 declares no nav slot, so nothing that needs one can land there', () => {
+  // A personal blog has a one-line header. Spec §6.1 lists this as deliberate.
+  for (const page of CH2.pages) assert.ok(!page.slots.nav, `page ${page.id} grew a nav slot`);
+  for (const seed of SEEDS.slice(0, 200)) {
+    for (const p of plan(CH2, seed).picks) {
+      assert.notStrictEqual(p.slot, 'nav', `seed ${seed} placed ${p.id} on a nav that does not exist`);
+    }
+  }
+});
+
+test('the archive can be wrong, and every month it offers is impossible', () => {
+  /* The sidebar used to be ten data-catch elements and no slots — a region that could only
+     ever punish the player, never reward them. The archive is a real surface now; the
+     memorial beside it deliberately is not (see the next test). */
+  for (const page of CH2_PAGES) {
+    const box = page.html.slice(page.html.indexOf('Lưu trữ'), page.html.indexOf('</aside>'));
+    assert.strictEqual((box.match(/data-slot="date"/g) || []).length, 4,
+      `${page.id}: the archive months are not anomaly slots`);
+  }
+  for (const entry of CH2.flavour.T07.month) {
+    const m = entry.match(/^Tháng\s+(\d{1,2}),\s*(\d{4})$/);
+    assert.ok(m, `"${entry}" is not shaped like an archive row`);
+    const [, month, year] = m.map(Number);
+    const impossible = month < 1 || month > 12 || year > 2026 || year < 1994;
+    assert.ok(impossible, `"${entry}" is a month that could really be in this archive`);
+  }
+});
+
+test('T07 knows every timestamp shape the chapters actually contain', () => {
+  // A pool key with no matching shape on the page means T07 attaches to nothing and gets
+  // dropped by reconcile — silently, with the evidence counter already advertised.
+  const SHAPES = {
+    time: /\d{1,2}:\d{2}\s*[–—-]\s*\d{1,2}:\d{2}/,
+    date: /\d{1,2}\/\d{1,2}\/\d{4}/,
+    month: /Tháng\s+\d{1,2},\s*\d{4}/
+  };
+  const MARKUP = { [CH1.id]: [PAGE_INDEX], [CH2.id]: CH2_PAGES };
+  for (const chapter of CHAPTERS) {
+    const pool = chapter.flavour.T07;
+    if (!pool) continue;
+    const html = MARKUP[chapter.id].map((p) => p.html).join('');
+    for (const key of Object.keys(pool)) {
+      assert.ok(SHAPES[key], `${chapter.id} declares an unknown T07 pool "${key}"`);
+      assert.match(html, SHAPES[key],
+        `${chapter.id} has a T07 "${key}" pool but no ${key} anywhere in its markup`);
+    }
+  }
+});
+
+test('the memorial is clean content on both pages, never an anomaly slot', () => {
+  /* T08 only means anything because the sidebar says Mây died in 2021. If the memorial were
+     itself a slot, the director could rewrite the very line the anomaly is measured against. */
+  for (const page of CH2_PAGES) {
+    assert.match(page.html, /Tưởng nhớ Mây/, `${page.id} lost the memorial widget`);
+    assert.match(page.html, /1994 – 2021/, `${page.id} lost the dates that make T08 legible`);
+    const memo = page.html.slice(page.html.indexOf('side-box memo'), page.html.indexOf('Lưu trữ'));
+    assert.ok(!memo.includes('data-slot'), `${page.id}: the memorial became an anomaly slot`);
+  }
+});
+
+test('T08 has a name hook to rewrite in every byline and comment it can land on', () => {
+  // T08 replaces [data-who] so that the NAME is what gets marked — the player circles the
+  // thing they noticed. Without the hook it falls back to blanking the whole block.
+  const post = CH2_POST.html;
+  const bylines = [...post.matchAll(/<p class="byline"[^>]*>([\s\S]*?)<\/p>/g)];
+  assert.strictEqual(bylines.length, 1);
+  assert.match(bylines[0][1], /data-who/);
+  const comments = [...post.matchAll(/data-slot="comment"[\s\S]*?<\/li>/g)];
+  assert.strictEqual(comments.length, 9, 'chapter 2 declares nine comments');
+  for (const [block] of comments) assert.match(block, /data-who/, 'a comment has no name hook');
+});
+
+test('every page that offers a comment form has a list to post into', () => {
+  /* R01 appends to [data-comments] on ITS OWN page. A form without a list is a form the
+     anomaly can be assigned to and then silently fail to attach to. */
+  for (const page of CH2_PAGES) {
+    if (!page.html.includes('data-slot="comment-form"')) continue;
+    assert.match(page.html, /data-comments/, `${page.id} has a comment form but no list`);
+    assert.strictEqual(typeof page.behaviour, 'function',
+      `${page.id} has a comment form but never answers it`);
+  }
+});
+
+test('a post with no comments still shows an ordinary empty state', () => {
+  const empty = CH2_BY_ID['post-banh'];
+  assert.ok(!empty.html.includes('data-slot="comment"'), 'post-banh is the no-comments post');
+  assert.match(empty.html, /Chưa có bình luận nào/, 'the empty state has to look ordinary too');
+  assert.match(empty.html, /data-slot="comment-form"/, 'you can still be the first to comment');
+});
+
+test('no comment text is repeated across chapter 2', () => {
+  /* The same regulars turn up under several posts, which is what a small blog looks like —
+     but the same SENTENCE under two posts reads as a duplication bug, and a player who spots
+     it will circle it and lose a heart for noticing something real. */
+  // Comment bodies only. The memorial and the footer are repeated on every page ON PURPOSE —
+  // the memorial is what makes T08 legible from wherever the player happens to be reading.
+  const seen = new Map();
+  for (const page of CH2_PAGES) {
+    for (const body of page.html.matchAll(/<div class="cmt-body">([\s\S]*?)<\/div>/g)) {
+      for (const m of body[1].matchAll(/<p data-catch>([^<]{15,})<\/p>/g)) {
+        const text = m[1].replace(/\s+/g, ' ').trim();
+        assert.ok(!seen.has(text),
+          `comment "${text.slice(0, 40)}…" appears on both ${seen.get(text)} and ${page.id}`);
+        seen.set(text, page.id);
+      }
+    }
+  }
+  assert.ok(seen.size >= 12, `only ${seen.size} comments found — the scan missed them`);
+});
+
+test('every post card on the index opens a page that exists, and every page leads back', () => {
+  /* Three of the four cards used to be dead links. A post card that does nothing when clicked
+     is an anomaly nobody placed — and the worst kind: the player circles it, loses a heart,
+     and the results screen tells them they were wrong. */
+  const targets = [...new Set([...CH2_INDEX.html.matchAll(/data-goto="([^"]+)"/g)].map((m) => m[1]))];
+  const cards = [...CH2_INDEX.html.matchAll(/data-slot="post-title"/g)].length;
+  assert.strictEqual(targets.length, cards,
+    `${cards} post cards but ${targets.length} distinct destinations: ${targets}`);
+  for (const t of targets) {
+    assert.ok(CH2_BY_ID[t], `index links to "${t}", which is not a page of this chapter`);
+  }
+  for (const page of CH2_PAGES) {
+    if (page.id === 'index') continue;
+    assert.match(page.html, /data-goto="index"/, `${page.id} has no way back to the index`);
+  }
+});
+
+test('every page of chapter 2 can hold an anomaly from at least three families', () => {
+  // The director needs >=3 families overall, and every page needs at least one anomaly. A page
+  // whose slots only suit one family makes that impossible to satisfy on some seeds.
+  for (const page of CH2.pages) {
+    const fams = new Set(
+      ANOMALIES.filter((a) => a.slots.some((sl) => (page.slots[sl] || 0) > 0)).map((a) => a.family)
+    );
+    assert.ok(fams.size >= 3,
+      `page ${page.id} can only host ${[...fams].join(',') || 'nothing'}`);
+  }
+});
+
+test('every image in chapter 2 is pinned and degrades', () => {
+  for (const page of CH2_PAGES) {
+    const imgs = [...page.html.matchAll(/<img[^>]*>/g)];
+    assert.ok(imgs.length > 0, `${page.id} has no images`);
+    for (const [tag] of imgs) assert.match(tag, /onerror=/, `image without a fallback: ${tag}`);
+    for (const m of page.html.matchAll(/<img[^>]+src="([^"]+)"/g)) {
+      assert.ok(isPinned(m[1]), `unpinned image src: ${m[1]}`);
+    }
+  }
+});
+
+test('chapter 2 site markup carries no script and no remote stylesheet', () => {
+  for (const page of CH2_PAGES) {
+    assert.ok(!/<script/i.test(page.html), `${page.id} carries a script`);
+    assert.ok(!/<link[^>]+href="http/i.test(page.html), `${page.id} loads a remote stylesheet`);
+  }
+});
+
+test('the post page answers an ordinary comment without a script tag', () => {
+  assert.strictEqual(typeof CH2_POST.behaviour, 'function');
+});
+
+test('every anomaly the director can place in chapter 2 has a real slot on that page', () => {
+  const present = Object.fromEntries(
+    CH2.pages.map((p) => [p.id, slotCounts(CH2_MARKUP[p.id].html)])
+  );
+  for (const seed of SEEDS.slice(0, 200)) {
+    for (const p of plan(CH2, seed).picks) {
+      assert.ok((present[p.page]?.[p.slot] || 0) > p.nth,
+        `seed ${seed}: ${p.id} wants ${p.page}/${p.slot}[${p.nth}]`);
+    }
+  }
+});
+
+test('the number placed stays inside the range the chapter declares', () => {
+  /* The briefing tells the player "there are N things here", and N is what was PLACED. The
+     per-page guarantee used to be a fix-up that ADDED anomalies after the roll, so a five-page
+     chapter could quietly hand out nine when it advertised six to eight. Pages are covered
+     first now, and the fill only tops up to the rolled count. */
+  for (const chapter of CHAPTERS) {
+    for (const seed of SEEDS) {
+      const { picks } = plan(chapter, seed);
+      assert.ok(picks.length >= chapter.min && picks.length <= chapter.max,
+        `${chapter.id} seed ${seed}: placed ${picks.length}, declared ${chapter.min}..${chapter.max}`);
+    }
+  }
+});
+
+test('every page of chapter 2 is dirty on every seed', () => {
+  // A player who clears a page that was never dirty learns the wrong lesson about looking.
+  for (const seed of SEEDS) {
+    const picks = plan(CH2, seed).picks;
+    for (const page of CH2.pages) {
+      assert.ok(picks.some((p) => p.page === page.id),
+        `seed ${seed} left chapter 2 page "${page.id}" clean`);
+    }
+  }
+});
+
+test('every anomaly eligible for a chapter has a flavour pool there', () => {
+  for (const chapter of CHAPTERS) {
+    for (const a of ANOMALIES) {
+      const eligible = chapter.pages.some((p) => a.slots.some((s) => (p.slots[s] || 0) > 0));
+      if (!eligible || chapter.exclude.includes(a.id)) continue;
+      assert.ok(chapter.flavour[a.id],
+        `${a.id} can be placed in ${chapter.id} but has no flavour pool there`);
+    }
+  }
+});
+
+test('chapter 2 unlocks only after chapter 1 is cleared', () => {
+  const nothing = () => false;
+  const ch1done = (id) => id === CH1.id;
+  assert.strictEqual(unlockedUpTo(nothing), 1, 'chapter 1 alone is open on a fresh save');
+  assert.strictEqual(isUnlocked(CH2.id, nothing), false);
+  assert.strictEqual(isUnlocked(CH1.id, nothing), true, 'chapter 1 is never locked');
+  assert.strictEqual(unlockedUpTo(ch1done), 2);
+  assert.strictEqual(isUnlocked(CH2.id, ch1done), true);
+});
+
+test('the ?unlock=1 debug flag reads location lazily, never at import', () => {
+  // A top-level `location` reference would break every test in this file, which runs with no
+  // DOM at all. Under Node there is no location, so the flag must simply be off.
+  assert.strictEqual(unlockAllRequested(), false);
 });
 
 /* ── Give up, and the results reveal ────────────────────────────────────── */
@@ -797,7 +1068,7 @@ test('S01 declares no fixed word list — it must read the page it lands on', ()
 
 test('only the two-stage reactive anomalies are marked deferred', () => {
   const deferred = ANOMALIES.filter((a) => a.deferred).map((a) => a.id);
-  assert.deepStrictEqual(deferred, ['R05', 'R06'],
+  assert.deepStrictEqual(deferred, ['R01', 'R05', 'R06'],
     'only two-stage reactive anomalies may be absent from the DOM after apply()');
   for (const id of deferred) assert.strictEqual(byId(id).family, 'REACTIVE');
 });
@@ -922,7 +1193,7 @@ test('the withdrawn S04 is gone from the registry, not merely unused', () => {
 test('T07 only ever corrupts the closing time, never the opening one', () => {
   // A line wrong at both ends reads as junk data; one that starts right and then goes wrong
   // reads as a shop that really does close then.
-  for (const entry of CH1.flavour.T07) {
+  for (const entry of CH1.flavour.T07.time) {
     assert.strictEqual(typeof entry, 'string');
     // Impossible either because it is not a clock reading at all (09:-30, 08^2:00, 19:∞),
     // or because it is shaped like one and still cannot happen (26:79, 24:60).

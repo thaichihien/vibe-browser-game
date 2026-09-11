@@ -84,4 +84,49 @@ export const R06 = {
   }
 };
 
-export const REACTIVE_ANOMALIES = [R05, R06];
+/* ── R01: bình luận gửi đi, nhưng không phải của bạn ───────────────────
+   Bỏ trống ô tên rồi gửi. Bình luận lên thật — nhưng không phải dưới tên "Ẩn danh", và
+   không phải nội dung bạn vừa gõ. Nó lên dưới tên Mây, và nó trả lời một câu bạn chưa hề nói.
+
+   Chỉ bắn khi ô tên TRỐNG, nên nó nằm sau một thao tác mà người chơi phải tự nghĩ ra: gửi
+   một bình luận không ký tên. Ai điền tên đầy đủ sẽ không bao giờ thấy nó, và đó là chủ ý —
+   họ vẫn còn sáu dị thường khác, còn người tò mò thì được thưởng. */
+export const R01 = {
+  id: 'R01', family: 'REACTIVE', label: 'Bình luận lên dưới một cái tên khác',
+  slots: ['comment-form'], weight: 3,
+  deferred: true,
+  apply(ctx) {
+    const entry = pick(ctx.rng, ctx.flavour);
+    const form = ctx.slot.querySelector('form');
+    const list = ctx.root.querySelector('[data-comments]');
+    if (!form || !list) return;
+
+    form.addEventListener('submit', () => {
+      const name = form.querySelector('[name="ten"]');
+      const body = form.querySelector('[name="noidung"]');
+      if (!body || !body.value.trim()) return;      // chưa gõ gì thì chưa có gì xảy ra
+      if (name && name.value.trim()) return;        // có ký tên -> bình luận bình thường
+      if (list.querySelector('[data-anom="R01"]')) return;
+
+      /* Cờ cho nhánh sạch biết mà đứng im. Nếu không có nó, trang sẽ đăng CẢ HAI: bình luận
+         thật của người chơi và bình luận của Mây — và "có thêm một cái" thì đọc ra là lỗi,
+         không phải là dị thường. Xem behaviour() trong sites/ch2-bep-nha-may/pages.js. */
+      form.dataset.handled = '1';
+
+      const li = document.createElement('li');
+      li.className = 'cmt';
+      li.innerHTML =
+        `<div class="cmt-body"><b data-who>${entry.name}</b> ` +
+        `<span class="cmt-when" data-when>${entry.when}</span>` +
+        `<p></p></div>`;
+      li.querySelector('p').textContent = entry.text;
+      list.appendChild(li);
+
+      if (name) name.value = '';
+      body.value = '';
+      ctx.mark(li);
+    });
+  }
+};
+
+export const REACTIVE_ANOMALIES = [R01, R05, R06];

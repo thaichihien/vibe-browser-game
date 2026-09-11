@@ -2,9 +2,10 @@
    nếu không bộ test "every module imports" sẽ hỏng. */
 
 import { renderMenu } from './ui/menu.js';
+import { CHAPTERS } from './chapters/index.js';
 import { isMuted, setMuted, recordClear } from './storage.js';
 import { plan } from './engine/director.js';
-import { mount, targets, slotElement } from './engine/site.js';
+import { mount, targets, slotElement, showPage, pageElement, pageIdOf } from './engine/site.js';
 import { nearestEnclosed } from './engine/hittest.js';
 import { newRun, observerFor } from './state.js';
 import { resolve, giveUp, reconcile } from './engine/run.js';
@@ -17,8 +18,13 @@ import { beep } from './audio.js';
 import { byId } from './engine/registry.js';
 import { mulberry32 } from './engine/rng.js';
 import { PAGE_INDEX } from '../sites/ch1-lumiere/page.js';
+import { CH2_PAGES } from '../sites/ch2-bep-nha-may/pages.js';
 
-const PAGES = { 'ch1-lumiere': { index: PAGE_INDEX } };
+/* Every page of a chapter, in order. pages[0] is where the player lands. */
+const PAGES = {
+  'ch1-lumiere': [PAGE_INDEX],
+  'ch2-bep-nha-may': CH2_PAGES
+};
 
 const FEEDBACK = {
   CAPTURED:   ['BẰNG CHỨNG ĐÃ GHI', 'good'],
@@ -123,23 +129,25 @@ export function boot() {
 
     // The <link> inside the shadow root resolves against the DOCUMENT, not against this
     // module — so the href is relative to games/tham-tu-mang/index.html, not to js/main.js.
-    const page = PAGES[chapter.id][chapter.pages[0].id];
-    shadow = mount(viewport, page, `./sites/${chapter.slug}/`);
+    const pages = PAGES[chapter.id];
+    shadow = mount(viewport, pages, `./sites/${chapter.slug}/`);
 
     /* The honest site first, anomalies on top of it — the same order the architecture states:
        sites are authored clean and mutated at run start. A page's behaviour() is how it
-       answers ordinary interaction (a form that thanks you, a cart that adds an item); without
-       it, a form that swallows an email and says nothing is an anomaly nobody placed. */
-    page.behaviour?.(shadow);
+       answers ordinary interaction (a form that thanks you, a comment that posts); without
+       it, a form that swallows what you typed and says nothing is an anomaly nobody placed. */
+    for (const p of pages) p.behaviour?.(shadow);
 
     run = newRun(chapter, seed, built.picks);
 
     const rng = mulberry32(seed ^ 0x5f3759df);
     for (const pick of built.picks) {
-      const slot = slotElement(shadow, pick.slot, pick.nth);
+      const slot = slotElement(shadow, pick.page, pick.slot, pick.nth);
       if (!slot) continue;
       byId(pick.id).apply({
-        root: shadow,
+        // root is the PAGE, not the whole shadow root: I03 looks for a second avatar and must
+        // not reach across to one on a page the player is not even looking at.
+        root: pageElement(shadow, pick.page),
         slot,
         rng,
         flavour: chapter.flavour[pick.id],
@@ -157,18 +165,39 @@ export function boot() {
       console.warn('[tham-tu-mang] anomalies failed to attach and were dropped:', dropped);
     }
 
+    /* The site's own links, routed rather than followed. Anomaly assignment does not change:
+       every page is already mounted and already mutated, so this only swaps which one is on
+       screen — go away and come back and it is the same page you left. */
+    shadow.addEventListener('site:goto', (e) => {
+      if (!run || !pages.some((p) => p.id === e.detail)) return;
+      goToPage(e.detail);
+    });
+
+    showPage(shadow, run.page);
     lasso.resize();   // the wrap just became visible, so the canvas finally has a real box
     renderHud(run);
+    const no = String(CHAPTERS.indexOf(chapter) + 1).padStart(2, '0');
+    const scope = pages.length > 1
+      ? `<p>Hồ sơ này có <b>${pages.length} trang</b>. Liên kết trên trang vẫn dùng được, và
+         dị thường ở đâu thì nằm yên ở đó — đi rồi quay lại vẫn thấy đúng chỗ cũ.</p>`
+      : '';
     showOverlay({
-      title: 'HỒ SƠ 01 — LUMIÈRE',
-      body: `<p>Một trang bán kem dưỡng ẩm. Có <b>${run.total}</b> thứ trên trang này không
-             nên ở đó.</p>
+      title: `HỒ SƠ ${no} — ${chapter.title}`,
+      body: `<p>${chapter.briefing} Có <b>${run.total}</b> thứ trong hồ sơ này không nên ở đó.</p>
+             ${scope}
              <p><b>CHẾ ĐỘ ĐỌC</b> là mặc định: cuộn, bấm, gõ, bôi đen chữ — không mất máu.</p>
              <p>Bấm <b>CHẾ ĐỘ KHOANH</b> rồi kéo một vòng quanh thứ đáng ngờ. Khoanh trúng nội
              dung bình thường <b>hoặc khoanh vào khoảng trống</b> đều mất một trái tim.</p>`,
       cta: 'MỞ HỒ SƠ',
       onCta: () => {}
     });
+  }
+
+  function goToPage(pageId) {
+    run.page = pageId;
+    showPage(shadow, pageId);
+    window.scrollTo(0, 0);
+    lasso.resize();
   }
 
   /* Mở đáp án: mọi dị thường đều được viền lại — xanh nếu đã tìm ra, hổ phách nếu bỏ sót.
@@ -220,6 +249,9 @@ export function boot() {
         const el = shadow.querySelector(`[data-anom="${row.dataset.anomRow}"]`);
         if (!el) return;
         document.getElementById('overlay').hidden = true;
+        // It may live on a page the player is not currently looking at.
+        const onPage = pageIdOf(el);
+        if (onPage && onPage !== run.page) goToPage(onPage);
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
     }

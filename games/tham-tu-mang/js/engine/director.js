@@ -47,8 +47,13 @@ function claimSlot(anomaly, budget, used, rng, preferPage = null) {
   return chosen;
 }
 
-function place(anomaly, budget, used, rng, picks, preferPage = null) {
-  const slot = claimSlot(anomaly, budget, used, rng, preferPage);
+/**
+ * @param {string|null} preferPage  thử trang này trước
+ * @param {boolean} strict          nếu true, KHÔNG được rơi sang trang khác
+ */
+function place(anomaly, budget, used, rng, picks, preferPage = null, strict = false) {
+  let slot = preferPage ? claimSlot(anomaly, budget, used, rng, preferPage) : null;
+  if (!slot && !strict) slot = claimSlot(anomaly, budget, used, rng, null);
   if (!slot) return false;
   picks.push({
     id: anomaly.id, family: anomaly.family,
@@ -91,6 +96,29 @@ export function plan(chapter, seed, registry = ANOMALIES) {
   }
   const families = shuffle(rng, [...byFamily.keys()]);
 
+  /* 2a. Phủ hết các trang TRƯỚC, mỗi trang một dị thường, vẫn đi vòng qua các họ để giữ bề
+         rộng. Bước 3 ở cuối vẫn còn đó làm lưới an toàn, nhưng mỗi lần nó phải ra tay là một
+         dị thường ĐƯỢC THÊM ngoài số đã bốc — với năm trang thì con số BẰNG CHỨNG trôi ra
+         ngoài khoảng min..max mà chương tự khai. Phủ trước thì số bốc ra vẫn là số phải tìm. */
+  for (const page of chapter.pages) {
+    if (picks.length >= count) break;
+    if (picks.some((p) => p.page === page.id)) continue;
+    for (const family of families) {
+      if ((familyCount[family] || 0) >= 2) continue;
+      let placed = false;
+      for (const a of shuffle(rng, byFamily.get(family))) {
+        if (takenIds.has(a.id)) continue;
+        if (!place(a, budget, used, rng, picks, page.id, true)) continue;
+        takenIds.add(a.id);
+        bump(family);
+        placed = true;
+        break;
+      }
+      if (placed) break;
+    }
+  }
+
+  // 2b. Rồi mới lấp cho đủ count, không ràng buộc trang.
   for (let pass = 0; pass < 2 && picks.length < count; pass++) {
     for (const family of families) {
       if (picks.length >= count) break;
@@ -106,14 +134,22 @@ export function plan(chapter, seed, registry = ANOMALIES) {
     }
   }
 
-  // 3. Every page must carry at least one, or a player can clear a page that was never dirty.
+  /* 3. Every page must carry at least one, or a player can clear a page that was never dirty.
+        KEEP TRYING until one actually lands. The first version picked a single candidate and
+        gave up if it would not fit — and "eligible for the chapter" is not "eligible for THIS
+        page": I03 needs two avatars, T08 needs a byline, and chapter 2's index page has
+        neither. So on roughly 2% of seeds the fallback chose something that could not go
+        there, placed nothing, and left a whole page clean. Chapter 1 has one page, so this
+        step never ran and the bug could not appear until there was a second page. */
   for (const page of chapter.pages) {
     if (picks.some((p) => p.page === page.id)) continue;
-    const spare = shuffle(rng, eligible)
-      .find((a) => !takenIds.has(a.id) && (familyCount[a.family] || 0) < 2);
-    if (spare && place(spare, budget, used, rng, picks, page.id)) {
-      takenIds.add(spare.id);
-      bump(spare.family);
+    for (const a of shuffle(rng, eligible)) {
+      if (takenIds.has(a.id)) continue;
+      if ((familyCount[a.family] || 0) >= 2) continue;
+      if (!place(a, budget, used, rng, picks, page.id, true)) continue;
+      takenIds.add(a.id);
+      bump(a.family);
+      break;
     }
   }
 

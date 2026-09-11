@@ -49,6 +49,19 @@ export const PAGE_INDEX = {
     const input = form?.querySelector('input');
     if (!form || !input) return;
 
+    /* Bong bóng báo lỗi của trình duyệt nói theo NGÔN NGỮ GIAO DIỆN của trình duyệt, không
+       theo lang="vi" của trang — nên một người Việt dùng Chrome bản tiếng Anh sẽ thấy
+       "Please fill out this field." nảy lên giữa một trang tiếng Việt. Đó là chữ tiếng Anh
+       duy nhất trong cả chương, và nó tố cáo rằng trang này không phải trang thật. */
+    const VI_THIEU = 'Vui lòng nhập email của bạn.';
+    const VI_SAI = 'Địa chỉ email chưa đúng định dạng.';
+    input.addEventListener('invalid', () => {
+      input.setCustomValidity('');              // bỏ thông báo cũ rồi mới hỏi lại trình duyệt
+      if (input.validity.valueMissing) input.setCustomValidity(VI_THIEU);
+      else if (input.validity.typeMismatch) input.setCustomValidity(VI_SAI);
+    });
+    input.addEventListener('input', () => input.setCustomValidity(''));
+
     form.addEventListener('submit', () => {
       // sealNavigation() đã chặn điều hướng ở pha capture; ở đây chỉ còn việc trả lời.
       if (!input.checkValidity() || !input.value) return;

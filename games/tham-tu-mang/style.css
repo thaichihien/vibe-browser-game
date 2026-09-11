@@ -101,6 +101,17 @@ body.capture #viewport-wrap::after {
   color: var(--paper); font: inherit; text-align: left; cursor: pointer;
 }
 .case:hover { border-color: var(--evidence); }
+/* Chương bị khoá: vẫn hiện một dòng, vì biết CÒN thứ khác ở đó là một phần của kho hồ sơ. */
+.case.locked { opacity: 0.45; cursor: not-allowed; }
+.case.locked:hover { border-color: inherit; }
+.case.locked .case-name { letter-spacing: 0.1em; }
+/* Cờ gỡ lỗi phải NHÌN THẤY được: một chương mở ra vì cờ chứ không vì đã phá xong thì người
+   chơi cần biết, nếu không họ sẽ tưởng tiến độ của mình bị hỏng. */
+.menu-debug {
+  margin-top: 18px; padding: 9px 14px;
+  border: 1px dashed #4a5666; border-radius: 8px;
+  color: var(--dim); font-size: 12px;
+}
 .case-no { color: var(--dim); font-variant-numeric: tabular-nums; font-size: 12px; }
 .case-name { font-weight: 600; }
 .case-sub { color: var(--dim); font-size: 12px; }

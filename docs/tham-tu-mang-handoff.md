@@ -90,7 +90,7 @@ js/
   anomalies/        text · style · motion · element · reactive · image
   ui/               menu · hud · mode · lasso · toast · overlay
   chapters/         index.js · ch1-lumiere.js
-sites/ch1-lumiere/  page.js (markup) · site.css
+sites/ch1-lumiere/  page.js (markup + behaviour()) · site.css
 ```
 
 **The 20 anomalies built** (of 34 designed):
@@ -376,6 +376,19 @@ crashes — and again, none catchable by a green test suite:
     player's stroke**, and it carries both rules in its colour: grey while open, green once it
     would close, red past the cap, over a light halo so it reads on cream and on black alike.
     **Lesson: "communicate the rule by drawing" did not have to mean drawing more things.**
+
+16. **The newsletter form swallowed a valid email and said nothing.** A form that takes an
+    address and does not answer is an anomaly nobody placed — and it quietly wrecked `R05`,
+    because with a silent clean branch *any* confirmation was the anomaly, so the player never
+    had to read the date the anomaly is actually made of. Page modules now export
+    `behaviour(shadow)` — how the honest site answers ordinary interaction — which `main.js`
+    calls after mounting and before applying anomalies. Both branches now thank you, clear the
+    field, and share the `.news-ok` class, so **only the words differ**. `R05` therefore must
+    not set inline styles: its first version kept a `font-size:13px` fallback that overrode the
+    site's 13.5px class, making the anomalous line half a pixel smaller than the honest one —
+    identifiable by eye without reading it, which is the one thing it must not be. Chapters 2
+    and 3 need this hook for the comment form and the cart. **Lesson: an anomaly that only
+    shows up as "something happened" is not an anomaly; the clean branch has to happen too.**
 
 ## 10. Known limitation for Chapter 2
 

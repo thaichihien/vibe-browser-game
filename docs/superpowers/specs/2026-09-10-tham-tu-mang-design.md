@@ -89,6 +89,18 @@ string, because slots have to be injectable and because the repo has no preceden
 `fetch`ing local files — every existing folder game inlines its content. Keeping markup in
 a module also lets `tests/` import a site and assert its slot inventory.
 
+**A page module may also export `behaviour(shadow)`** — how the honest site answers ordinary
+interaction. `main.js` calls it after mounting and *before* applying anomalies, matching the
+architecture above: clean site first, mutations on top. Site markup may not contain `<script>`
+(there is a test), so this hook is the only place that behaviour can live.
+
+It is not decoration. A newsletter form that takes an email and does nothing is an anomaly
+**nobody placed** — and worse, it destroys `R05`: if the clean branch is silent, then any
+confirmation at all is the anomaly, and the player never has to read it. When both branches
+answer, and answer in the same words, same pill, same type size, the only thing separating them
+is what the sentence says. That is where the anomaly was always supposed to live. Chapters 2
+and 3 need the same hook for their comment form and cart.
+
 Hit testing never uses `elementFromPoint` (which does not pierce shadow boundaries).
 It queries `shadow.querySelectorAll('[data-anom]')` and `[data-catch]` and tests their
 bounding rects against the lasso polygon. The shadow boundary therefore costs nothing.
@@ -104,13 +116,38 @@ At run start, seeded from `Date.now()` (or a URL `?seed=` for reproducible testi
    - **at least 3 of the 6 families** represented,
    - **at most 2 from any one family**,
    - **at most 1 anomaly per slot element** (no stacking).
-4. For multi-page chapters, assign each pick to a page; every page gets at least one.
+4. For multi-page chapters, **cover every page first**, then fill to the rolled count.
+
+   The order matters. Covering pages as a fix-up *after* selection means every uncovered page
+   ADDS an anomaly beyond the roll, so a five-page chapter advertising 6–8 could hand out nine.
+   The briefing tells the player how many things are on the site, and that number is what was
+   placed — so placement has to stay inside the range the chapter declares. Covering first,
+   then topping up, keeps the rolled count and the placed count the same thing.
 5. Call `apply(ctx)` per anomaly, which mutates the DOM and marks what it produced with
    `data-anom="<id>"`.
 
-**Anomaly assignment is fixed for the whole run.** Navigating away from a page and back
-re-renders it with the same anomalies in the same places — backtracking must be safe, or
-the player can never verify a suspicion.
+**Anomaly assignment is fixed for the whole run.** Navigating away from a page and back shows
+the same anomalies in the same places — backtracking must be safe, or the player can never
+verify a suspicion.
+
+**How multi-page is implemented: every page is mounted at once, and navigation shows one of
+them.** Not re-rendered on demand. Re-rendering would lose three things, all load-bearing:
+
+1. **Assignment could not stay fixed.** Re-rendering means re-running `apply()`, and an anomaly
+   that draws its word or its position from `rng` would land somewhere else the second time.
+2. **Reactive traces would evaporate.** `R01`'s comment and `R06`'s changed label exist only in
+   the DOM. Navigating away would erase evidence the player had already earned.
+3. **`reconcile()` could not run.** It drops anomalies that failed to attach and runs once at
+   start; with a single page mounted it would drop every anomaly belonging to the others and
+   silently shrink the evidence count.
+
+Hidden pages cost nothing: `targets()` skips anything `checkVisibility()` reports as hidden, so
+they offer no hit targets, and their `IntersectionObserver`s do not fire until shown. Slot
+lookup is **per page** — `paragraph[2]` means the third paragraph of *that* page.
+
+`sealNavigation()` still refuses to let the browser navigate, but a link marked `data-goto`
+is routed through the page swap instead of merely being blocked. A blog whose post titles do
+not open the post is not a blog.
 
 The seeded PRNG is `mulberry32`; every random draw in a run goes through it, so a seed
 reproduces a case exactly.
@@ -308,7 +345,7 @@ clearing chapter N unlocks N+1. Each clear stores a rank.
 | # | Site | Pages | Anomalies | Register | Threat |
 |---|---|---|---|---|---|
 | 1 | **LUMIÈRE** — kem dưỡng ẩm | 1 | 5–6 | landing page bán hàng | Cult |
-| 2 | **Bếp Nhà Mây** — blog nấu ăn | 2 | 5–7 | blog cá nhân | Người đã mất |
+| 2 | **Bếp Nhà Mây** — blog nấu ăn | 5 | 6–8 | blog cá nhân | Người đã mất |
 | 3 | **SănĐồCũ.vn** — chợ đồ cũ | 3 | 6–7 | thương mại điện tử | Monster |
 | 4 | **Hồ Vắng** — khu du lịch sinh thái | 1 | 6–7 | trang đặt phòng | Alien |
 | 5 | **Tiểu học Hoa Ban** — trang thông báo | 1 | 6–8 | trang cơ quan | Cult |
@@ -342,21 +379,94 @@ press the button to claim, an empty circle costs a heart just as a wrong one doe
 first run is forced to include `S07 emoji-lac-loai` — the most legible anomaly in the
 library — so the player learns the verb on something unmistakable.
 
-### 5.2 Chapter 2 — Bếp Nhà Mây
+### 5.2 Chapter 2 — Bếp Nhà Mây · BUILT
 
-Two pages: `index` (post list, sidebar, a *"Tưởng nhớ Mây (1994–2021)"* widget) and `post`
-(a recipe for *canh chua cá lóc*, author byline, nine comments, a comment form).
+**Five pages, not two.** `index` (post list, sidebar, a *"Tưởng nhớ Mây (1994–2021)"* widget),
+`post` (the full recipe — author byline, nine comments, a comment form), and one page for each
+of the other three post cards.
 
-Slots: `post-title` ×4, `paragraph` ×5, `byline`, `date` ×4, `photo` ×5 (4 ảnh bài viết +
-1 ảnh món ăn), `avatar` ×3 (người bình luận), `comment` ×9, `comment-form`, `sidebar`, `footer`.
+The original sketch had one article and three cards that went nowhere. On screen that is not a
+shortcut, it is a **broken site**: a post card that does nothing when clicked is an anomaly
+nobody placed, and the worst kind — the player circles it, loses a heart, and the results
+screen tells them they were wrong. The three extra posts are short, which is what short posts
+on a real blog look like, and each is a full anomaly surface like any other page.
 
-Imagery: `loremflickr.com/…/vietnamesefood?lock=…` — the chapter that most needs its
-photographs to be real, and the one where a bad `lock` will be most obvious at playtest.
+**The recipe is a *gỏi bắp cải tím*, not *canh chua cá lóc*.** Photo first, copy second — the
+rule §3.4 records after chapter 1 had to learn it the hard way. The photograph that reads best
+as a home-cooked Vietnamese dish is a clay bowl of purple cabbage, red onion, chillies and
+coriander. There is no fish in it, so writing "canh chua cá lóc" underneath would have been the
+exact mismatch `S05` exists to create — and a clean caption that already contradicts its photo
+makes `S05` invisible.
+
+Slots as built, per page — the director indexes them per page, so they are declared that way:
+
+| | `index` | `post` | `post-cho` | `post-toi` | `post-banh` |
+|---|---|---|---|---|---|
+| `post-title` | 4 | 1 | 1 | 1 | 1 |
+| `date` | 4 | 1 | 1 | 1 | 1 |
+| `photo` | 4 | 1 | 1 | 1 | 1 |
+| `paragraph` | 2 | 4 | 2 | 2 | 2 |
+| `byline` | — | 1 | — | — | — |
+| `avatar` | — | 3 | — | — | — |
+| `comment` | — | 9 | 3 | 2 | **—** |
+| `comment-form` | — | 1 | 1 | 1 | 1 |
+| `footer` | 1 | 1 | 1 | 1 | 1 |
+
+**Every post takes comments, including the one that has none.** The same handful of regulars
+turn up under several posts, which is what a small blog looks like — but each comment is
+written fresh, because the identical sentence appearing under two posts reads as a duplication
+bug, and a player who spots it will circle it and lose a heart for noticing something real.
+There is a test for that.
+
+`post-banh` has **no comments at all** and still has a form. A post nobody has replied to yet is
+the most ordinary thing on a small blog, and the empty state has to look ordinary too. The
+"chưa có bình luận nào" line hides itself with CSS `:has(.cmt)` rather than JavaScript, so it
+gets out of the way whether the first comment arrives from the site's own `behaviour()` or from
+`R01` — no two places have to remember to remove it.
+
+Four comment forms means `R01` can land on any of them, so the trick has to be tried on the
+right post. Experimenting is free, so that is four free experiments, not four risks.
+
+Every page can host at least three of the six families, which the director needs in order to
+satisfy "≥3 families" *and* "every page carries at least one" on the same run.
+
+**The sidebar is split.** The memorial carries no slot and never may: `T08` measures a byline
+against its *"1994 – 2021"*, so a director that could rewrite that line would be moving the
+ruler. It is also the chapter's most expensive trap — the most emotionally loaded thing on the
+page, and never the answer, which is how the player learns that *sad* does not mean *wrong*.
+
+The **archive** beside it is a real surface: its four month rows are `date` slots. Before that
+the whole sidebar was ten `data-catch` elements and no slots — a region that could only ever
+punish. Because the sidebar is identical on all five pages, a wrong month on **one** page is
+found either by reading it or by comparing pages, which is the cross-reference horror this
+chapter is built around.
+
+`T07` therefore learned a third timestamp shape, `month` (*"Tháng 3, 2026"*), alongside `time`
+and `date`. A pool key with no matching shape in the markup means `T07` attaches to nothing and
+is dropped by `reconcile()` — silently, after the evidence counter has already been advertised
+— so there is a test tying every declared pool key to a shape that actually appears.
+
+One trap worth recording: the archive's post-count `<span>` was styled by tag, and `T07` wraps
+its corrupted text in a `<span>` too — so the anomalous row rendered a shade lighter than its
+neighbours and could be spotted **without being read**. The count is selected by class now.
+This is the same failure as `R05`'s inline `font-size`: a text anomaly must never be
+identifiable by looking rather than reading.
+`footer` is declared once **per page** rather than once per chapter, because both pages have one.
+
+Imagery: `picsum.photos/id/…` (see §3.4 — loremflickr is not used).
 
 Home of `R01 binh-luan-khong-ten`. The memorial widget is authored clean and always present —
 it is what makes `T08 chu-ky-nguoi-da-chet` land, and on runs where that anomaly is not drawn
 it is simply a sad detail. That asymmetry is intentional: the site must be able to be sad
-without being wrong.
+without being wrong. It appears on **both** pages and carries no `data-slot`, so the director
+can never rewrite the very line the anomaly is measured against.
+
+**The memorial has no photograph.** §3.4 forbids captioning a real person as dead, and a
+portrait beside "1994 – 2021" would do exactly that. Text only.
+
+`T08` and `R01` both need a markup hook: a name sits in `[data-who]` and its timestamp in
+`[data-when]`, so `T08` can mark **the name** — the thing the player actually noticed — rather
+than blanking a whole comment.
 
 ### 5.3 Chapter 3 — SănĐồCũ.vn
 
@@ -560,19 +670,23 @@ Diacritics decay down a list. The first item is perfect Vietnamese; each subsequ
 more `dấu` until the last is bare consonants — the site forgetting how to write.
 - Ch5: *"Thông báo nghỉ lễ"* → *"Thong bao nghi le"* → *"thng bo ngh l"* → *"t b n l"*
 
-**T07 · `ngay-thang-khong-ton-tai`** — slots: `date`, `incident`, `hours`
+**T07 · `ngay-thang-khong-ton-tai`** — slots: `date`, `incident`, `hours` · BUILT
 A date or a time stated flatly that cannot exist, or should not: `31/02/2019`, `00/00/0000`, a
 post dated tomorrow, an incident resolved before it began.
 - Ch2: *"Đăng ngày 31/02/2019"*
 - Ch6: *"Sự cố #4471 — bắt đầu 03:12, đã khắc phục lúc 03:04."*
 - Ch1: a shop's opening hours — *"09:00 – 24:60"*, *"08:00 – 09:-30"*, *"08^2:00 – 20:00"*
 
+Its flavour pool is **keyed by the shape of the stamp** — `{ time: [...], date: [...] }` —
+and the two are never mixed. A clock reading dropped into a date field does not read as a date
+that cannot exist; it reads as corrupt data, and corrupt data is something players skip past.
+
 The `hours` slot is the best surface it has: three shops listed side by side in one identical
 `HH:MM – HH:MM` template, so the eye reads all three as a block and nobody checks the digits.
 **Only the closing time is ever corrupted.** A line wrong at both ends reads as junk data; a
 line that starts correct and then goes wrong reads as a shop that really does close then.
 
-**T08 · `chu-ky-nguoi-da-chet`** — slots: `byline`, `comment`, `notice`
+**T08 · `chu-ky-nguoi-da-chet`** — slots: `byline`, `comment`, `notice` · BUILT
 A byline or signature belonging to someone the same page says is gone. Pure cross-reference
 horror — it requires the chapter to have authored the memorial line as ordinary content.
 - Ch2: byline *"Mây · 3 ngày trước"* against the sidebar's *"Tưởng nhớ Mây (1994–2021)"*
@@ -678,10 +792,16 @@ All five are **two-stage**: the site is honest until the player experiments, the
 makes the anomaly *appear*, and it must then be circled to count. Experimenting is always
 free — no interaction can ever cost a heart.
 
-**R01 · `binh-luan-khong-ten`** — slots: `comment-form` · Ch2
+**R01 · `binh-luan-khong-ten`** — slots: `comment-form` · Ch2 · BUILT
 Submit the comment form with the name field empty. The comment posts — but not under
 `Ẩn danh`, and not with your text. It appears as *"Mây · vừa xong"* and its body replies to
 something the player has not said: *"Không sao đâu. Chị vẫn ở đây mà."*
+
+The clean site must post an ordinary comment in every other case, or the anomaly degenerates
+into "something appeared" and the player never reads the name. Sign the comment and it goes up
+under your name; leave the name blank on a run without `R01` and it goes up as `Ẩn danh`. When
+an anomaly answers an interaction it sets `form.dataset.handled`, and the site's own
+`behaviour()` stands down — otherwise both post and the page reads as buggy rather than wrong.
 
 **R02 · `gio-hang-tu-them`** — slots: `cart-line` · Ch3
 Add anything to the cart. The cart shows your item and one more you did not add — same seller,
@@ -701,7 +821,16 @@ before today, and the unsubscribe link's text is *"KHÔNG THỂ"*.
 
 The field is `required` and `type="email"`, so native constraint validation runs *before* the
 submit event: an empty or malformed address cannot fire the anomaly. That is deliberate — the
-anomaly has to sit behind a real interaction, not a stray click on the button.
+anomaly has to sit behind a real interaction, not a stray click on the button. The rejection
+messages are set through `setCustomValidity` in Vietnamese, because the browser's own bubble
+follows the *browser's* UI language rather than the page's `lang`, and "Please fill out this
+field." popping up mid-page is the one piece of English in the chapter.
+
+**A valid address always gets an answer** (§3.2): the clean site thanks you and clears the
+field; `R05` thanks you, clears the field, and tells you that you subscribed in 2011. Both use
+the same `.news-ok` class, so they are indistinguishable by eye — `R05` must not set inline
+styles, or the anomaly renders half a pixel smaller than the honest line and can be spotted
+without being read. A chapter offering `newsletter` or `subscribe` styles `.news-ok` itself.
 
 **R06 · `lien-ket-di-tim-thu-ban-khong-go`** — slots: `nav`, `cta` · Ch1
 Click an ordinary nav item or an ordinary button, and the browser opens a new tab searching for
@@ -923,6 +1052,11 @@ obvious it is free.
 
 ## 10. Known constraints
 
+- **`?unlock=1` opens every chapter.** A debug flag for looking at later chapters without
+  clearing the earlier ones. It only unlocks: saved progress is untouched, so removing the flag
+  puts everything back. The menu says so on screen while it is on, because a chapter that opened
+  for a reason other than being earned would otherwise look like corrupted progress. It reads
+  `location` lazily — a top-level reference would break the DOM-free test import.
 - **This game needs a server.** ES modules do not load over `file://`. `games/last-quarter/`
   already has this constraint, and GitHub Pages is unaffected. Note that `python3` is not
   installed on this machine — use `npx serve` or any static server.

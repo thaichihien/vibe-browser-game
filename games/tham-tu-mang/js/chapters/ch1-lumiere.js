@@ -7,6 +7,7 @@ export const CH1 = {
   title: 'LUMIÈRE',
   slug: 'ch1-lumiere',
   subtitle: 'Kem dưỡng ẩm · trang bán hàng',
+  briefing: 'Một trang bán kem dưỡng ẩm.',
   // Trang đã dài ra đáng kể, nên số dị thường tăng theo: quét hết một trang lớn mất công hơn,
   // và với 36 chỗ bám thì 5 dị thường trôi mất trong đó.
   min: 6,
@@ -137,7 +138,8 @@ export const CH1 = {
     ],
 
     // T07 — giờ đóng cửa không thể tồn tại. Giờ MỞ cửa giữ nguyên; chỉ vế sau sai.
-    T07: ['26:79', '09:-30', '08^2:00', '24:60', '19:∞', '0:-00'],
+    // Tách theo hình dạng của mốc: chương này chỉ có slot `hours`, nên chỉ cần kho `time`.
+    T07: { time: ['26:79', '09:-30', '08^2:00', '24:60', '19:∞', '0:-00'] },
 
     // R06 — bấm vào thì trình duyệt đi tìm một thứ bạn không gõ, và chỗ vừa bấm đổi chữ.
     R06: [
