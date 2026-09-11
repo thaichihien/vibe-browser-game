@@ -1,0 +1,322 @@
+/* Bếp Nhà Mây — stylesheet riêng, nạp BÊN TRONG shadow root nên selector trần không bao giờ
+   chạm tới HUD của trò chơi.
+
+   Ngữ vực khác hẳn chương 1. LUMIÈRE là một thương hiệu thuê người thiết kế; chỗ này là một
+   người tự dựng blog và giữ nó gọn gàng suốt nhiều năm. Nên: giấy ấm, một cột chữ hẹp đọc
+   được, thanh bên đơn giản, không hiệu ứng nào. Vẫn phải là một trang web thật của năm nay —
+   nếu nó trông tạm bợ thì mọi dị thường đều chìm vào cái tạm bợ đó.
+
+   BA CHỖ PHẢI CHỪA LẠI CHO DỊ THƯỜNG (giống chương 1, lý do đầy đủ ở ch1-lumiere/site.css):
+   1. KHÔNG overflow:hidden ở thẻ nào bọc một data-slot — S06 dịch chữ ra ngoài lề, E01 thả
+      một cái nút position:absolute ra đó.
+   2. Không transform trong :hover của avatar — M01 và M03 đang điều khiển transform của nó.
+   3. Mọi ảnh nằm trong <figure> cùng <figcaption>; I01, I03, I04 tìm ảnh qua closest('figure').
+
+   PHÔNG: Georgia và Times KHÔNG có glyph tiếng Việt dựng sẵn (ằ ặ ệ ộ ữ). Hai stack dưới đây
+   phủ đủ trên cả macOS lẫn Windows. */
+
+:host {
+  display: block;
+
+  --paper:   #fdfaf4;
+  --card:    #ffffff;
+  --ink:     #33302b;
+  --muted:   #736c62;
+  --line:    #e8ded0;
+  --clay:    #a8603f;
+  --memo:    #f3ece0;
+
+  --maxw: 1080px;
+  --pad: max(22px, calc((100% - var(--maxw)) / 2));
+  --r: 14px;
+
+  --shadow: 4px 9px 24px -12px rgba(51, 46, 40, 0.36);
+
+  --sans: system-ui, -apple-system, "Segoe UI", Tahoma, "Noto Sans", Arial, sans-serif;
+  --serif: "Iowan Old Style", Charter, Cambria, Constantia, "Noto Serif", serif;
+
+  font: 400 16px/1.78 var(--sans);
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+
+/* height:auto là bắt buộc: thuộc tính width/height trên <img> là presentational hint và nó
+   ĐÈ aspect-ratio bên dưới, nên ảnh sẽ cao đúng số pixel đã yêu cầu từ CDN. Thuộc tính vẫn
+   phải có mặt (giữ chỗ trước khi ảnh về, và định cỡ ảnh SVG dự phòng). */
+img { display: block; object-fit: cover; height: auto; }
+
+h1, h2, h3 {
+  font-family: var(--serif);
+  font-weight: 400;
+  /* 1.2 cắt mất dấu trên chữ hoa có dấu chồng (Ằ, Ộ) ở cỡ lớn. */
+  line-height: 1.3;
+  margin: 0;
+  color: var(--ink);
+}
+
+p { margin: 0 0 16px; }
+a { color: inherit; }
+
+/* ── Đầu trang ──────────────────────────────────────────────────────────── */
+
+.blog-head {
+  padding: 30px var(--pad) 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+.blog-name {
+  display: block;
+  font-family: var(--serif);
+  font-size: 30px; letter-spacing: 0.02em;
+}
+.blog-name a { text-decoration: none; }
+.blog-tag {
+  display: block; margin-top: 5px;
+  font-size: 13.5px; color: var(--muted); letter-spacing: 0.04em;
+}
+
+/* ── Khung hai cột ──────────────────────────────────────────────────────── */
+
+.wrap {
+  display: grid; grid-template-columns: minmax(0, 1fr) 268px;
+  gap: 46px;
+  padding: 40px var(--pad) 60px;
+  align-items: start;
+}
+
+/* ── Trang chủ: dòng bài viết ───────────────────────────────────────────── */
+
+.lead {
+  font-family: var(--serif);
+  font-size: 19px; line-height: 1.72;
+  color: var(--muted);
+  margin-bottom: 34px;
+  max-width: 62ch;
+}
+
+.post-card {
+  padding-bottom: 34px;
+  margin-bottom: 34px;
+  border-bottom: 1px solid var(--line);
+}
+.post-card:last-child { border-bottom: 0; margin-bottom: 0; }
+.post-card figure { margin: 0 0 16px; }
+.post-card img {
+  width: 100%; aspect-ratio: 4 / 3; max-height: 300px;
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+.post-card h2 { font-size: 26px; margin: 10px 0 6px; }
+.post-card h2 a { text-decoration: none; }
+.post-card h2 a:hover { color: var(--clay); }
+.post-card p { color: var(--muted); max-width: 62ch; }
+
+figcaption {
+  font-family: var(--sans);
+  font-size: 12.5px; color: var(--muted);
+  margin-top: 8px;
+}
+
+.meta {
+  display: block;
+  font-size: 12.5px; color: #8d8479;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+
+.more {
+  display: inline-block;
+  font-size: 13.5px; font-weight: 600; color: var(--clay);
+  text-decoration: none;
+}
+.more:hover { text-decoration: underline; }
+
+/* ── Thanh bên ──────────────────────────────────────────────────────────── */
+
+.side { display: grid; gap: 18px; }
+.side-box {
+  background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--r);
+  padding: 20px 22px;
+}
+.side-box h3 {
+  font-size: 16px; margin-bottom: 10px;
+}
+.side-box p { font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+.side-box p:last-child { margin-bottom: 0; }
+
+/* Ô tưởng niệm. NỘI DUNG SẠCH, luôn luôn có mặt — xem đầu file pages.js. */
+.memo { background: var(--memo); border-color: #e0d3bf; }
+.memo h3 { color: var(--clay); }
+
+.archive { list-style: none; padding: 0; margin: 0; font-size: 14px; }
+.archive li {
+  display: flex; justify-content: space-between;
+  padding: 6px 0; color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+.archive li:last-child { border-bottom: 0; }
+/* Đúng cái <span> đếm số bài, chọn bằng class chứ không phải bằng thẻ.
+   `.archive span` tóm luôn cả cái <span> mà T07 chèn vào khi nó làm hỏng dòng tháng, nên
+   dòng dị thường hiện ra nhạt màu hơn hàng xóm — tức là nhìn ra được mà không cần đọc, đúng
+   thứ mà một dị thường chữ nghĩa không được phép có. */
+.archive .n { color: #a79c8d; }
+
+/* ── Trang bài viết ─────────────────────────────────────────────────────── */
+
+.back {
+  display: inline-block; margin-bottom: 22px;
+  font-size: 13.5px; color: var(--muted); text-decoration: none;
+}
+.back:hover { color: var(--clay); }
+
+.single h1 { font-size: clamp(30px, 3.4vw, 40px); margin-bottom: 14px; }
+.single > p, .single ul, .single ol { max-width: 64ch; }
+.single > p[data-slot] { color: var(--ink); }
+
+.byline {
+  font-size: 14.5px; color: var(--muted); margin: 0 0 4px;
+}
+.byline b { color: var(--ink); font-weight: 600; }
+.cmt-when { color: #9a9084; font-size: 13px; }
+
+.hero { margin: 22px 0 30px; }
+.hero img {
+  width: 100%; aspect-ratio: 2 / 1;
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+
+.single h2 {
+  font-size: 22px;
+  margin: 32px 0 12px;
+}
+
+.ing, .steps { padding-left: 20px; margin: 0 0 18px; }
+.ing li, .steps li { margin-bottom: 7px; }
+.ing { list-style: square; }
+
+/* ── Bình luận ──────────────────────────────────────────────────────────── */
+
+.comments { margin-top: 46px; border-top: 1px solid var(--line); padding-top: 30px; }
+.cmt-list { list-style: none; padding: 0; margin: 0 0 34px; }
+.cmt {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.cmt:last-child { border-bottom: 0; }
+.cmt-face { margin: 0; flex: none; width: 92px; }
+.cmt-face img.face {
+  width: 46px; height: 46px; border-radius: 50%;
+  box-shadow: var(--shadow);
+}
+.cmt-face figcaption { margin-top: 6px; font-size: 12.5px; color: var(--ink); line-height: 1.45; }
+.cmt-face figcaption b { display: block; font-weight: 600; }
+.cmt-body { flex: 1; min-width: 0; }
+.cmt-body b { font-weight: 600; }
+/* Không có avatar thì tên nằm cùng dòng với nội dung; có avatar thì tên đã nằm ở cột trái,
+   nên đoạn văn phải bắt đầu ngay từ dòng đầu để hai kiểu bình luận cùng một chiều cao mắt. */
+.cmt-body p { margin: 5px 0 0; color: var(--muted); }
+.cmt-face + .cmt-body p { margin-top: 0; }
+
+/* Trạng thái rỗng. Ẩn bằng :has() chứ không bằng JS, nên nó biến mất dù bình luận đầu tiên
+   đến từ nhánh sạch của trang hay từ R01 — không có hai chỗ cùng phải nhớ xoá nó đi. */
+.cmt-none { padding: 14px 0; color: #9a9084; font-size: 14.5px; }
+.cmt-list:has(.cmt) .cmt-none { display: none; }
+
+.cmt-form h3 { font-size: 18px; margin-bottom: 14px; }
+.cmt-form form { display: grid; gap: 10px; max-width: 520px; }
+.cmt-form input, .cmt-form textarea {
+  padding: 11px 15px;
+  border: 1px solid #ded0bd; border-radius: 10px;
+  background: var(--card);
+  font: 15px var(--sans); color: var(--ink);
+  resize: vertical;
+}
+.cmt-form input:focus, .cmt-form textarea:focus {
+  outline: 2px solid var(--clay); outline-offset: 1px;
+}
+.cmt-form button {
+  justify-self: start;
+  padding: 11px 26px; border: 0; border-radius: 999px;
+  background: var(--clay); color: #fff;
+  font: 600 12.5px var(--sans); letter-spacing: 0.13em;
+  cursor: pointer;
+}
+.cmt-form button:hover { background: #8e4e31; }
+
+/* ── Chân trang ─────────────────────────────────────────────────────────── */
+
+footer {
+  display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap;
+  padding: 26px var(--pad);
+  border-top: 1px solid var(--line);
+  background: var(--card);
+  font-size: 12.5px; color: var(--muted);
+}
+
+/* ── Màn hình hẹp ───────────────────────────────────────────────────────── */
+
+@media (max-width: 860px) {
+  .wrap { grid-template-columns: 1fr; gap: 34px; }
+  .cmt { flex-direction: column; gap: 8px; }
+  .cmt-face { width: auto; display: flex; align-items: center; gap: 12px; }
+  .cmt-face figcaption { margin-top: 0; }
+}
+
+/* ── Chrome của trò chơi vẽ đè lên trang ────────────────────────────────── */
+
+/* Vòng ngắm — phần tử sẽ bị tính điểm nếu thả tay ngay bây giờ. MÀU TRUNG TÍNH, có chủ ý:
+   nó cho biết bạn đang khoanh cái gì, tuyệt đối không cho biết cái đó đúng hay sai. */
+.aim-ring {
+  outline: 2px solid rgba(60, 70, 85, 0.9);
+  outline-offset: 2px;
+  background: rgba(120, 140, 170, 0.14);
+  border-radius: 2px;
+}
+
+.evidence-ring {
+  outline: 2px solid #4fa88b;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.missed-ring {
+  outline: 2px dashed #d9a441;
+  outline-offset: 3px;
+  border-radius: 2px;
+  animation: loRa 1.4s ease-out 3;
+}
+@keyframes loRa {
+  0%   { box-shadow: 0 0 0 0 rgba(217, 164, 65, 0.55); }
+  100% { box-shadow: 0 0 0 14px rgba(217, 164, 65, 0); }
+}
+
+/* M03 — nhịp thở. Biên độ do dị thường đặt qua --tho-scale; các mốc không chia đều để có
+   quãng nghỉ ở đỉnh (hít — giữ — thở ra), vì nhịp đều đọc ra là hiệu ứng giao diện. */
+@keyframes tho {
+  0%   { transform: scale(1); }
+  38%  { transform: scale(var(--tho-scale, 1.04)); }
+  56%  { transform: scale(var(--tho-scale, 1.04)); }
+  100% { transform: scale(1); }
+}
+
+/* T05 — dòng chữ chỉ hiện khi rê chuột. Trang tự vẽ lấy thay vì dùng title= của trình duyệt:
+   tooltip mặc định trông như một phần của TRÌNH DUYỆT, mà thứ trông như chrome của trình
+   duyệt thì không bao giờ đọc ra là dị thường của trang. */
+.ghost-tip {
+  position: fixed;
+  z-index: 5;
+  max-width: 280px;
+  padding: 9px 13px;
+  background: #33302b;
+  color: #f6efe4;
+  font: 400 13px/1.5 var(--sans);
+  border-radius: 8px;
+  box-shadow: 0 10px 26px -10px rgba(30, 26, 22, 0.6);
+  pointer-events: none;
+}

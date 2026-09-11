@@ -1,0 +1,384 @@
+/* SănĐồCũ.vn — stylesheet riêng, nạp BÊN TRONG shadow root nên selector trần không chạm HUD.
+
+   Ngữ vực thứ ba, khác hẳn hai chương trước. LUMIÈRE là thương hiệu thuê người thiết kế;
+   Bếp Nhà Mây là một người tự dựng blog và giữ nó gọn gàng. Chỗ này là một SÀN: dày đặc,
+   hiệu quả, xám trung tính, viền mảnh, mọi thứ xếp lưới cho vừa nhiều nhất có thể. Nó không
+   đẹp, nó tiện — và đó mới đúng là một chợ đồ cũ trông như thế.
+
+   Sự chật chội đó chính là lớp nguỵ trang của chương (spec §5.3): mười hai tấm ảnh do mười
+   hai người chụp, mười hai cái giá, mười hai cái tên. Ở một trang vốn đã lệch nhau khắp nơi,
+   một thứ lệch thêm sẽ không nhô ra nữa.
+
+   BA CHỖ PHẢI CHỪA LẠI CHO DỊ THƯỜNG (lý do đầy đủ ở ch1-lumiere/site.css):
+   1. KHÔNG overflow:hidden ở thẻ nào bọc một data-slot — S06 dịch chữ ra ngoài lề, E01 thả
+      một cái nút position:absolute ra đó.
+   2. Không transform trong :hover của cta/avatar/tile — M01 và M03 đang lái transform của nó.
+   3. Mọi ảnh nằm trong <figure> cùng <figcaption>; I01, I03, I04 tìm ảnh qua closest('figure').
+
+   PHÔNG: Georgia và Times KHÔNG có glyph tiếng Việt dựng sẵn (ằ ặ ệ ộ ữ). Stack dưới đây phủ
+   đủ trên cả macOS lẫn Windows. */
+
+:host {
+  display: block;
+
+  --page:   #f3f4f6;
+  --card:   #ffffff;
+  --ink:    #1f2328;
+  --muted:  #656d76;
+  --line:   #dfe3e8;
+  --brand:  #c2410c;
+  --ok:     #15803d;
+
+  --maxw: 1180px;
+  --pad: max(18px, calc((100% - var(--maxw)) / 2));
+  --r: 8px;
+
+  --shadow: 2px 4px 12px -6px rgba(31, 35, 40, 0.3);
+
+  --sans: system-ui, -apple-system, "Segoe UI", Tahoma, "Noto Sans", Arial, sans-serif;
+
+  font: 400 15px/1.65 var(--sans);
+  color: var(--ink);
+  background: var(--page);
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+
+/* height:auto là bắt buộc: thuộc tính width/height trên <img> là presentational hint và nó
+   ĐÈ aspect-ratio bên dưới. Thuộc tính vẫn phải có mặt (giữ chỗ, và định cỡ ảnh SVG dự phòng). */
+img { display: block; object-fit: cover; height: auto; }
+
+h1 { font-size: 25px; font-weight: 600; line-height: 1.35; margin: 0 0 12px; }
+h2 { font-size: 18px; font-weight: 600; line-height: 1.35; margin: 0 0 12px; }
+h3 { font-size: 15px; font-weight: 500; line-height: 1.45; margin: 0; }
+p { margin: 0 0 14px; }
+a { color: inherit; }
+
+/* ── Thanh trên cùng ────────────────────────────────────────────────────── */
+
+.bar {
+  display: flex; align-items: center; gap: 18px;
+  padding: 12px var(--pad);
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.brand { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+.brand a { text-decoration: none; }
+.brand .dot { color: var(--brand); }
+
+.find { display: flex; flex: 1; min-width: 220px; max-width: 460px; }
+.find input {
+  flex: 1; min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--line); border-right: 0;
+  border-radius: var(--r) 0 0 var(--r);
+  font: 14px var(--sans); color: var(--ink);
+  background: var(--page);
+}
+.find button {
+  padding: 8px 16px; border: 0;
+  border-radius: 0 var(--r) var(--r) 0;
+  background: var(--brand); color: #fff;
+  font: 600 12px var(--sans); letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+nav { display: flex; gap: 16px; }
+nav a {
+  color: var(--muted); text-decoration: none;
+  font-size: 12.5px; font-weight: 600; letter-spacing: 0.05em;
+}
+nav a:hover { color: var(--ink); }
+
+.cart-link {
+  font-size: 12.5px; font-weight: 600; letter-spacing: 0.04em;
+  text-decoration: none;
+  padding: 7px 13px;
+  border: 1px solid var(--line); border-radius: var(--r);
+}
+.cart-link b { color: var(--brand); }
+
+/* ── Khung ──────────────────────────────────────────────────────────────── */
+
+.shell { padding: 26px var(--pad) 48px; }
+/* Trang chi tiết hẹp hơn trang lưới, và phải TỰ CĂN GIỮA: nếu nó dùng --pad của trang lưới
+   thì nội dung bị đẩy sang trái, chừa một khoảng trống lớn bên phải. */
+.shell.single {
+  max-width: 1016px; margin-inline: auto;
+  padding-left: 18px; padding-right: 18px;
+}
+.lead { color: var(--muted); max-width: 70ch; margin-bottom: 22px; }
+
+.back {
+  display: inline-block; margin-bottom: 16px;
+  font-size: 13px; color: var(--muted); text-decoration: none;
+}
+.back:hover { color: var(--brand); }
+
+.meta { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+
+/* ── Lưới hàng + cột lọc ────────────────────────────────────────────────── */
+
+/* Lọc nằm bên PHẢI: đây là một sàn rao vặt, và hàng hoá phải là thứ đập vào mắt trước. */
+.board { display: grid; grid-template-columns: minmax(0, 1fr) 232px; gap: 22px; align-items: start; }
+
+.count { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+.count b { color: var(--ink); }
+.empty {
+  margin: 18px 0 0; padding: 16px;
+  background: var(--card); border: 1px dashed var(--line); border-radius: var(--r);
+  color: var(--muted); font-size: 14px; text-align: center;
+}
+
+.filters {
+  background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--r);
+  padding: 16px 16px 18px;
+  position: sticky; top: 14px;
+}
+.filters h2 { font-size: 14px; margin-bottom: 12px; }
+.filters fieldset { border: 0; padding: 0; margin: 0 0 16px; }
+.filters legend {
+  padding: 0; margin-bottom: 7px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted);
+}
+.filters label {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 0; font-size: 13.5px; cursor: pointer;
+}
+.filters input[type="range"] { width: 100%; accent-color: var(--brand); }
+.price-out { display: block; margin-top: 5px; font-size: 13px; font-weight: 700; color: var(--brand); }
+.reset {
+  width: 100%; padding: 9px 0; border: 1px solid var(--line); border-radius: var(--r);
+  background: var(--page); color: var(--muted);
+  font: 600 11.5px var(--sans); letter-spacing: 0.07em; cursor: pointer;
+}
+.reset:hover { color: var(--ink); border-color: var(--muted); }
+
+.grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+}
+.good {
+  background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--r);
+  padding: 10px;
+}
+.good figure { margin: 0 0 9px; }
+.good img {
+  width: 100%; aspect-ratio: 1; border-radius: 5px;
+  box-shadow: var(--shadow);
+}
+.good h3 a { text-decoration: none; }
+.good h3 a:hover { color: var(--brand); }
+figcaption { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+
+.price {
+  display: block; margin-top: 7px;
+  font-size: 16px; font-weight: 700; color: var(--brand);
+}
+.price.big { font-size: 26px; margin: 4px 0 10px; }
+.sub { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); }
+
+/* ── Trang sản phẩm ─────────────────────────────────────────────────────── */
+
+.detail { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 30px; align-items: start; }
+.shot { margin: 0; }
+.shot img { width: 100%; aspect-ratio: 1; border-radius: var(--r); box-shadow: var(--shadow); }
+.detail-copy p { color: var(--muted); max-width: 62ch; }
+
+.buy {
+  display: inline-block; margin: 6px 0 20px;
+  padding: 12px 28px; border: 0; border-radius: var(--r);
+  background: var(--brand); color: #fff;
+  font: 600 13px var(--sans); letter-spacing: 0.08em;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+.buy:hover { background: #a5360a; }
+.buy:disabled { background: var(--muted); cursor: default; }
+.buy.ghost {
+  background: transparent; color: var(--ink);
+  border: 1px solid var(--line); box-shadow: none;
+}
+.buy.ghost:hover { background: var(--card); }
+
+.seller {
+  display: flex; gap: 13px; align-items: center; margin: 0;
+  background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--r);
+  padding: 14px 16px;
+}
+.seller img.face {
+  width: 46px; height: 46px; border-radius: 50%; flex: none;
+  box-shadow: var(--shadow);
+}
+.seller figcaption { margin-top: 0; font-size: 13px; color: var(--ink); }
+.seller figcaption b { font-size: 14.5px; }
+.seller figcaption span { color: var(--muted); }
+
+/* ── Hỏi người bán ──────────────────────────────────────────────────────── */
+
+.qa { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 24px; }
+.qa-list { list-style: none; padding: 0; margin: 0; }
+.qa-row {
+  display: flex; gap: 13px; align-items: flex-start;
+  padding: 15px 0; border-bottom: 1px solid var(--line);
+}
+.qa-row:last-child { border-bottom: 0; }
+.qa-face { margin: 0; flex: none; width: 92px; }
+.qa-face img.face { width: 40px; height: 40px; border-radius: 50%; box-shadow: var(--shadow); }
+.qa-face figcaption { margin-top: 6px; font-size: 12px; color: var(--ink); line-height: 1.45; }
+.qa-face figcaption b { display: block; font-weight: 600; }
+.qa-body { flex: 1; min-width: 0; }
+.qa-body > b { font-weight: 600; }
+.qa-body p { margin: 4px 0 0; color: var(--muted); }
+.qa-face + .qa-body p:first-child { margin-top: 0; }
+.when { color: #8b949e; font-size: 12px; }
+.ans {
+  margin-top: 7px !important;
+  padding-left: 12px; border-left: 2px solid var(--line);
+  color: var(--ink) !important;
+}
+
+/* ── Giỏ hàng ───────────────────────────────────────────────────────────── */
+
+.cart { list-style: none; padding: 0; margin: 0 0 14px; }
+.cart li {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 18px; align-items: baseline;
+  background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--r);
+  padding: 14px 16px; margin-bottom: 9px;
+}
+.line-t { font-weight: 600; }
+/* grid-column: 2 là bắt buộc. Trong markup giá đứng SAU tên và ghi chú, nên nếu không ghim
+   cột thì thuật toán tự xếp của grid nhét nó vào cột 1 và đẩy tên sang phải — giá bên trái,
+   tên bên phải, ngược hẳn mọi giỏ hàng trên đời. */
+.line-p {
+  grid-column: 2; grid-row: 1 / span 2; align-self: center;
+  font-weight: 700; color: var(--brand);
+}
+.line-n { font-size: 12.5px; color: var(--muted); }
+
+/* Dòng ghi chú tài khoản đã đóng. NỘI DUNG SẠCH, không bao giờ mang slot — nó là cái mốc để
+   T08 đo (xem đầu file pages.js). */
+.gone {
+  font-size: 13px; color: var(--muted);
+  background: #fff7ed;
+  border: 1px solid #fed7aa; border-radius: var(--r);
+  padding: 11px 14px;
+  max-width: 70ch;
+}
+
+.total {
+  display: flex; justify-content: space-between; align-items: baseline;
+  max-width: 420px; margin: 18px 0 30px;
+  padding-top: 14px; border-top: 1px solid var(--line);
+  font-weight: 600;
+}
+.total .price { margin: 0; }
+
+.ship { margin-bottom: 26px; }
+.ship form { display: grid; gap: 9px; max-width: 460px; }
+.ship input {
+  padding: 10px 13px;
+  border: 1px solid var(--line); border-radius: var(--r);
+  background: var(--card);
+  font: 14px var(--sans); color: var(--ink);
+}
+.ship input:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+.ship button {
+  justify-self: start;
+  padding: 10px 22px; border: 0; border-radius: var(--r);
+  background: var(--ink); color: #fff;
+  font: 600 12px var(--sans); letter-spacing: 0.08em;
+  cursor: pointer;
+}
+.ship-ok { margin-top: 10px; font-size: 13px; color: var(--ok); }
+
+/* ── Chân trang ─────────────────────────────────────────────────────────── */
+
+footer {
+  display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 20px var(--pad);
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  font-size: 12px; color: var(--muted);
+}
+
+/* ── Màn hình hẹp ───────────────────────────────────────────────────────── */
+
+@media (max-width: 1000px) {
+  .board { grid-template-columns: 1fr; }
+  .filters { position: static; order: -1; }
+  .grid { grid-template-columns: repeat(3, 1fr); }
+  .detail { grid-template-columns: 1fr; }
+  .shot img { max-height: 420px; }
+}
+@media (max-width: 720px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+  .bar { gap: 12px; }
+  .find { order: 3; max-width: none; flex-basis: 100%; }
+  .qa-row { flex-direction: column; gap: 7px; }
+  .qa-face { width: auto; display: flex; align-items: center; gap: 11px; }
+  .qa-face figcaption { margin-top: 0; }
+}
+@media (max-width: 460px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+/* ── Chrome của trò chơi vẽ đè lên trang ────────────────────────────────── */
+
+/* Vòng ngắm — MÀU TRUNG TÍNH có chủ ý: nó cho biết bạn đang khoanh cái gì, tuyệt đối không
+   cho biết cái đó đúng hay sai. */
+.aim-ring {
+  outline: 2px solid rgba(60, 70, 85, 0.9);
+  outline-offset: 2px;
+  background: rgba(120, 140, 170, 0.14);
+  border-radius: 2px;
+}
+
+.evidence-ring {
+  outline: 2px solid #4fa88b;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.missed-ring {
+  outline: 2px dashed #d9a441;
+  outline-offset: 3px;
+  border-radius: 2px;
+  animation: loRa 1.4s ease-out 3;
+}
+@keyframes loRa {
+  0%   { box-shadow: 0 0 0 0 rgba(217, 164, 65, 0.55); }
+  100% { box-shadow: 0 0 0 14px rgba(217, 164, 65, 0); }
+}
+
+/* M03 — nhịp thở. Biên độ do dị thường đặt qua --tho-scale; các mốc không chia đều để có
+   quãng nghỉ ở đỉnh, vì nhịp đều đọc ra là hiệu ứng giao diện chứ không phải hơi thở. */
+@keyframes tho {
+  0%   { transform: scale(1); }
+  38%  { transform: scale(var(--tho-scale, 1.04)); }
+  56%  { transform: scale(var(--tho-scale, 1.04)); }
+  100% { transform: scale(1); }
+}
+
+/* T05 — dòng chữ chỉ hiện khi rê chuột. Trang tự vẽ lấy thay vì dùng title= của trình duyệt:
+   tooltip mặc định trông như một phần của TRÌNH DUYỆT, mà thứ trông như chrome của trình
+   duyệt thì không bao giờ đọc ra là dị thường của trang. */
+.ghost-tip {
+  position: fixed;
+  z-index: 5;
+  max-width: 280px;
+  padding: 9px 13px;
+  background: #1f2328;
+  color: #f0f2f4;
+  font: 400 13px/1.5 var(--sans);
+  border-radius: 6px;
+  box-shadow: 0 10px 26px -10px rgba(15, 18, 20, 0.6);
+  pointer-events: none;
+}
