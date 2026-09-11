@@ -49,8 +49,21 @@ export const S05 = {
 export const S07 = {
   id: 'S07', family: 'STYLE', label: 'Emoji lạc loài giữa các biểu tượng', slots: ['feature-icon', 'tile', 'nav'], weight: 4,
   apply(ctx) {
-    ctx.slot.textContent = pick(ctx.rng, ctx.flavour);
-    ctx.mark(ctx.slot);
+    const emoji = pick(ctx.rng, ctx.flavour);
+
+    /* Chỗ bám có thể là MỘT biểu tượng (feature-icon), mà cũng có thể là cả một khối chứa
+       nhiều thứ bên trong (nav, tile). Bản đầu gán thẳng textContent cho chỗ bám, nên khi nó
+       rơi vào thanh điều hướng thì CẢ NĂM liên kết biến mất, còn lại đúng một cái emoji —
+       14% số ván của chương 1. Đó không đọc ra là "một biểu tượng lạc loài", nó đọc ra là
+       trang web hỏng, mà trang hỏng thì người chơi bỏ qua chứ không khoanh.
+
+       Nên: có phần tử con thì thay chữ của ĐÚNG MỘT đứa con và đánh dấu đứa đó — người chơi
+       khoanh được đúng cái họ nhìn ra. Không có con thì mới thay chữ của chính chỗ bám. */
+    const kids = [...ctx.slot.children].filter((el) => el.textContent.trim());
+    const target = kids.length ? pick(ctx.rng, kids) : ctx.slot;
+
+    target.textContent = emoji;
+    ctx.mark(target);
   }
 };
 

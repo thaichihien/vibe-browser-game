@@ -169,7 +169,7 @@ export const CH2_INDEX = {
         ${photo(488, 'Bát gỏi bắp cải tím', 760, 570)}
         <figcaption data-slot="photo" data-catch>Bắp cải tím, ớt xanh, rau mùi — trộn xong là ăn</figcaption>
       </figure>
-      <h2 data-slot="post-title" data-catch><a href="#" data-goto="post">Gỏi bắp cải tím trộn ớt xanh</a></h2>
+      <h2><a href="#" data-goto="post" data-slot="post-title" data-catch>Gỏi bắp cải tím trộn ớt xanh</a></h2>
       <span class="meta" data-slot="date" data-catch>14/03/2026</span>
       <p data-catch>Món chị hay làm vào những hôm nóng quá không ai muốn bật bếp. Giòn, chua,
         cay, và làm xong trong mười lăm phút.</p>
@@ -181,7 +181,7 @@ export const CH2_INDEX = {
         ${photo(292, 'Củ quả trên thớt gỗ', 760, 570)}
         <figcaption data-slot="photo" data-catch>Hành tím, cà rốt, củ cải và một nắm tiêu sọ</figcaption>
       </figure>
-      <h2 data-slot="post-title" data-catch><a href="#" data-goto="post-cho">Đi chợ sớm: chọn củ cho nồi canh</a></h2>
+      <h2><a href="#" data-goto="post-cho" data-slot="post-title" data-catch>Đi chợ sớm: chọn củ cho nồi canh</a></h2>
       <span class="meta" data-slot="date" data-catch>07/03/2026</span>
       <p data-slot="paragraph" data-catch>Chị dặn đi chợ trước bảy giờ, lúc người ta vừa dỡ
         hàng xuống. Củ nào cầm lên thấy nặng tay hơn vẻ ngoài của nó thì lấy.</p>
@@ -193,7 +193,7 @@ export const CH2_INDEX = {
         ${photo(999, 'Bát nhỏ trên bàn gỗ tối màu', 760, 570)}
         <figcaption data-slot="photo" data-catch>Nấu chậm, để trên bếp suốt buổi chiều</figcaption>
       </figure>
-      <h2 data-slot="post-title" data-catch><a href="#" data-goto="post-toi">Bữa tối mùa lạnh, nấu chậm</a></h2>
+      <h2><a href="#" data-goto="post-toi" data-slot="post-title" data-catch>Bữa tối mùa lạnh, nấu chậm</a></h2>
       <span class="meta" data-slot="date" data-catch>28/02/2026</span>
       <p data-catch>Cần Thơ hiếm khi lạnh, nhưng có vài tuần trong năm trời trở. Những hôm đó
         chị nấu món này và để lửa liu riu từ ba giờ chiều.</p>
@@ -205,7 +205,7 @@ export const CH2_INDEX = {
         ${photo(835, 'Bánh hạnh nhân và hoa thuỷ tiên', 760, 570)}
         <figcaption data-slot="photo" data-catch>Mẻ bánh hạnh nhân, nướng hơi quá tay một chút</figcaption>
       </figure>
-      <h2 data-slot="post-title" data-catch><a href="#" data-goto="post-banh">Bánh hạnh nhân, mẻ đầu tiên trong năm</a></h2>
+      <h2><a href="#" data-goto="post-banh" data-slot="post-title" data-catch>Bánh hạnh nhân, mẻ đầu tiên trong năm</a></h2>
       <span class="meta" data-slot="date" data-catch>19/02/2026</span>
       <p data-catch>Công thức này không có trong sổ. Tôi tự mò, nên mẻ đầu hơi cháy cạnh.
         Chị chắc sẽ cười.</p>

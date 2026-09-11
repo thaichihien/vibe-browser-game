@@ -162,6 +162,13 @@ export const CH2 = {
       'Bản quyền © 1994–2021 Mây'
     ],
 
+    // E02 — một ô nhập không có lý do gì để tồn tại trong ô gửi bình luận.
+    E02: [
+      'Bạn đang ở một mình chứ?',
+      'Tên người đã giới thiệu bạn tới bếp này',
+      'Nhóm máu'
+    ],
+
     // E05 — con trỏ sai chỗ.
     E05: [
       { cursor: 'not-allowed' },

@@ -351,7 +351,7 @@ test('T02 replacements change the SHAPE of the block, not one character', () => 
 
 import { ANOMALIES, byId } from '../games/tham-tu-mang/js/engine/registry.js';
 
-const STAGE1_IDS = ['T01','T02','T03','T04','T05','T07','T08','S01','S05','S06','S07','M01','M03','E01','E04','E05','R01','R05','R06','I01','I03','I04'];
+const STAGE1_IDS = ['T01','T02','T03','T04','T05','T06','T07','T08','S01','S05','S06','S07','M01','M03','E01','E02','E04','E05','R01','R02','R05','R06','I01','I03','I04'];
 const FAMILIES = ['TEXT','STYLE','MOTION','ELEMENT','REACTIVE','IMAGE'];
 
 test('the registry holds exactly the anomalies that are built', () => {
@@ -709,6 +709,9 @@ test('every anomaly the director can place has a slot that exists on the page', 
 /* ── Chapter 2: two pages, and the cross-page reference ─────────────────── */
 
 import { CH2 } from '../games/tham-tu-mang/js/chapters/ch2-bep-nha-may.js';
+import { CH3 } from '../games/tham-tu-mang/js/chapters/ch3-san-do-cu.js';
+import { CH3_PAGES, GOODS, CATEGORIES } from '../games/tham-tu-mang/sites/ch3-san-do-cu/pages.js';
+const CH3_BY_ID = Object.fromEntries(CH3_PAGES.map((p) => [p.id, p]));
 import { CH2_PAGES, CH2_INDEX, CH2_POST } from '../games/tham-tu-mang/sites/ch2-bep-nha-may/pages.js';
 const CH2_BY_ID = Object.fromEntries(CH2_PAGES.map((p) => [p.id, p]));
 import { unlockedUpTo, isUnlocked, unlockAllRequested }
@@ -763,7 +766,7 @@ test('T07 knows every timestamp shape the chapters actually contain', () => {
     date: /\d{1,2}\/\d{1,2}\/\d{4}/,
     month: /Tháng\s+\d{1,2},\s*\d{4}/
   };
-  const MARKUP = { [CH1.id]: [PAGE_INDEX], [CH2.id]: CH2_PAGES };
+  const MARKUP = { [CH1.id]: [PAGE_INDEX], [CH2.id]: CH2_PAGES, [CH3.id]: CH3_PAGES };
   for (const chapter of CHAPTERS) {
     const pool = chapter.flavour.T07;
     if (!pool) continue;
@@ -952,6 +955,218 @@ test('the ?unlock=1 debug flag reads location lazily, never at import', () => {
   assert.strictEqual(unlockAllRequested(), false);
 });
 
+/* ── Chapter 3: the marketplace, and the cart that spans two pages ──────── */
+
+import { boDau, decay } from '../games/tham-tu-mang/js/anomalies/text.js';
+
+test('all three SănĐồCũ pages ship exactly the slots they declare', () => {
+  for (const page of CH3.pages) {
+    assert.deepStrictEqual(slotCounts(CH3_BY_ID[page.id].html), page.slots,
+      `chapter 3 page "${page.id}" markup does not match its declaration`);
+  }
+});
+
+test('every good on the listing opens its own page, and every page leads back', () => {
+  /* Twelve goods, twelve destinations. A card that does nothing when clicked is an anomaly
+     nobody placed — the player circles it, loses a heart, and the results screen says they
+     were wrong. Separate pages rather than one page that swaps content: an anomaly attaches
+     to a real element at run start, so rewriting that element under it would either destroy
+     it or strand it on the wrong item. */
+  const targets = [...CH3_BY_ID.listing.html.matchAll(/data-goto="([^"]+)"/g)].map((m) => m[1]);
+  const goodsLinks = targets.filter((t) => t !== 'listing' && t !== 'cart');
+  assert.strictEqual(new Set(goodsLinks).size, GOODS.length,
+    `${GOODS.length} goods but ${new Set(goodsLinks).size} destinations`);
+  for (const t of new Set(goodsLinks)) {
+    assert.ok(CH3_BY_ID[t], `listing links to "${t}", which is not a page of this chapter`);
+  }
+  assert.match(CH3_BY_ID.listing.html, /data-goto="cart"/, 'no way to the cart');
+  for (const page of CH3_PAGES) {
+    if (page.id === 'listing') continue;
+    assert.match(page.html, /data-goto="listing"/, `${page.id} has no way back`);
+  }
+});
+
+test('no text-rewriting slot ever wraps a navigation link', () => {
+  /* A whole class of silent breakage. T01, T02, T03, T06, S01 and S05 all assign to their
+     slot's textContent — so if the slot WRAPS the card's <a data-goto>, the link element is
+     destroyed and that item becomes unreachable. T06 did exactly this to three cards of the
+     chapter 3 grid: it rotted their titles and took the links with them.
+
+     The fix is structural: the slot goes ON the link, never around it. Rewriting the link's
+     own text leaves the element, its href and its data-goto intact. */
+  const REWRITERS = new Set(['paragraph', 'notice', 'post-title', 'product-title', 'price',
+                             'tile', 'gallery-caption', 'avatar', 'photo', 'hero-title']);
+  const ALL = [[CH1.id, [PAGE_INDEX]], [CH2.id, CH2_PAGES], [CH3.id, CH3_PAGES]];
+  for (const [chapterId, pages] of ALL) {
+    for (const page of pages) {
+      // Crude but sufficient: an opening tag that declares a rewriting slot, followed by a
+      // data-goto before that element could plausibly have closed.
+      for (const m of page.html.matchAll(/<(\w+)([^>]*\bdata-slot="([^"]+)"[^>]*)>/g)) {
+        if (!REWRITERS.has(m[3])) continue;
+        const tag = m[1];
+        const rest = page.html.slice(m.index + m[0].length);
+        const close = rest.indexOf(`</${tag}>`);
+        const inner = close === -1 ? rest.slice(0, 400) : rest.slice(0, close);
+        assert.ok(!/data-goto=/.test(inner),
+          `${chapterId}/${page.id}: a "${m[3]}" slot wraps a data-goto link — ` +
+          'rewriting its text would delete the link');
+      }
+    }
+  }
+});
+
+test('every good page can put its own item in the cart', () => {
+  for (const g of GOODS) {
+    const page = CH3_BY_ID[g.key];
+    assert.ok(page, `no page for ${g.key}`);
+    assert.match(page.html, /data-add-to-cart/, `${g.key} cannot be bought`);
+    assert.strictEqual(typeof page.behaviour, 'function', `${g.key} never answers its button`);
+  }
+});
+
+test('the listing carries a working search and filter, over static cards', () => {
+  /* Both only hide and show cards — never rewrite them, which would wipe an anomaly sitting
+     on one. A hidden card stops being a target (targets() checks checkVisibility), so
+     filtering and unfiltering is safe: the anomaly comes back exactly where it was. */
+  const html = CH3_BY_ID.listing.html;
+  assert.match(html, /data-find/, 'no search form');
+  assert.match(html, /data-cat-filter/, 'no category filter');
+  assert.match(html, /data-price-filter/, 'no price filter');
+  assert.match(html, /data-reset/, 'no way to clear the filters');
+  for (const g of GOODS) {
+    assert.ok(html.includes(`data-title="${g.title.toLowerCase()}"`),
+      `${g.key} has no searchable title on its card`);
+    assert.ok(html.includes(`data-cat="${g.cat}"`), `${g.key} has no category on its card`);
+  }
+  for (const c of CATEGORIES) {
+    assert.ok(html.includes(`value="${c}"`), `category "${c}" has no filter checkbox`);
+  }
+});
+
+test('R02 has a trigger on one page and a cart to grow on another', () => {
+  /* The first anomaly that spans pages: the button is on the product page, the evidence is a
+     line on the cart. Either half missing means it attaches to nothing and reconcile drops it
+     after the evidence counter has already promised it. */
+  assert.match(CH3_BY_ID['may-anh'].html, /data-add-to-cart/, 'no add-to-cart button');
+  assert.match(CH3_BY_ID.cart.html, /data-cart\b/, 'no cart list to append to');
+  assert.match(CH3_BY_ID.cart.html, /data-slot="cart-line"/, 'no line for R02 to clone');
+  for (const hook of ['data-line-title', 'data-line-price', 'data-line-note']) {
+    assert.match(CH3_BY_ID.cart.html, new RegExp(hook), `cart line has no ${hook} to rewrite`);
+  }
+  assert.match(CH3_BY_ID.cart.html, /data-ship-address/, 'nothing for R02 to prefill');
+});
+
+test('the closed-account notice is clean content, never an anomaly slot', () => {
+  /* T08's anchor, exactly like chapter 2's memorial: a question signed "Hạnh · vừa xong" is
+     only wrong because another page says her account closed in 2024. If the director could
+     rewrite that line it would be moving the ruler. */
+  const cart = CH3_BY_ID.cart.html;
+  const notice = cart.slice(cart.indexOf('class="gone"'), cart.indexOf('class="total"'));
+  assert.match(notice, /Hạnh/);
+  assert.match(notice, /02\/2024/);
+  assert.ok(!notice.includes('data-slot'), 'the closed-account notice became a slot');
+  for (const entry of CH3.flavour.T08) {
+    assert.strictEqual(entry.name, 'Hạnh', 'T08 must name the person the notice says is gone');
+  }
+});
+
+test('every Q&A row gives T08 a name to rewrite', () => {
+  const rows = [...CH3_BY_ID['may-anh'].html.matchAll(/data-slot="comment"[\s\S]*?<\/li>/g)];
+  assert.ok(rows.length >= 2, 'the rich good page carries the comment slots');
+  for (const [block] of rows) assert.match(block, /data-who/, 'a Q&A row has no name hook');
+});
+
+test('every image in chapter 3 is pinned and degrades, and no two goods share a photo', () => {
+  const srcs = [];
+  for (const page of CH3_PAGES) {
+    for (const [tag] of page.html.matchAll(/<img[^>]*>/g)) assert.match(tag, /onerror=/);
+    for (const m of page.html.matchAll(/<img[^>]+src="([^"]+)"/g)) {
+      assert.ok(isPinned(m[1]), `unpinned image src: ${m[1]}`);
+    }
+  }
+  // Twelve different sellers photographing twelve different things is the camouflage (§5.3).
+  for (const m of CH3_BY_ID.listing.html.matchAll(/picsum\.photos\/id\/(\d+)\//g)) srcs.push(m[1]);
+  assert.strictEqual(srcs.length, 12, 'the listing grid is twelve goods');
+  assert.strictEqual(new Set(srcs).size, 12, `two goods share a photograph: ${srcs}`);
+});
+
+test('chapter 3 site markup carries no script and no remote stylesheet', () => {
+  for (const page of CH3_PAGES) {
+    assert.ok(!/<script/i.test(page.html), `${page.id} carries a script`);
+    assert.ok(!/<link[^>]+href="http/i.test(page.html), `${page.id} loads a remote stylesheet`);
+  }
+});
+
+test('every anomaly the director can place in chapter 3 has a real slot on that page', () => {
+  const present = Object.fromEntries(
+    CH3.pages.map((p) => [p.id, slotCounts(CH3_BY_ID[p.id].html)])
+  );
+  for (const seed of SEEDS.slice(0, 200)) {
+    for (const p of plan(CH3, seed).picks) {
+      assert.ok((present[p.page]?.[p.slot] || 0) > p.nth,
+        `seed ${seed}: ${p.id} wants ${p.page}/${p.slot}[${p.nth}]`);
+    }
+  }
+});
+
+test('every page the player cannot avoid is dirty on every seed', () => {
+  /* Pages may opt out with `optional: true` — chapter 3's twelve goods do, because 6–8
+     anomalies cannot cover fourteen pages and a marketplace where every listing is wrong
+     stops being a marketplace. The rule still holds where it matters: the pages you are
+     guaranteed to pass through are never completely clean. */
+  for (const chapter of CHAPTERS) {
+    for (const seed of SEEDS) {
+      const picks = plan(chapter, seed).picks;
+      for (const page of chapter.pages.filter((p) => !p.optional)) {
+        assert.ok(picks.some((p) => p.page === page.id),
+          `${chapter.id} seed ${seed} left page "${page.id}" clean`);
+      }
+    }
+  }
+});
+
+test('optional pages are still real anomaly surfaces, not decoration', () => {
+  // If nothing ever landed on the twelve goods, browsing them would be pure busywork.
+  const optional = new Set(CH3.pages.filter((p) => p.optional).map((p) => p.id));
+  const hit = new Set();
+  for (const seed of SEEDS) {
+    for (const p of plan(CH3, seed).picks) if (optional.has(p.page)) hit.add(p.page);
+  }
+  assert.strictEqual(hit.size, optional.size,
+    `only ${hit.size}/${optional.size} good pages ever receive an anomaly`);
+});
+
+test('T06 strips Vietnamese one layer at a time, and never touches the first item', () => {
+  /* The first item in the window is the ruler. If every item were wrong there would be
+     nothing to show that they are rotting rather than simply being misspelled. */
+  const src = 'Thông báo nghỉ lễ';
+  assert.strictEqual(decay(src, 0), src, 'level 0 is the untouched ruler');
+
+  // Level 1 is the only unambiguous one: fold to ASCII, keep every letter.
+  assert.strictEqual(boDau(src), 'Thong bao nghi le');
+  assert.strictEqual(decay(src, 1), 'Thong bao nghi le', 'tones and hats go first');
+  assert.strictEqual(boDau('Đèn bàn kim loại'), 'Den ban kim loai', 'đ folds to d');
+
+  /* Levels 2 and 3 are asserted as PROPERTIES, not as transcriptions. Spec §6 T06 sketches
+     "Thong bao nghi le" -> "thng bo ngh l" -> "t b n l", but that sketch keeps the o in "bao"
+     while dropping the o in "thong" — it is illustrative, not an algorithm. Dropping every
+     vowel is the rule that is actually consistent, and what matters for the anomaly is that
+     each level is strictly less readable than the one before it. */
+  const levels = [0, 1, 2, 3].map((n) => decay(src, n));
+  for (let i = 1; i < levels.length; i++) {
+    // Level 1 only folds, so it is the same length; 2 and 3 actually take letters away.
+    const shrinks = i === 1 ? levels[i].length === levels[i - 1].length
+                            : levels[i].length < levels[i - 1].length;
+    assert.ok(shrinks,
+      `level ${i} ("${levels[i]}") did not decay from level ${i - 1} ("${levels[i - 1]}")`);
+    assert.ok(!/[\u0300-\u036f]/.test(levels[i].normalize('NFD')),
+      `level ${i} still carries diacritics`);
+  }
+  assert.ok(!/[aeiou]/i.test(levels[2]), 'level 2 should have no vowels left');
+  assert.strictEqual(levels[3].split(' ').length, src.split(' ').length,
+    'level 3 keeps one letter per word, so the shape of the line survives');
+});
+
 /* ── Give up, and the results reveal ────────────────────────────────────── */
 
 import { giveUp } from '../games/tham-tu-mang/js/engine/run.js';
@@ -1068,7 +1283,7 @@ test('S01 declares no fixed word list — it must read the page it lands on', ()
 
 test('only the two-stage reactive anomalies are marked deferred', () => {
   const deferred = ANOMALIES.filter((a) => a.deferred).map((a) => a.id);
-  assert.deepStrictEqual(deferred, ['R01', 'R05', 'R06'],
+  assert.deepStrictEqual(deferred, ['R01', 'R02', 'R05', 'R06'],
     'only two-stage reactive anomalies may be absent from the DOM after apply()');
   for (const id of deferred) assert.strictEqual(byId(id).family, 'REACTIVE');
 });

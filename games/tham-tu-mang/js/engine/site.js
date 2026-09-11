@@ -75,6 +75,29 @@ export function mount(host, pages, baseHref) {
   return shadow;
 }
 
+/**
+ * Đợi stylesheet của trang giả nạp xong.
+ *
+ * Vì sao cần: CSS của trang là một <link> BÊN TRONG shadow root, nạp bất đồng bộ. Nếu áp dị
+ * thường ngay sau mount() thì lúc đó chưa có kiểu dáng nào cả, và mọi dị thường hỏi
+ * getComputedStyle sẽ nhận về giá trị mặc định của thẻ. E01 hỏi xem thẻ cha có phải flex
+ * không để tránh thả cái nút đè lên chữ; chưa có CSS thì thanh điều hướng trả lời "block",
+ * nên nó thả nút vào giữa thanh và đè lên các liên kết — đọc ra là trang hỏng.
+ *
+ * Có hẹn giờ thoát: một stylesheet không bao giờ nạp được (ngoại tuyến, CDN chết) không được
+ * phép treo cả chương. Trang vẫn chạy, chỉ là chạy không có kiểu dáng.
+ */
+export function styleReady(shadow, timeout = 1500) {
+  const link = shadow.querySelector('link[rel="stylesheet"]');
+  if (!link || link.sheet) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => resolve();
+    link.addEventListener('load', done, { once: true });
+    link.addEventListener('error', done, { once: true });
+    setTimeout(done, timeout);
+  });
+}
+
 /** display:none rather than [hidden], which a site stylesheet can override without meaning to. */
 export function showPage(shadow, pageId) {
   for (const el of shadow.querySelectorAll('[data-page]')) {

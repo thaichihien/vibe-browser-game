@@ -77,6 +77,17 @@ Two markup hooks carry the whole contract:
 
 An element can carry both.
 
+**A slot must never WRAP a navigation link.** `T01`, `T02`, `T03`, `T06`, `S01` and `S05` all
+assign to their slot's `textContent`, so a slot placed on a `<h3>` around a card's
+`<a data-goto>` destroys that link and makes the item unreachable — `T06` did exactly this to
+three cards of the chapter 3 grid, rotting their titles and taking the links with them. The slot
+goes **on** the link instead: rewriting the link's own text leaves the element, its `href` and
+its `data-goto` intact. There is a test for it across every chapter.
+
+For the same reason a slot should not wrap another slot. Chapter 3's seller card was briefly a
+`tile` slot wrapping an `avatar` slot, so a text-rewriting anomaly on the tile would have
+deleted the element another anomaly was attached to.
+
 ### 3.2 Site isolation — shadow root
 
 The fake site renders into an **open shadow root** on `#viewport`. Site CSS is a real
@@ -116,13 +127,28 @@ At run start, seeded from `Date.now()` (or a URL `?seed=` for reproducible testi
    - **at least 3 of the 6 families** represented,
    - **at most 2 from any one family**,
    - **at most 1 anomaly per slot element** (no stacking).
-4. For multi-page chapters, **cover every page first**, then fill to the rolled count.
+4. For multi-page chapters, **cover every non-optional page first**, then fill to the rolled
+   count. A page may declare `optional: true` and give up its guarantee.
 
    The order matters. Covering pages as a fix-up *after* selection means every uncovered page
    ADDS an anomaly beyond the roll, so a five-page chapter advertising 6–8 could hand out nine.
    The briefing tells the player how many things are on the site, and that number is what was
    placed — so placement has to stay inside the range the chapter declares. Covering first,
    then topping up, keeps the rolled count and the placed count the same thing.
+
+   **`optional: true` exists because chapter 3 has fourteen pages.** Six to eight anomalies
+   cannot cover fourteen, and should not: a marketplace where every listing has something wrong
+   with it is not a marketplace any more. Optional pages still receive anomalies through the
+   ordinary fill — they simply are not guaranteed one. The rule keeps its point where it
+   matters: the pages a player cannot avoid are never completely clean.
+
+**Anomalies are applied only after the site stylesheet has loaded.** The stylesheet is a
+`<link>` inside the shadow root and loads asynchronously, so an anomaly that asks
+`getComputedStyle` at apply time sees the bare tag defaults rather than the page's real layout.
+`E01` asks whether its slot sits inside a flex container so it does not drop its stray button on
+top of the nav links; before the wait it was told "block" and dropped it there anyway, which
+reads as a broken page rather than a button someone forgot. `styleReady()` in `site.js` waits,
+with a timeout so a dead stylesheet cannot hang a chapter.
 5. Call `apply(ctx)` per anomaly, which mutates the DOM and marks what it produced with
    `data-anom="<id>"`.
 
@@ -468,22 +494,58 @@ portrait beside "1994 – 2021" would do exactly that. Text only.
 `[data-when]`, so `T08` can mark **the name** — the thing the player actually noticed — rather
 than blanking a whole comment.
 
-### 5.3 Chapter 3 — SănĐồCũ.vn
+### 5.3 Chapter 3 — SănĐồCũ.vn · BUILT
 
 Three pages: `listing` (grid of 12 second-hand items), `product` (one item, seller card,
 description, Q&A), `cart` (line items, shipping form, total).
 
-Slots: `product-title` ×12, `price` ×12, `photo` ×12 (ảnh từng món), `seller`,
-`avatar` (ảnh người bán), `paragraph` ×3, `qa` ×4, `cta` (nút mua), `cart-line`,
-`shipping-form`, `nav`, `footer`.
+Slots as built, per page:
 
-Imagery: twelve pinned `loremflickr` shots across mismatched keywords (`furniture`, `camera`,
-`bicycle`, `doll`…) — second-hand listings photographed by twelve different people is exactly
-the visual incoherence a real marketplace has, and excellent camouflage.
+| | `listing` | `product` | `cart` |
+|---|---|---|---|
+| `nav` | 1 | 1 | 1 |
+| `product-title` | 12 | 1 | — |
+| `price` | 12 | 1 | 1 |
+| `photo` | 12 | 1 | — |
+| `paragraph` | 1 | 2 | 1 |
+| `date` | — | 1 | — |
+| `tile` | — | 1 | — |
+| `avatar` | — | 3 | — |
+| `comment` | — | 4 | — |
+| `cta` | — | 1 | 1 |
+| `cart-line` | — | — | 1 |
+| `shipping-form` | — | — | 1 |
+| `footer` | 1 | 1 | 1 |
+
+Two renames from the sketch, both to avoid **dead slot types**. `qa` became `comment`, because
+no anomaly in §6 accepts `qa` while `T08` already accepts `comment` — and a Q&A thread is a
+better home for a signature than the sketch realised. `seller` became `tile`, which `M01`,
+`M03`, `S07`, `T03` and `T04` all accept. A declared slot type that no anomaly can use is a
+region of the page that can only ever cost the player a heart.
+
+The product page carries **three** avatars (the seller plus two of the four askers) rather than
+one, so `I03` — which needs two faces on a page — has a home here.
+
+Imagery: twelve pinned `picsum` shots of twelve unrelated objects — a camera, a typewriter, a
+wall clock, a child's tricycle, a chair, a speaker, a book, a desk lamp, an enamel mug, coloured
+pencils, hand tools, picture frames. Second-hand listings photographed by twelve different
+people is exactly the visual incoherence a real marketplace has, and it is the best camouflage
+in the game: on a page where every photograph already clashes, one more that clashes does not
+stand out. There is a test that no two goods share a photograph.
 
 Home of `R02 gio-hang-tu-them`. The listing grid's sheer volume of prices and titles makes
 this the chapter where `T03 dem-nguoc-trong-van-ban` and `T06 chinh-ta-sai-tang-dan` are
 hardest to spot — twelve cards of noise.
+
+**The cart is real state that survives navigation.** Pressing "bỏ vào giỏ" on the product page
+adds a line to the cart page and updates the badge on all three navs. Without that, `R02` has
+nothing to hide behind: if the cart never changes, then *any* change is the anomaly and the
+player never has to read what the extra line is or who is selling it.
+
+**A closed-account notice on the cart page is clean content and always present** — the same job
+chapter 2's memorial does. It says Hạnh's account closed in 02/2024, which is the only thing
+that makes `T08` mean anything when a Q&A question turns up signed "Hạnh · vừa xong". On runs
+without `T08` it is just a dull line of marketplace housekeeping.
 
 ### 5.4 Chapter 4 — Khu du lịch sinh thái Hồ Vắng
 
@@ -665,7 +727,7 @@ it the anomaly is findable only by hovering every element on the page, and since
 - Ch1: visible *"Khách hàng hài lòng"* / tooltip *"cô ấy chưa rời phòng thử kể từ tháng 3"*
 - Ch4: visible *"Bình minh trên hồ"* / tooltip *"chụp lúc 2 giờ sáng"*
 
-**T06 · `chinh-ta-sai-tang-dan`** — slots: `notice` (list), `product-title` (grid)
+**T06 · `chinh-ta-sai-tang-dan`** — slots: `notice` (list), `product-title` (grid) · BUILT
 Diacritics decay down a list. The first item is perfect Vietnamese; each subsequent item loses
 more `dấu` until the last is bare consonants — the site forgetting how to write.
 - Ch5: *"Thông báo nghỉ lễ"* → *"Thong bao nghi le"* → *"thng bo ngh l"* → *"t b n l"*
@@ -733,6 +795,11 @@ A line sits slightly outside its container, translated into the margin with
 `overflow: visible`, as if it tried to leave the page and got most of the way.
 
 **S07 · `emoji-lac-loai`** — slots: `feature-icon`, `tile`, `nav`
+
+**It replaces the text of one CHILD when the slot has children.** Assigning to the slot's own
+`textContent` works for a single `feature-icon`, but on a `nav` it deleted all five links and
+left one emoji — on 14% of chapter 1 seeds. That does not read as "one icon is wrong", it reads
+as a broken page, and a broken page gets skipped rather than circled.
 The site's emoji vocabulary breaks. Among ✨🌿💧🧴 one bullet is 🩸 or 🕳️ or 👁️ or 🦷 — same
 size, same alignment, styled identically. The most legible anomaly in the library, which is
 why Ch1's first run forces it.
@@ -769,7 +836,12 @@ rules: *"GỌI LẠI"*, *"ĐỪNG BẤM"*, *"XÁC NHẬN LẦN NỮA"*. Clicking
 wrong voice. Clicking never scores — it still has to be circled.
 
 **E02 · `o-nhap-khong-nen-co`** — slots: `comment-form`, `booking-form`, `shipping-form`,
-`subscribe`, `newsletter`
+`subscribe`, `newsletter` · BUILT
+
+It does not style itself. It **clones a field already in that form** and changes only the
+words, which guarantees it matches its neighbours exactly and lets it work on any chapter
+without knowing anything about that site's CSS. The clone is never `required` and carries no
+`name`, because experimenting must never be able to block the player from submitting.
 A form field that has no business in this form, styled exactly like its neighbours:
 *"Nhóm máu"*, *"Tên người sẽ nhận đồ của bạn"*, *"Đêm qua bạn mơ thấy gì?"*,
 *"Số người sẽ về cùng bạn"*.
@@ -803,9 +875,20 @@ under your name; leave the name blank on a run without `R01` and it goes up as `
 an anomaly answers an interaction it sets `form.dataset.handled`, and the site's own
 `behaviour()` stands down — otherwise both post and the page reads as buggy rather than wrong.
 
-**R02 · `gio-hang-tu-them`** — slots: `cart-line` · Ch3
+**R02 · `gio-hang-tu-them`** — slots: `cart-line` · Ch3 · BUILT
 Add anything to the cart. The cart shows your item and one more you did not add — same seller,
 and the shipping address prefilled is the one from the seller's card.
+
+**The first anomaly that spans two pages**: the trigger is a button on the product page, the
+evidence is a line on the cart. Anomalies get `ctx.shadow` alongside `ctx.root` for this, and
+the rule is that the *trigger* may be anywhere while the *evidence* stays inside `ctx.root` —
+marking something on another page would count it against a page it is not on.
+
+**It recounts the cart badge and re-adds the subtotal after inserting its line.** Skip that and
+the cart holds three items while the label says two: the player reads a site that cannot count,
+which is a *bug*, and bugs get ignored. The anomaly is far stronger when every number agrees —
+nothing is broken, there is simply something in your cart you never chose. Its own items are
+priced 0₫ so the total stays honest.
 
 **R03 · `tim-kiem-tra-ve-chinh-minh`** — slots: `nav` (search box) · Ch3, Ch6
 Search anything. Among plausible results sits one whose title is the player's exact query

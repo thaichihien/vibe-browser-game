@@ -5,7 +5,7 @@ import { renderMenu } from './ui/menu.js';
 import { CHAPTERS } from './chapters/index.js';
 import { isMuted, setMuted, recordClear } from './storage.js';
 import { plan } from './engine/director.js';
-import { mount, targets, slotElement, showPage, pageElement, pageIdOf } from './engine/site.js';
+import { mount, targets, slotElement, showPage, pageElement, pageIdOf, styleReady } from './engine/site.js';
 import { nearestEnclosed } from './engine/hittest.js';
 import { newRun, observerFor } from './state.js';
 import { resolve, giveUp, reconcile } from './engine/run.js';
@@ -19,11 +19,13 @@ import { byId } from './engine/registry.js';
 import { mulberry32 } from './engine/rng.js';
 import { PAGE_INDEX } from '../sites/ch1-lumiere/page.js';
 import { CH2_PAGES } from '../sites/ch2-bep-nha-may/pages.js';
+import { CH3_PAGES } from '../sites/ch3-san-do-cu/pages.js';
 
 /* Every page of a chapter, in order. pages[0] is where the player lands. */
 const PAGES = {
   'ch1-lumiere': [PAGE_INDEX],
-  'ch2-bep-nha-may': CH2_PAGES
+  'ch2-bep-nha-may': CH2_PAGES,
+  'ch3-san-do-cu': CH3_PAGES
 };
 
 const FEEDBACK = {
@@ -118,7 +120,7 @@ export function boot() {
     renderMenu(screen, startChapter);
   }
 
-  function startChapter(chapter) {
+  async function startChapter(chapter) {
     const fromUrl = Number(new URLSearchParams(location.search).get('seed'));
     const seed = Number.isFinite(fromUrl) && fromUrl > 0 ? fromUrl : Date.now() % 2147483647;
     const built = plan(chapter, seed);
@@ -138,6 +140,11 @@ export function boot() {
        it, a form that swallows what you typed and says nothing is an anomaly nobody placed. */
     for (const p of pages) p.behaviour?.(shadow);
 
+    /* Đợi CSS của trang trước khi áp dị thường. Dị thường nào hỏi getComputedStyle mà hỏi
+       trước lúc stylesheet nạp xong thì nhận về mặc định của thẻ, không phải kiểu dáng thật
+       của trang — xem styleReady() trong engine/site.js. */
+    await styleReady(shadow);
+
     run = newRun(chapter, seed, built.picks);
 
     const rng = mulberry32(seed ^ 0x5f3759df);
@@ -148,6 +155,12 @@ export function boot() {
         // root is the PAGE, not the whole shadow root: I03 looks for a second avatar and must
         // not reach across to one on a page the player is not even looking at.
         root: pageElement(shadow, pick.page),
+        /* …but a few anomalies are deliberately cross-page: R02 lives on the cart and has to
+           hear a click on the product page. They get the whole document, and the rule for
+           using it is that the TRIGGER may be anywhere while the EVIDENCE stays on ctx.root —
+           an anomaly assigned to the cart that marks something on another page would be
+           counted against a page it is not on. */
+        shadow,
         slot,
         rng,
         flavour: chapter.flavour[pick.id],

@@ -242,4 +242,57 @@ export const T08 = {
   }
 };
 
-export const TEXT_ANOMALIES = [T01, T02, T03, T04, T05, T07, T08];
+/* ── T06: trang web quên dần cách viết tiếng Việt ──────────────────────
+   Không phải MỘT chữ sai, mà cả một danh sách MỤC RỮA DẦN: mục đầu tiên tiếng Việt hoàn
+   hảo, mục sau mất dấu thanh, mục sau nữa mất luôn nguyên âm, mục cuối chỉ còn phụ âm trơ.
+   Đọc lướt qua thì giống lỗi phông chữ; đọc kỹ thì thấy nó không hỏng — nó đang quên.
+
+   Vì thế nó là dị thường DUY NHẤT tác động lên nhiều phần tử cùng lúc theo một thứ tự có ý
+   nghĩa, nên nó cần một cửa sổ các mục liền nhau chứ không phải một chỗ bám đơn lẻ. Mục đầu
+   trong cửa sổ được giữ NGUYÊN VẸN: nếu mọi mục đều sai thì không còn cái mốc nào để thấy
+   rằng chúng đang rữa đi. */
+
+/** Bỏ dấu thanh và dấu mũ, giữ nguyên chữ cái. "nghỉ lễ" -> "nghi le" */
+export function boDau(text) {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd').replace(/Đ/g, 'D');
+}
+
+/** Ba mức rữa. Mức 0 là nguyên vẹn và không bao giờ được đánh dấu. */
+export function decay(text, level) {
+  if (level <= 0) return text;
+  const flat = boDau(text);
+  if (level === 1) return flat;
+  if (level === 2) return flat.toLowerCase().replace(/[aeiouy]/g, '');
+  return flat.toLowerCase().split(/\s+/).map((w) => w.replace(/[^a-z]/g, '')[0] ?? '')
+    .filter(Boolean).join(' ');
+}
+
+export const T06 = {
+  id: 'T06', family: 'TEXT', label: 'Trang web quên dần cách viết tiếng Việt',
+  slots: ['product-title', 'notice'], weight: 3,
+  apply(ctx) {
+    const entry = pick(ctx.rng, ctx.flavour);
+    const span = entry.span ?? 4;
+
+    const all = [...ctx.root.querySelectorAll(`[data-slot="${ctx.slot.dataset.slot}"]`)];
+    let start = all.indexOf(ctx.slot);
+    if (start < 0) return;
+    // Không đủ chỗ phía sau thì lùi cửa sổ lại, để lúc nào cũng có đủ mục mà rữa.
+    start = Math.max(0, Math.min(start, all.length - span));
+    const window = all.slice(start, start + span);
+    if (window.length < 2) return;
+
+    window.forEach((el, i) => {
+      if (i === 0) return;                       // cái mốc, giữ nguyên
+      const level = Math.min(i, 3);
+      const text = el.textContent.replace(/\s+/g, ' ').trim();
+      const rotted = decay(text, level);
+      if (rotted === text) return;
+      el.textContent = rotted;
+      ctx.mark(el);
+    });
+  }
+};
+
+export const TEXT_ANOMALIES = [T01, T02, T03, T04, T05, T06, T07, T08];

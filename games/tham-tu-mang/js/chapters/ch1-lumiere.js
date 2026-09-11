@@ -148,6 +148,13 @@ export const CH1 = {
       { q: 'how to summon a demon', label: 'ĐÃ GỌI RỒI' }
     ],
 
+    // E02 — một ô nhập không có lý do gì để tồn tại trong ô đăng ký nhận thư.
+    E02: [
+      'Nhóm máu',
+      'Tên người sẽ nhận thư thay bạn',
+      'Đêm qua bạn mơ thấy gì?'
+    ],
+
     // E05 — con trỏ sai chỗ.
     E05: [
       { cursor: 'not-allowed' },

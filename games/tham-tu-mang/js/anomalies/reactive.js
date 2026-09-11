@@ -129,4 +129,69 @@ export const R01 = {
   }
 };
 
-export const REACTIVE_ANOMALIES = [R01, R05, R06];
+/* ── R02: giỏ hàng tự thêm một món ─────────────────────────────────────
+   Bỏ một món vào giỏ. Giỏ hiện món của bạn — và một món nữa bạn không hề bấm. Cùng người
+   bán. Và ô địa chỉ nhận hàng đã được điền sẵn, bằng địa chỉ của người bán.
+
+   Dị thường ĐẦU TIÊN bắc qua hai trang: cái nút ở trang sản phẩm, còn bằng chứng nằm ở
+   trang giỏ hàng. Nó nghe qua ctx.shadow nhưng chỉ đánh dấu thứ nằm trong ctx.root — nếu
+   đánh dấu một phần tử ở trang khác thì bằng chứng bị tính vào một trang mà nó không ở đó.
+
+   Dòng hàng mới được NHÂN BẢN từ một dòng có sẵn rồi đổi chữ: tự dựng kiểu dáng thì nó sẽ
+   khác hàng xóm một chút, và người chơi nhận ra nó bằng mắt thay vì bằng cách đọc. */
+export const R02 = {
+  id: 'R02', family: 'REACTIVE', label: 'Giỏ hàng có thêm một món bạn không bỏ vào',
+  slots: ['cart-line'], weight: 3,
+  deferred: true,
+  apply(ctx) {
+    const entry = pick(ctx.rng, ctx.flavour);
+    /* MỌI nút bỏ vào giỏ, không phải cái đầu tiên. Chương 3 có mười hai trang món, mỗi trang
+       một cái nút; bản đầu chỉ nghe querySelector() nên nó chỉ bắn khi người chơi mua đúng
+       món đầu tiên trong DOM — mua bất cứ món nào khác thì dị thường lặng lẽ không xảy ra,
+       mà bảng BẰNG CHỨNG thì vẫn đếm nó. */
+    const triggers = [...ctx.shadow.querySelectorAll('[data-add-to-cart]')];
+    const list = ctx.slot.parentElement;
+    if (!triggers.length || !list) return;
+
+    let fired = false;
+    const onAdd = () => {
+      if (fired) return;
+      fired = true;
+
+      const line = ctx.slot.cloneNode(true);
+      line.removeAttribute('data-slot');        // chỗ bám đã dùng xong, bản sao không nhận nữa
+      const title = line.querySelector('[data-line-title]');
+      const price = line.querySelector('[data-line-price]');
+      const note = line.querySelector('[data-line-note]');
+      if (title) title.textContent = entry.title;
+      if (price) price.textContent = entry.price;
+      if (note) note.textContent = entry.seller;
+      list.appendChild(line);
+
+      // Địa chỉ giao hàng tự điền — bằng địa chỉ của người bán, không phải của bạn.
+      const addr = ctx.root.querySelector('[data-ship-address]');
+      if (addr) addr.value = entry.address;
+
+      /* Đếm lại số món và cộng lại tạm tính. Bỏ qua bước này thì giỏ có ba dòng mà nhãn ghi
+         hai, và người chơi đọc ra là trang web đếm sai — tức là một cái LỖI, thứ mà người ta
+         bỏ qua. Dị thường mạnh hơn nhiều khi mọi con số đều khớp: không có gì hỏng cả, chỉ là
+         trong giỏ có một món bạn chưa từng bấm vào. */
+      const total = ctx.root.querySelector('[data-cart-total]');
+      if (total) {
+        const sum = [...list.querySelectorAll('li')].reduce((n, li) => {
+          const raw = li.querySelector('[data-line-price]')?.textContent ?? '';
+          return n + Number(raw.replace(/\D/g, '') || 0);
+        }, 0);
+        total.textContent = `${sum.toLocaleString('vi-VN')}₫`;
+      }
+      for (const n of ctx.shadow.querySelectorAll('[data-cart-count]')) {
+        n.textContent = String(list.querySelectorAll('li').length);
+      }
+
+      ctx.mark(line);
+    };
+    for (const t of triggers) t.addEventListener('click', onAdd);
+  }
+};
+
+export const REACTIVE_ANOMALIES = [R01, R02, R05, R06];

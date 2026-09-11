@@ -6,6 +6,22 @@
 import { mulberry32, range, shuffle } from './rng.js';
 import { ANOMALIES, byId } from './registry.js';
 
+/**
+ * Những trang BẮT BUỘC phải bẩn.
+ *
+ * Luật cũ là "mọi trang đều phải có ít nhất một dị thường", và nó đúng khi một chương có hai
+ * hay ba trang. Chương 3 có mười bốn: một trang danh sách, mười hai trang món hàng, một trang
+ * giỏ. Không thể rải 6–8 dị thường cho mười bốn trang, mà cũng KHÔNG NÊN: một sàn rao vặt mà
+ * món nào cũng có gì đó sai thì không còn là một sàn rao vặt nữa.
+ *
+ * Nên một trang có thể tự khai `optional: true`. Trang tuỳ chọn vẫn nhận dị thường bình
+ * thường ở bước lấp — nó chỉ không được BẢO ĐẢM có. Lý do của luật cũ vẫn được giữ ở chỗ
+ * quan trọng nhất: những trang người chơi chắc chắn sẽ đi qua thì không bao giờ sạch trơn.
+ */
+function mustBeDirty(chapter) {
+  return chapter.pages.filter((p) => !p.optional);
+}
+
 function slotBudget(chapter) {
   const budget = new Map();          // "pageId:slotType" -> số phần tử của loại đó
   for (const page of chapter.pages) {
@@ -100,7 +116,7 @@ export function plan(chapter, seed, registry = ANOMALIES) {
          rộng. Bước 3 ở cuối vẫn còn đó làm lưới an toàn, nhưng mỗi lần nó phải ra tay là một
          dị thường ĐƯỢC THÊM ngoài số đã bốc — với năm trang thì con số BẰNG CHỨNG trôi ra
          ngoài khoảng min..max mà chương tự khai. Phủ trước thì số bốc ra vẫn là số phải tìm. */
-  for (const page of chapter.pages) {
+  for (const page of mustBeDirty(chapter)) {
     if (picks.length >= count) break;
     if (picks.some((p) => p.page === page.id)) continue;
     for (const family of families) {
@@ -141,7 +157,7 @@ export function plan(chapter, seed, registry = ANOMALIES) {
         neither. So on roughly 2% of seeds the fallback chose something that could not go
         there, placed nothing, and left a whole page clean. Chapter 1 has one page, so this
         step never ran and the bug could not appear until there was a second page. */
-  for (const page of chapter.pages) {
+  for (const page of mustBeDirty(chapter)) {
     if (picks.some((p) => p.page === page.id)) continue;
     for (const a of shuffle(rng, eligible)) {
       if (takenIds.has(a.id)) continue;
