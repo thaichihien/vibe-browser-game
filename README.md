@@ -24,6 +24,7 @@ Một bộ sưu tập mini game viết bằng HTML/CSS/JavaScript thuần và vi
 - `animal-kings/` - RTS nhập vai Vua: tự tay thu hoạch, đi gặp thương nhân/thợ xây/đội trưởng, chiêu mộ đoàn tùy tùng. 5 vương quốc muông thú, 4 mức AI, không có bản đồ nhỏ — tin từ xa phải có liên lạc chạy về.
 - `chrono-drifter/` - RPG theo lượt của một kẻ trôi thời gian: mỗi lần bấm chơi là một thời đại, một dạng trận và một phe ngẫu nhiên. 30 thời đại, 632 nhân vật, vòng khắc chế 9 hệ đổi tên theo từng thời đại, và 26 món đồ hiện đại mua bằng ⧗ mảnh thời gian. Toàn bộ cơ chế được ghi lại trong [wiki](docs/chrono-drifter-wiki.md).
 - `tham-tu-mang/` - trò quan sát: mở một trang web bình thường và khoanh tròn 5-8 thứ không nên ở đó. Dị thường được rải ngẫu nhiên mỗi lượt nên cùng một trang chơi lần nào cũng khác. Ba trái tim; khoanh nhầm vào nội dung sạch, hoặc khoanh vào khoảng trống, đều mất một trái tim. Cần chạy qua server (ES modules).
+- `dai-chien-bong-bong/` - Crazy Arcade monster mode: ba raid (🐙 bạch tuộc, 🐧 chim cánh cụt, 🦭 hải cẩu), mỗi raid hai màn quái rồi tới trùm, chọn con nào trước cũng được. Chạm vào quái là mất mạng ngay — nước thì chỉ nhốt bạn, và cách giết quái là **dụ** nó vào quả bom đặt sẵn. Mỗi màn là một câu đố dựng tay: quái tuần tra đúng một trục, đứng im tới khi bạn giết con đầu tiên, hoặc bị nhốt sau tường. Chấm hạng D→SS theo số quái diệt + thời gian + số lần chết.
 
 ## Chạy local
 

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Đại Chiến Bong Bóng</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%8E%88</text></svg>" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="arena-shell">
+
+  <header class="topbar">
+    <a class="link" href="../../index.html">← ARCADE.SYS</a>
+    <span class="brand">🎈 ĐẠI CHIẾN BONG BÓNG</span>
+    <span class="spacer"></span>
+    <button class="ctl" id="btn-rules">HƯỚNG DẪN</button>
+    <button class="ctl" id="btn-mute" title="Tắt tiếng (M)">🔊</button>
+  </header>
+
+  <!-- ── menu ─────────────────────────────────────────────────────────── -->
+  <section class="screen" id="screen-menu">
+    <div class="hero">
+      <div class="hero-art" aria-hidden="true">
+        <span class="ha a">🐰</span><span class="ha b">💣</span><span class="ha c">🐙</span>
+        <span class="ha d">🐱</span><span class="ha e">💦</span>
+      </div>
+      <h1>ĐẠI CHIẾN BONG BÓNG</h1>
+      <p class="tagline">
+        Ba raid, khó ngang nhau — chọn con trùm nào trước cũng được.<br />
+        Hai màn quái rồi tới trùm. Chạm vào quái là mất mạng ngay,<br />
+        nên mỗi màn là bài toán đi đường trước khi là bài toán bắn.
+      </p>
+
+      <div class="seat-pick" role="radiogroup" aria-label="Số người chơi">
+        <button class="seat" data-seats="1" aria-checked="true" role="radio">🐰 MỘT NGƯỜI</button>
+        <button class="seat" data-seats="2" aria-checked="false" role="radio">🐰🐱 HAI NGƯỜI</button>
+      </div>
+
+      <button class="big" id="btn-start">BẮT ĐẦU</button>
+      <p class="menu-progress" id="menu-progress"></p>
+    </div>
+  </section>
+
+  <!-- ── chapter select ───────────────────────────────────────────────── -->
+  <section class="screen" id="screen-chapters" hidden>
+    <h2 class="screen-title">CHỌN TRÙM — cả ba khó ngang nhau</h2>
+    <div class="chapter-grid" id="chapter-grid"></div>
+    <button class="ctl back" id="btn-menu">← VỀ MENU</button>
+  </section>
+
+  <!-- ── the fight ────────────────────────────────────────────────────── -->
+  <section class="screen play" id="screen-play" hidden>
+    <div class="stage-top" id="stage-top"></div>
+    <div class="board">
+      <div class="panels left" id="panel-left"></div>
+      <div class="bezel">
+        <canvas id="screen" width="720" height="624" aria-label="Sàn đấu"></canvas>
+        <div class="overlay" id="overlay" hidden></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ── rules ──────────────────────────────────────────────────────────── -->
+<div class="modal" id="modal-rules" hidden>
+  <div class="modal-card">
+    <button class="modal-x" id="btn-rules-close" aria-label="Đóng">✕</button>
+    <h2>HƯỚNG DẪN</h2>
+
+    <h3>Điều khiển</h3>
+    <table class="keys">
+      <tr><th></th><th>Di chuyển</th><th>Đặt bom</th><th>Kỹ năng</th></tr>
+      <tr><td>🐰 Một người</td><td><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd></td><td><kbd>Space</kbd></td><td><kbd>,</kbd><kbd>.</kbd></td></tr>
+      <tr><td colspan="4" class="note">Chơi một mình thì cả <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>,
+        <kbd>Enter</kbd>, <kbd>Q</kbd><kbd>E</kbd> đều dùng được — không có nửa bàn phím nào là sai.</td></tr>
+      <tr><td>🐰 Người 1</td><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td><kbd>Space</kbd></td><td><kbd>Q</kbd><kbd>E</kbd></td></tr>
+      <tr><td>🐱 Người 2</td><td><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd></td><td><kbd>Enter</kbd></td><td><kbd>,</kbd><kbd>.</kbd></td></tr>
+    </table>
+    <p class="note">Bàn phím rẻ có thể bỏ phím khi hai người bấm cùng lúc — đó là giới hạn phần cứng,
+      không phải lỗi game. Nhấn <kbd>P</kbd> để tạm dừng, <kbd>M</kbd> để tắt tiếng.
+      Di chuột lên chỉ số trong thẻ người chơi để xem nó là gì.</p>
+
+    <h3>Luật cốt lõi</h3>
+    <ul>
+      <li><b>Chạm vào quái hay trùm là mất một mạng NGAY LẬP TỨC.</b> Không bong bóng,
+        không vùng vẫy, không ai cứu được. Quái không phải là "sát thương" — nó là bức tường
+        biết đi, và mỗi màn là bài toán <i>đi đường nào</i> trước khi là bài toán bắn.</li>
+      <li><b>Nước thì chỉ nhốt bạn.</b> Dính nước là bị bọc bong bóng: bấm loạn phím hướng
+        để phá, hoặc để đồng đội chạm vào cứu. Hết giờ mới mất mạng.</li>
+      <li><b>Quái KHÔNG né nước.</b> Đặt bom sẵn rồi <b>dụ</b> nó đi vào — đó chính là
+        cách giết quái trong Crazy Arcade, không phải canh bắn trúng.</li>
+      <li><b>Quả bom bạn vừa đặt là bức tường của chính bạn</b> — và cũng là tường chặn quái.
+        Nhốt một con tuần tra vào ngõ cụt bằng bom là nước đi hợp lệ.</li>
+      <li><b>Bom nổ hình chữ thập</b>, phá đúng <i>một</i> khối mỗi hướng rồi dừng.
+        Nước chạm bom khác sẽ kích nổ dây chuyền.</li>
+    </ul>
+
+    <h3>Quái vật — mỗi loại chết một kiểu</h3>
+    <ul>
+      <li>🎱 <b>Đạn Pháo</b> / 🧨 <b>Bom Xù</b> — trúng nước là chết ngay. Đạn Pháo chỉ chạy
+        theo <i>một</i> hàng hoặc <i>một</i> cột và không bao giờ quay sang tìm bạn;
+        Bom Xù thì đuổi thẳng.</li>
+      <li>⛄ <b>Cục Bông</b> — nước chỉ làm nó <i>đông cứng</i>. Phải <b>chạm vào</b> để nó vỡ.
+        Bỏ mặc vài giây là nó tan đá và sống lại.</li>
+      <li>🐊 <b>Cá Sấu</b> — lần trúng nước đầu chỉ làm nó <i>teo lại</i>.
+        Phải trúng lần hai trước khi nó hồi.</li>
+      <li>🥚 <b>Trứng</b> — trùm chim cánh cụt đẻ ra. Không nổ sớm là nó nở thành Cục Bông.</li>
+      <li>Con nào đang bị đông cứng hay teo lại thì <b>vô hại</b> — chạm vào thoải mái.
+        Đó chính là lý do phải tưới nước lên chúng.</li>
+    </ul>
+
+    <h3>Mỗi màn là một câu đố, không phải một đấu trường</h3>
+    <p>Quái không sinh ra ngẫu nhiên. Mỗi con đứng ở một ô cố định với một kịch bản cố định:
+      con thì tuần tra đúng một trục, con thì <b>đứng im cho tới khi bạn giết con đầu tiên</b>,
+      con thì bị nhốt sau tường phải phá vào mới tới được, con thì sống lại một lần.
+      Sau 60 giây tất cả tăng tốc. Nhìn kỹ bản đồ trước khi đặt quả bom đầu tiên.</p>
+
+    <h3>Đánh trùm</h3>
+    <ul>
+      <li><b>Trùm chỉ có máu thường</b> — cứ dội bom là nó chết. Máu hiện thành 8 giọt 💧
+        trên đầu nó.</li>
+      <li><b>Ghé mép ô (걸치기).</b> Đây là kỹ thuật cốt lõi: đứng sao cho <i>tâm</i> nhân vật
+        ở ô khô còn thân thì đè lên mép trùm — nước phun của nó trượt qua bạn, còn bom bạn
+        vẫn tới nó. Va chạm và dính nước đều tính theo ô ở <b>tâm</b> nhân vật, nên chỗ đứng
+        nửa vời đó là hợp lệ.</li>
+      <li>Dội đủ nhiều đòn liên tiếp thì trùm <b>choáng</b> mấy giây — thưởng cho việc
+        đặt sẵn bom thay vì nhỏ giọt.</li>
+      <li>Mọi chiêu đều <b>báo trước bằng ô cam</b>. Ô cam đầy dần là đếm ngược.</li>
+      <li>🐙 phun nước quanh mình, bắn pháo cả làn, và <b>phân thân</b> khi sắp chết —
+        chỉ giết bản thật mới xong, nhưng bản giả vẫn giết bạn.</li>
+      <li>🐧 đẻ trứng và húc thẳng.</li>
+      <li>🦭 <b>không</b> phun nước quanh mình — đứng cạnh nó là an toàn. Cái giết bạn là
+        cú lăn ngang cả hàng và bom 3×3 rơi khắp bản đồ.</li>
+      <li>Màn trùm <b>vẫn có quái thường</b>. Dọn chúng trước cho dễ thở.</li>
+    </ul>
+
+    <h3>Hạng D → SS</h3>
+    <p>Mỗi raid được chấm hạng theo <b>số quái diệt được + tổng thời gian cả 3 màn +
+      số lần chết</b>. Thời gian cộng dồn cả raid, nên màn 1 chậm thì gỡ lại ở màn 3.
+      Mục tiêu SS hiện ngay trên thanh trạng thái trong lúc chơi. Hạng cao nhất của bạn
+      được lưu lại cho từng raid.</p>
+
+    <h3>Ba con trùm, khó ngang nhau</h3>
+    <p>Không có raid nào bị khoá — chọn con nào trước cũng được, y như Crazy Arcade.
+      Cả ba cùng số máu, cùng tốc độ, cùng số quái, cùng mục tiêu SS. Cái khác nhau là
+      <b>câu hỏi</b> mỗi con đặt ra.</p>
+
+    <h3>Khi hết mạng</h3>
+    <p>Chơi hai người: người hết mạng ngồi ngoài đến hết màn, rồi quay lại với đủ mạng
+      ở màn kế tiếp. Cả hai cùng hết mạng thì chơi lại màn đó từ đầu — nhưng
+      <b>đồng hồ vẫn chạy</b>, nên chết nhiều là mất hạng.</p>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
