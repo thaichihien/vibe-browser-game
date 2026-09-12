@@ -121,8 +121,9 @@ nav a:hover { color: var(--ink); }
 
 /* ── Lưới hàng + cột lọc ────────────────────────────────────────────────── */
 
-/* Lọc nằm bên PHẢI: đây là một sàn rao vặt, và hàng hoá phải là thứ đập vào mắt trước. */
-.board { display: grid; grid-template-columns: minmax(0, 1fr) 232px; gap: 22px; align-items: start; }
+/* Lọc nằm bên TRÁI, và nó đứng trước trong markup chứ không phải bị CSS đẩy sang — thứ tự
+   đọc và thứ tự tab phải đi theo thứ tự mắt nhìn. */
+.board { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 22px; align-items: start; }
 
 .count { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
 .count b { color: var(--ink); }
@@ -313,7 +314,7 @@ footer {
 
 @media (max-width: 1000px) {
   .board { grid-template-columns: 1fr; }
-  .filters { position: static; order: -1; }
+  .filters { position: static; }
   .grid { grid-template-columns: repeat(3, 1fr); }
   .detail { grid-template-columns: 1fr; }
   .shot img { max-height: 420px; }

@@ -376,13 +376,6 @@ ${nav(true)}
   </p>
 
   <div class="board">
-    <div>
-      <p class="count" data-catch><b data-result-count>12</b> món đang hiển thị</p>
-      <div class="grid">${GOODS.map(card).join('')}
-      </div>
-      <p class="empty" data-empty hidden data-catch>Không có món nào khớp với bộ lọc.</p>
-    </div>
-
     <aside class="filters" data-catch>
       <h2 data-catch>Lọc kết quả</h2>
 
@@ -400,6 +393,13 @@ ${nav(true)}
 
       <button type="button" class="reset" data-reset data-catch>XOÁ BỘ LỌC</button>
     </aside>
+
+    <div>
+      <p class="count" data-catch><b data-result-count>12</b> món đang hiển thị</p>
+      <div class="grid">${GOODS.map(card).join('')}
+      </div>
+      <p class="empty" data-empty hidden data-catch>Không có món nào khớp với bộ lọc.</p>
+    </div>
   </div>
 </main>
 ${foot(true)}`
