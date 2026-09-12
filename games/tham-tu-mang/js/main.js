@@ -20,12 +20,14 @@ import { mulberry32 } from './engine/rng.js';
 import { PAGE_INDEX } from '../sites/ch1-lumiere/page.js';
 import { CH2_PAGES } from '../sites/ch2-bep-nha-may/pages.js';
 import { CH3_PAGES } from '../sites/ch3-san-do-cu/pages.js';
+import { PAGE_INDEX as CH4_INDEX } from '../sites/ch4-ho-vang/page.js';
 
 /* Every page of a chapter, in order. pages[0] is where the player lands. */
 const PAGES = {
   'ch1-lumiere': [PAGE_INDEX],
   'ch2-bep-nha-may': CH2_PAGES,
-  'ch3-san-do-cu': CH3_PAGES
+  'ch3-san-do-cu': CH3_PAGES,
+  'ch4-ho-vang': [CH4_INDEX]
 };
 
 const FEEDBACK = {

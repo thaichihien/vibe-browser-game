@@ -85,31 +85,10 @@ export const T03 = {
   }
 };
 
-/* Những gì trình duyệt thành thật biết về người chơi, không cần mạng, không cần lưu trữ.
-   Một lời nói dối thì đoán được; một câu nói THẬT thì không. */
-const FACTS = {
-  tz: () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return null; } },
-  screen: () => (window.innerWidth ? `${window.innerWidth}×${window.innerHeight}` : null),
-  cores: () => navigator.hardwareConcurrency || null,
-  lang: () => navigator.language || null
-};
-
-export const T04 = {
-  id: 'T04', family: 'TEXT', label: 'Trang web biết về bạn nhiều hơn nó nên biết',
-  slots: ['paragraph', 'footer', 'tile'], weight: 3,
-  apply(ctx) {
-    // Chỉ dùng những quan sát ĐÚNG. Nếu trình duyệt không trả lời được thì bỏ qua mục đó
-    // thay vì bịa — nói bừa thì người chơi bắt được ngay, còn nói đúng thì không.
-    const usable = ctx.flavour.filter((f) => FACTS[f.fact]?.() != null);
-    if (!usable.length) return;
-
-    const entry = pick(ctx.rng, usable);
-    const line = document.createElement('span');
-    line.textContent = ' ' + entry.text.replace('{v}', String(FACTS[entry.fact]()));
-    ctx.slot.appendChild(line);
-    ctx.mark(line);
-  }
-};
+/* T04 `trang-web-biet-ve-ban` đã bị RÚT theo yêu cầu của người chơi.
+   Nó đọc những thứ trình duyệt biết thật (múi giờ, cỡ màn hình, số lõi, ngôn ngữ) rồi nói
+   lại cho người chơi nghe. Cùng với nó, bảng FACTS cũng đi — không còn ai dùng. Nếu khôi
+   phục thì xem spec §6 T04, kể cả biến thể phá vỡ bức tường thứ tư dành riêng cho chương 6. */
 
 /* ── T05: dòng chữ chỉ hiện khi rê chuột ───────────────────────────────
    CÁI NÀY LÀ GÌ, nói cho gọn: chú thích nhìn thấy nói một đằng, còn dòng chữ nấp sau nó —
@@ -295,4 +274,46 @@ export const T06 = {
   }
 };
 
-export const TEXT_ANOMALIES = [T01, T02, T03, T04, T05, T06, T07, T08];
+/* ── T09: toạ độ tự đi chỗ khác ────────────────────────────────────────
+   Chỗ bám là cả khối bản đồ, nhưng thứ đổi chỉ là một cụm số nhỏ trong đó — cặp toạ độ mà
+   mọi trang khu nghỉ đều in ra và không ai đọc kỹ. Lần đầu nhìn, nó đúng bằng cái đang có
+   trong markup, nên người chơi không có gì để nghi ngờ. Mỗi lần họ cuộn đi rồi cuộn lại,
+   nó đã đi thêm một đoạn: mấy giây đầu là vài giây cung, rồi vài phút, rồi sang hẳn bán cầu
+   khác, và cuối cùng dừng ở một vĩ độ KHÔNG TỒN TẠI trên Trái Đất.
+
+   Vì sao đổi lúc không ai nhìn chứ không phải đổi trước mắt: một con số nhảy khi đang bị
+   nhìn đọc ra là widget, là hiệu ứng, là một thứ trang web CỐ Ý làm. Một con số chỉ khác đi
+   sau khi bạn quay lưng thì không có cách nào đọc ra là cố ý, và nó buộc người chơi phải
+   nhớ mình đã đọc thấy gì — đúng việc mà cả trò chơi này yêu cầu.
+
+   Đây là dị thường duy nhất đi qua NHIỀU bước chứ không phải một lần đổi: T02 đổi một lần
+   rồi thôi, còn cái này để lại một vệt mà người chơi kiểm chứng được bằng cách cuộn thêm
+   vài vòng nữa. Bước cuối là bước dừng — nếu nó cứ trôi mãi thì người chơi không bao giờ
+   biết mình đã thấy đủ chưa. */
+export const T09 = {
+  id: 'T09', family: 'TEXT', label: 'Toạ độ trên bản đồ không đứng yên',
+  slots: ['map'], weight: 3,
+  apply(ctx) {
+    const entry = pick(ctx.rng, ctx.flavour);
+    const cell = ctx.slot.querySelector('[data-coords]');
+    if (!cell) return;
+
+    let step = 0;
+    cell.textContent = entry.steps[0];      // bước 0 = đúng cái trang vẫn ghi
+    ctx.mark(cell);
+
+    let away = false;
+    const watch = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) { away = true; continue; }
+        if (!away) continue;
+        away = false;
+        step = Math.min(step + 1, entry.steps.length - 1);
+        cell.textContent = entry.steps[step];
+      }
+    }, { threshold: 0.3 });
+    watch.observe(ctx.slot);
+  }
+};
+
+export const TEXT_ANOMALIES = [T01, T02, T03, T05, T06, T07, T08, T09];

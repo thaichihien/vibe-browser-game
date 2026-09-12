@@ -373,7 +373,7 @@ clearing chapter N unlocks N+1. Each clear stores a rank.
 | 1 | **LUMIÈRE** — kem dưỡng ẩm | 1 | 5–6 | landing page bán hàng | Cult |
 | 2 | **Bếp Nhà Mây** — blog nấu ăn | 5 | 6–8 | blog cá nhân | Người đã mất |
 | 3 | **SănĐồCũ.vn** — chợ đồ cũ | 3 | 6–7 | thương mại điện tử | Monster |
-| 4 | **Hồ Vắng** — khu du lịch sinh thái | 1 | 6–7 | trang đặt phòng | Alien |
+| 4 | **Hồ Vắng** — khu du lịch sinh thái | 1 | 7–9 | trang đặt phòng | Alien |
 | 5 | **Tiểu học Hoa Ban** — trang thông báo | 1 | 6–8 | trang cơ quan | Cult |
 | 6 | **MegaLink** — trạng thái hệ thống | 1 | 7–8 | dashboard kỹ thuật | Thứ trong đường truyền |
 
@@ -547,22 +547,91 @@ chapter 2's memorial does. It says Hạnh's account closed in 02/2024, which is 
 that makes `T08` mean anything when a Q&A question turns up signed "Hạnh · vừa xong". On runs
 without `T08` it is just a dull line of marketplace housekeeping.
 
-### 5.4 Chapter 4 — Khu du lịch sinh thái Hồ Vắng
+### 5.4 Chapter 4 — Khu du lịch sinh thái Hồ Vắng · BUILT
 
-Single long page: hero over a lake, *"Vì sao chọn Hồ Vắng"*, a six-photo gallery, a booking
-widget (dates, guests, room type), a map block with coordinates, reviews, footer.
+Single long page. An eco-resort on a lake at the end of a provincial road outside Đà Lạt:
+full-bleed hero, a conditions strip, four reasons to come, two room types, a six-photo
+gallery, a booking widget, five house rules, a map block with coordinates, three reviews,
+footer.
 
-Slots: `nav`, `hero-title`, `paragraph` ×4, `photo` ×7 (hero + 6 ảnh thư viện),
-`gallery-caption` ×6, `avatar` ×3 (người đánh giá), `booking-form`, `map`, `review` ×3, `cta`,
-`footer`.
+**Its design language is deliberately nothing like chapter 1's, and that is a rule of the
+game rather than a matter of taste.** The premise is that each case file opens a *different*
+website, built by different people. Two chapters sharing one visual language read as "the
+same page again with new words", and behind that comes the suspicion that all six were
+invented by one hand — a suspicion which is true, and which kills the question every anomaly
+lives on: *"…or is the site just like that?"* So the two sites are opposites on every axis
+that reads at a glance:
 
-Imagery: `loremflickr.com/…/lake,fog?lock=…`. The richest photographic chapter in the game —
-seven pinned images against six captions is the ideal surface for both `S05` and the whole
-IMAGE family.
+| | Ch1 · LUMIÈRE | Ch4 · HỒ VẮNG |
+|---|---|---|
+| palette | cream, rose accent | white paper + forest-dark bands, ochre accent |
+| headings | serif | light sans, very large |
+| surfaces | 18px rounded cards, soft shadows | square corners, no shadows, 1px hairlines only |
+| hero | split image / copy | full-bleed 92vh photograph, transparent nav over it |
+| rhythm | even grids | numbered sections 01–07, room photos bleeding off the page edge |
+| gallery | even 3×2 | offset mosaic, 4+2 / 2+2+2 / 6 |
 
-Home of `R04 dat-cho-qua-so-nguoi`. Alien register: the anomalies here lean on sky, light,
-distance, and things counted wrong. The gallery captions are the richest surface in the game
-for `S05 anh-khong-khop-chu-thich`.
+That comparison was drawn from how boutique-hotel and lodge sites actually look now:
+full-bleed cinematic heroes, magazine and broken-grid sections, dark-with-accent palettes,
+whitespace instead of visible card chrome, and rich offset galleries.
+
+**The hero photograph sits under its own separate scrim layer, not behind a cropped
+background.** `I01` can rotate that photograph 35–176°; if the darkening came from a filter
+on the image itself, the white headline would drop onto bright water and stop being legible
+the moment the anomaly fired. A layer that does not rotate keeps the page readable while the
+photograph goes visibly wrong — which is the whole point of `I01` landing there.
+
+Slots as built — 52 of them on one page, which is why the roll is 7–9 rather than chapter 1's
+6–8 over 36:
+
+| slot | n | where |
+|---|---|---|
+| `nav` | 1 | transparent header over the hero |
+| `hero-title` | 1 | |
+| `paragraph` | 7 | hero lead + one per numbered section |
+| `tile` | 4 | the "hôm nay bên hồ" conditions strip |
+| `feature-icon` | 4 | the four reasons |
+| `photo` | 4 | hero, two rooms, the pass road |
+| `gallery-caption` | 6 | the mosaic |
+| `price` | 2 | two room types |
+| `date` | 3 | price list, gallery update, rules issue date |
+| `hours` | 3 | reception, restaurant, boat dock |
+| `notice` | 5 | the house rules — `T06` decays down the list |
+| `booking-form` | 1 | |
+| `map` | 1 | the only `map` slot in the game |
+| `avatar` | 3 | three reviewers |
+| `comment` | 3 | three review bodies, each with `[data-who]` / `[data-when]` |
+| `cta` | 3 | book, see all photos, call reception |
+| `footer` | 1 | |
+
+`review` from the original sketch was **renamed to `comment`**, for the same reason `qa` was in
+chapter 3: no anomaly in §6 accepts `review`, so declaring it would have created a region of
+the page that could only ever cost the player a heart. As `comment` it is a home for `T08`.
+
+**The lost-property notice is clean content and always present** — the same job chapter 2's
+memorial and chapter 3's closed-account line do. It says a guest checked in on 14/08/2023 and
+has not checked out, which is the only thing that makes `T08` mean anything when a review turns
+up signed with that name "vừa xong". It carries no `data-slot` and never may. Note what it does
+*not* say: nobody is described as dead or harmed (§3.4). A guest who never completed checkout is
+lost-property housekeeping — and it is more unsettling for staying inside that register.
+
+Home of four anomalies that had no site to live on before:
+
+- **`R04 xac-nhan-thua-khach`** — the booking widget, which spec §6 always reserved for it.
+- **`T09 toa-do-troi`** — the map block. Chapter 4 is the only chapter with a `map` slot.
+- **`M06 anh-sang-di-qua-anh`** — seven photographs, more than any other chapter.
+- **`E03 muc-menu-thu-mot-mot`** — chapters 1 and 3 have navs too and now carry pools for it.
+
+`I02 anh-doi-khi-quay-lai` was built alongside them and is eligible in all four chapters.
+
+The honest page pre-loads ordinary explanations for everything the Alien register will later
+abuse: the resort really has no phone signal, the sky really is dark because there are no
+street lights within 3 km, and a reviewer has already written that satellites pass over at
+this time of year. An anomaly here never has to shout. It only has to stand next to a
+reasonable explanation and refuse to fit inside it.
+
+Imagery: ten pinned `picsum` photographs and three `randomuser` portraits. Captions were
+written against the photographs after looking at them, per §3.4.
 
 ### 5.5 Chapter 5 — Trường Tiểu học Hoa Ban
 
@@ -604,7 +673,7 @@ which is why it rolls 7–8. Home of `R05 huy-dang-ky-khong-huy`.
 
 ---
 
-## 6. The anomaly library — 34 scenarios
+## 6. The anomaly library — 35 designed, 29 built
 
 Six families. `slots` lists what the anomaly can attach to; the director only offers it to a
 chapter that has one. The flavour lines below are the authored pools, not placeholders.
@@ -612,9 +681,15 @@ chapter that has one. The flavour lines below are the authored pools, not placeh
 The brief asked for 30. The library grew to 34 when the sites gained real photographs (§3.4),
 which made a sixth family possible — those four were the only additions. The chapter 1
 playtest then traded one for one: `S04` was **withdrawn** and `R06` was **added**, so the
-library is still **34** — STYLE dropped to 6, REACTIVE rose to 6.
+library stayed at **34** — STYLE dropped to 6, REACTIVE rose to 6.
 
-### TEXT — 8
+Chapter 4 moved it twice more. `T04` had already been **withdrawn** at the player's request,
+taking TEXT to 7; building chapter 4 added `T09 toa-do-troi` (TEXT back to 8) and
+`M06 anh-sang-di-qua-anh` (MOTION to 6), so **35 are designed and 29 are built**. Both new
+ones exist because chapter 4 is the first site with a surface for them: it is the only chapter
+with a `map` slot, and it carries more photographs than any other.
+
+### TEXT — 8 (T04 withdrawn, T09 added)
 
 **T01 · `loi-nguyen-chen-giua`** — slots: `paragraph`, `notice`
 One sentence inside an ordinary paragraph is replaced with a liturgical or cursed line, in
@@ -673,7 +748,12 @@ Formatting follows Vietnamese convention throughout — comma as the decimal sep
 the moment it renders `8.5` instead of `8,5` it stops looking like a Vietnamese site's own
 widget and starts looking like a bug in the game.
 
-**T04 · `trang-web-biet-ve-ban`** — slots: `paragraph`, `tile`, `footer`
+**T04 · `trang-web-biet-ve-ban`** — ~~slots: `paragraph`, `tile`, `footer`~~
+**WITHDRAWN at the player's request (2026-09-12).** It read things the browser genuinely knows
+— timezone, viewport, core count, language — and said them back. Removed from the registry
+along with the `FACTS` table that only it used, and from all three chapters' flavour pools. The
+design below is kept, including the fourth-wall Ch6 variant, in case it is ever restored.
+**TEXT is 7.**
 *(was `goi-ten-nguoi-choi`, a clock reading — replaced: the hour is the least interesting
 thing a browser knows about you, and a line that only says "it is 23:00" is a parlour trick
 the player dismisses in a second.)*
@@ -754,6 +834,23 @@ horror — it requires the chapter to have authored the memorial line as ordinar
 - Ch2: byline *"Mây · 3 ngày trước"* against the sidebar's *"Tưởng nhớ Mây (1994–2021)"*
 - Ch5: a notice signed by a principal the *"Lịch sử nhà trường"* block lists as former.
 
+**T09 · `toa-do-troi`** — slots: `map` · Ch4 · BUILT
+The coordinate pair printed beside the map does not stay where it is. Its first state is
+exactly what the markup says, so the first read gives the player nothing to doubt. Every time
+they scroll away and come back it has moved a little further — seconds of arc, then minutes,
+then a hemisphere — and the last step stops at a latitude that does not exist on Earth
+(`91°04′22″B`) or at something that has stopped being a coordinate at all (`—°—′—″`).
+
+**It moves only while nobody is looking.** A number that ticks in front of the player reads as
+a widget, as something the site is *doing on purpose*. A number that is merely different when
+you come back cannot be read as a feature at all, and it forces them to rely on what they
+remember reading — which is the thing this entire game asks for.
+
+It is the only anomaly that walks through **several** states rather than changing once: `T02`
+swaps and is done, while this leaves a trail the player can confirm by scrolling around a few
+more times. The final step is a **stop**. If it drifted forever the player could never know
+they had seen enough of it.
+
 ### STYLE — 6 (S04 withdrawn)
 
 **S01 · `mot-chu-khac-font`** — slots: `paragraph`, `hero-title`, `notice`
@@ -781,9 +878,15 @@ registry rather than excluded per chapter, so the director cannot place it anywh
 ever restored it needs a second tell, not a darker shadow. **The library is 33.**
 
 **S05 · `anh-khong-khop-chu-thich`** — slots: `gallery-caption`, `avatar`, `photo`
-Image and caption disagree — and now that the photographs are real (§3.4), they disagree
-*flatly*, which is far worse than the emoji version this anomaly started as. The caption is
-specific, confident, and describes a different photograph.
+Image and caption disagree — and the caption is not merely *wrong*, it is **strange**. A caption
+naming the wrong object reads as a careless seller or a sloppy editor, and carelessness explains
+it away; a caption that does not belong to this world cannot be explained away at all. *"Ảnh:
+kho hàng ở tầng dưới. Toà nhà không có tầng dưới."*
+
+**Content constraint (§3.4).** `S05` can land on an `avatar` slot, beside a photograph of a real
+person. No caption may describe the person in the picture as dead, missing or harmed. The
+strangeness attaches to the *circumstances of the photograph* — the hour it was taken, the room
+it was taken in, what was found inside — never to the face.
 - Ch4: a photograph of an empty car park captioned *"Nhà hàng nổi giữa hồ"*
 - Ch3: a photograph of a chair captioned *"Máy ảnh Canon AE-1, còn hộp"*
 
@@ -796,6 +899,9 @@ A line sits slightly outside its container, translated into the margin with
 
 **S07 · `emoji-lac-loai`** — slots: `feature-icon`, `tile`, `nav`
 
+The vocabulary is fixed across every chapter: 🩸 🕳️ 👁️ 🦷 👽 🌚 🧿 🃏 🪬 — blood, a hole, an eye,
+a tooth, and then the things that watch or ward. Each one is a complete sentence next to ✨🌿💧.
+
 **It replaces the text of one CHILD when the slot has children.** Assigning to the slot's own
 `textContent` works for a single `feature-icon`, but on a `nav` it deleted all five links and
 left one emoji — on 14% of chapter 1 seeds. That does not read as "one icon is wrong", it reads
@@ -804,13 +910,15 @@ The site's emoji vocabulary breaks. Among ✨🌿💧🧴 one bullet is 🩸 or 
 size, same alignment, styled identically. The most legible anomaly in the library, which is
 why Ch1's first run forces it.
 
-### MOTION — 5
+### MOTION — 6
 
 **M01 · `phan-tu-theo-con-tro`** — slots: `avatar`, `tile`, `cta`
 An element drifts a few pixels toward the cursor, lagging heavily, capped at about 6px of
 travel. Never fast enough for the player to be sure they saw it.
 
-**M02 · `carousel-chay-nguoc`** — slots: `gallery-caption` (gallery), `tile` (tile row)
+**M02 · `carousel-chay-nguoc`** — slots: `gallery-caption` (gallery), `tile` (tile row) · not built
+*(Chapter 4's gallery is a still mosaic, not a carousel. Building this would mean authoring a
+rotating deck on the honest site first, purely so one anomaly could run it backwards.)*
 A rotating element advances forward N times, then once goes *backwards* to a slide that was
 never in the deck, then resumes as if nothing happened. Roughly a 20s cycle.
 
@@ -818,9 +926,26 @@ never in the deck, then resumes as if nothing happened. Roughly a 20s cycle.
 A block scales between 1.000 and 1.012 on a 4s ease-in-out. Sub-perceptual until stared at.
 Breathing.
 
-**M04 · `bong-tre-nhip`** — slots: `cta`, `tile`
+**M04 · `bong-tre-nhip`** — slots: `cta`, `tile` · not built
 The element animates on one period, its shadow on a slightly longer one, so the shadow arrives
 late — the thing casting it is not quite the thing you can see.
+
+**M06 · `anh-sang-di-qua-anh`** — slots: `photo`, `gallery-caption` · Ch4 · BUILT
+A small point of light crosses the inside of a photograph, taking 20–35 seconds to do it, and
+then does it again. A **still photograph** cannot have anything moving in it. That is the whole
+anomaly, and it is why this survives *"…or is the site just like that?"* better than anything
+else in MOTION: a block that scales is explicable as a UI flourish, a light tracking across a
+picture of a lake is not.
+
+**Both the light and the photograph are marked.** What the player sees is the light, so a circle
+drawn around the light has to score — but a small circle around it does not enclose the
+photograph's own centre, so marking only the photograph would take a heart off a player who
+circled exactly the right thing. `run.found` keys on the anomaly id, not the element, so either
+one scores once and the other then answers ĐÃ GHI RỒI (the `I03` pattern).
+
+Its flight path is built **the first time the photograph enters the viewport**, not at
+`apply()`. In a multi-page chapter every page is mounted at once and the ones not on screen are
+`display: none`, so measuring at apply time returns a 0×0 box and the light never moves.
 
 **M05 · `cuon-nguoc-mot-chut`** — slots: any section-level slot
 Once per run, scrolling down past this element makes the page scroll back up about 40px on its
@@ -846,17 +971,27 @@ A form field that has no business in this form, styled exactly like its neighbou
 *"Nhóm máu"*, *"Tên người sẽ nhận đồ của bạn"*, *"Đêm qua bạn mơ thấy gì?"*,
 *"Số người sẽ về cùng bạn"*.
 
-**E03 · `muc-menu-thu-mot-mot`** — slots: `nav`
+**E03 · `muc-menu-thu-mot-mot`** — slots: `nav` · Ch1, Ch3, Ch4 · BUILT
 An extra nav item: `TRANG CHỦ · SẢN PHẨM · VỀ CHÚNG TÔI · `**`TẦNG HẦM`**. Clicking shows a 404
-written in the first person — *"Tôi không tìm thấy trang đó. Tôi đã tìm rất lâu."*
+written in the first person — *"Tôi không tìm thấy trang đó. Tôi đã tìm rất lâu."* Ch4 offers
+`KHU VỰC 4`, `BẢN ĐỒ SAO`, `LỐI XUỐNG ĐÁY HỒ`.
+
+Like `E02`, **it clones a link already in that nav** and changes only the words, so it matches
+its neighbours exactly and works on any chapter without knowing that site's CSS. If it were a
+shade off, the player would find it by looking rather than by reading — and the words are the
+whole anomaly. The clone drops `data-goto`: in a multi-page chapter a copied link that kept it
+would route the player to a real page, and the item that does not exist would turn out to go
+somewhere that does.
 
 **E04 · `chan-trang-thua`** — slots: `footer`
 The footer contains a line no footer contains: a coordinate pair, a licence number that is a
 scripture reference, *"Bản quyền © 1834–2026"*, *"Số người đang xem: 1 (bạn) và 4"*.
 
 **E05 · `con-tro-doi-hinh`** — slots: `paragraph`, `avatar`, `cta`, `map`
-A region where the cursor becomes wrong: `crosshair` over body copy, `not-allowed` over the buy
-button, `help` over a photograph of a face, `progress` over the footer.
+A region where the cursor becomes wrong. **Only three: `help`, `wait`, `not-allowed`.**
+`crosshair` and `progress` were dropped — `crosshair` collides with capture mode's own cursor,
+and `progress` is close enough to `wait` to be the same anomaly twice. The three that remain
+each say something: this needs explaining, this is busy with something, you may not.
 
 ### REACTIVE — 6
 
@@ -884,6 +1019,13 @@ evidence is a line on the cart. Anomalies get `ctx.shadow` alongside `ctx.root` 
 the rule is that the *trigger* may be anywhere while the *evidence* stays inside `ctx.root` —
 marking something on another page would count it against a page it is not on.
 
+**The extra item must not look like a bundled freebie.** Its first version added "hộp đựng máy
+ảnh" and "dây đeo máy ảnh" — plausible accessories of the very item being viewed, at 0₫, from the
+same seller — so it read as something thrown in with the purchase, and a free gift is not wrong.
+What goes in the cart now is not merchandise at all: nobody sells it, nobody sent it, and the
+seller line says so. *"Thứ bạn để quên ở đây lần trước · Người gửi: không rõ · bạn đã nhận món
+này rồi."*
+
 **It recounts the cart badge and re-adds the subtotal after inserting its line.** Skip that and
 the cart holds three items while the label says two: the player reads a site that cannot count,
 which is a *bug*, and bugs get ignored. The anomaly is far stronger when every number agrees —
@@ -894,9 +1036,45 @@ priced 0₫ so the total stays honest.
 Search anything. Among plausible results sits one whose title is the player's exact query
 prefixed with *"chúng tôi đã tìm thấy"*, or one titled with the current clock time.
 
-**R04 · `dat-cho-qua-so-nguoi`** — slots: `booking-form` · Ch4
-Set guests above the stated maximum. Instead of clamping, the widget accepts it and the summary
-reads *"12 khách (11 người)"*. Lowering the number again does not fix the parenthetical.
+**R04 · `xac-nhan-thua-khach`** — slots: `booking-form` · Ch4 · BUILT
+Fill in the dates, leave the guest count at **2**, and press KIỂM TRA PHÒNG TRỐNG. The site
+answers the way any booking page answers — *"Còn phòng cho khoảng ngày này. Lễ tân sẽ gọi lại
+trong 30 phút để xác nhận đặt phòng cho **bảy** khách."*
+
+You typed two. It confirmed seven. It does not ask again, does not flag an error, does not
+apologise. The pool carries the whole **+1 to +5** range: a small overshoot reads like an
+addition slip, a large one reads like the site is counting people you did not book for.
+
+**It hangs off the submit, not off typing.** This is the REACTIVE family, and the family's rule
+is that the site is honest until the player tries something real. Watching a number change as
+you type into a field is a widget doing its job; booking for two people and being confirmed for
+seven is something that has *happened to you*.
+
+There is also a ruler four lines above it: the summary line still reads *"2 khách · 3 đêm"*. The
+player never has to remember what they typed — two numbers contradict each other inside the same
+box.
+
+**It does not compose its own sentence.** It lets the clean branch write the page's own wording
+and then replaces one number inside a `[data-guest-count]` span. Building the sentence itself
+would drift a word away from the real one, and the player would spot the anomaly by looking
+rather than by reading — exactly the mistake `R05` made once with `font-size`.
+
+For the same reason it does **not** set `form.dataset.handled`: the clean branch has to run on
+every submit so the answer stays current when the guest count changes. Both defer with
+`setTimeout(0)`, and the clean listener is registered first, so its callback is queued first and
+`R04` always overwrites a sentence that was just written.
+
+*(An earlier version keyed off exceeding the six-guest cap and split the summary into
+"12 khách (9 người)". It was replaced: the cap is an invitation to fiddle with a number field,
+where any change reads as widget behaviour, while the confirmation of a booking you actually
+made is a claim the site is making to you.)*
+
+**One defect this exposed in the clean branch.** It used to stand down when it found any
+`[data-anom]` inside the booking box — but `E02` also lands on `booking-form`, and its extra
+field carries `data-anom`. On a run with `E02` and no `R04` the form went silent: the player
+pressed the button and nothing at all happened, which is an anomaly nobody placed, and the
+worst kind. It now stands down on `form.dataset.handled`, the flag `R01` already documented.
+Chapter 1's newsletter uses the same `[data-anom]` probe and has the same latent hole.
 
 **R05 · `huy-dang-ky-khong-huy`** — slots: `subscribe`, `newsletter` · Ch1, Ch6
 Submit a real email address. The confirmation says you have been subscribed since a date years
@@ -932,15 +1110,58 @@ Only possible because the photographs are real and their URLs are parameterised.
 would need a second hand-made asset if the art were static files, and none of them are possible
 with emoji at all.
 
-**I01 · `anh-mat-mau`** — slots: `photo`
-One photograph in a set is served with `?grayscale` while every sibling is in colour. Not a
-filter applied in CSS — the image itself arrives without colour, so it survives inspection.
-- Ch4: five gallery photos of a lake in summer, and one of them is grey.
+**I01 · `anh-mat-mau`** — slots: `photo` · BUILT
+One photograph in a set arrives without colour — served `?grayscale`, not filtered in CSS, so it
+survives inspection — then aged with sepia and hard contrast until it reads as a photograph from
+another decade, **and rotated**: 35°, 69° or 176°.
 
-**I02 · `anh-doi-khi-quay-lai`** — slots: `photo`
-The image's `src` swaps to a different pinned `lock` when it leaves and re-enters the viewport
-— `T02` for pictures. The photograph you scrolled past is not the one you scroll back to, and
-its caption never changes.
+Greyscale alone was still explicable as a design choice, and so was the ageing. A landscape lying
+on its side, or very nearly upside down, is not.
+
+**It rotates the picture inside the frame, not the frame.** The first version transformed the
+whole `<img>`, so the page showed a rectangle sitting at an angle with the background showing
+through at four corners — which reads as *the page is broken*, not *the photograph is wrong*, and
+a broken page gets skipped rather than circled. The image box now keeps its exact position and
+size and nothing in the layout moves a pixel; only the world inside the frame is at an angle.
+
+The mechanism needs no extra element and no `overflow: hidden` anywhere: scale the image up by
+the factor `k` its angle needs to cover the box, then `clip-path` a quadrilateral computed **in
+the image's own un-rotated coordinates**. `clip-path` is applied before the transform, so
+clipping the pre-image of the frame under the rotation (rotate by −θ, shrink by 1/k) lands, after
+the transform, exactly on the original rectangle.
+
+**The angle bends to the frame's aspect ratio.** `k` is cheap for a square box and brutal for a
+long one — a 3:1 panorama at 69° needs a 3.16× enlargement, i.e. a small blurred fragment that
+reads as a broken image. So an unaffordable angle is walked toward whichever of 0° or 180° is
+nearer until it comes under a **1.8× ceiling**; a horizon tilted 16° is still unmistakably wrong.
+If that walk would flatten the tilt to nothing, it snaps to 180° instead, which costs exactly
+`k = 1` at any aspect ratio. Source images are requested large enough to survive the ceiling.
+
+`clip-path` hides the pixels but does **not** shrink the scroll area: the browser still counts the
+transformed box, so a 1.8× enlargement made the whole page scrollable sideways with nothing
+visible out there to explain it — a page that scrolls horizontally on its own reads as broken, and
+that scrollbar is a tell nobody placed. The anomaly therefore sets `overflow: clip` on its own
+`<figure>`, from inside `apply()` rather than in the site stylesheet: the "no `overflow: hidden` on
+a slot's ancestors" rule still matters for `S06` and `E01`, but neither ever attaches to an image
+caption, and one slot element only ever carries one anomaly.
+
+Geometry is measured with `offsetWidth`/`offsetHeight`, never `getBoundingClientRect` — the rect
+reports the *transformed* box, so a second measurement would measure the transform this code just
+applied. A `ResizeObserver` repaints on window resize and, just as importantly, covers the case
+where the box was 0×0 at `apply()` time: in a multi-page chapter every page is mounted at once and
+the ones not on screen are `display: none`.
+- Ch4: six gallery photographs of a lake across a year, and one of them is grey, brown, and lying
+  on its side.
+
+**I02 · `anh-doi-khi-quay-lai`** — slots: `photo` · all four built chapters · BUILT
+The image's `src` swaps to a different pinned photograph when it leaves and re-enters the
+viewport — `T02` for pictures. The photograph you scrolled past is not the one you scroll back
+to, and its caption never changes.
+
+Swapping **behind the player's back** is the point: a picture that visibly cross-fades reads as
+a slideshow, i.e. a feature. One that is merely different when you return cannot be explained by
+any feature at all. The replacement is preloaded, because the blank beat while a new `src`
+fetches would announce the swap instead of letting the player catch it by remembering.
 
 **I03 · `cung-mot-nguoi`** — slots: `avatar` (chapter must have ≥2)
 Two testimonials, two reviewers, two commenters — different names, different ages, different
@@ -954,29 +1175,36 @@ and never resets. Looking at it is what does it.
 
 ### 6.1 Coverage check
 
-**34 anomalies across six families.** Derived by matching each anomaly's `slots` against each
-chapter's declared inventory above — not estimated. `T05` and `S05` also accept `photo` since
-§3.4 made photographs real. The last two rows are what the director test in §8 asserts.
+**29 built anomalies across six families, 35 designed.** The four built chapters below are
+counted from the code — the registry matched against each chapter's declared slots, and
+re-checked by the test suite — so those columns are measurements, not estimates. Ch5 and Ch6
+are still projections against their sketched inventories.
 
-| Family | Ch1 | Ch2 | Ch3 | Ch4 | Ch5 | Ch6 |
+| Family (built) | Ch1 | Ch2 | Ch3 | Ch4 | Ch5* | Ch6* |
 |---|---|---|---|---|---|---|
-| TEXT (8) | 6 | 7 | 6 | 5 | 8 | 5 |
-| STYLE (6) | 6 | 5 | 5 | 6 | 6 | 4 |
-| MOTION (5) | 4 | 3 | 4 | 5 | 5 | 5 |
+| TEXT (8) | 5 | 6 | 7 | 8 | 8 | 5 |
+| STYLE (4) | 4 | 3 | 4 | 4 | 4 | 3 |
+| MOTION (3) | 3 | 3 | 3 | 3 | 3 | 2 |
 | ELEMENT (5) | 5 | 4 | 5 | 5 | 4 | 5 |
-| REACTIVE (6) | 2 | 1 | 3 | 2 | 0 | 3 |
-| IMAGE (4) | 4 | 4 | 3 | 4 | 3 | 0 |
-| **eligible** | **27** | **24** | **26** | **27** | **26** | **22** |
-| max roll | 6–8 | 7 | 7 | 7 | 8 | 8 |
+| REACTIVE (5) | 2 | 1 | 2 | 2 | 0 | 2 |
+| IMAGE (4) | 4 | 4 | 4 | 4 | 4 | 0 |
+| **eligible** | **23** | **21** | **25** | **26** | 23* | 17* |
+| roll | 6–8 | 6–8 | 6–7 | 7–9 | 6–8* | 7–8* |
 | families available | 6 | 6 | 6 | 6 | 5 | 5 |
 
-Ch1's TEXT rose to 6 because `T07` gained the `hours` slot, and its REACTIVE to 2 because
-`R06` accepts `nav` and `cta`. Ch1's roll is 6–8 rather than the 5–6 originally specified —
-the page roughly doubled in size after its first playtest (§5.1).
+Ch4's TEXT reaches all eight — it is the only chapter carrying every timestamp shape, a
+`comment`, a `notice` list and the game's only `map`. Ch2 stays lowest because a personal blog
+has no `nav`, and its REACTIVE is 1 by design (only `R01`).
+
+Building chapter 4 raised the earlier chapters too: `E03`, `I02` and `M06` are eligible
+wherever there is a nav or a photograph, so chapters 1–3 each gained two or three new ways to
+be wrong without a line of their markup changing. That is the runtime-mutation architecture
+(§3.1) paying out exactly as intended — one anomaly written once, six sites richer.
 
 Every chapter clears the director's "≥3 families, ≤2 per family" rule at its maximum roll with
 room to spare — the tightest is Ch6, whose five families give a capacity of 10 against a roll
-of 8.
+of 8. Ch4 rolls up to 9 against six families, i.e. a capacity of 12; the suite asserts that on
+500 seeds.
 
 **Adding photographs resolved the Chapter 5 problem.** Before the IMAGE family, Ch5 had four
 families against a maximum roll of 8, filling every family to its cap with zero slack — the
@@ -1012,17 +1240,17 @@ games/tham-tu-mang/
       rng.js                 mulberry32 + helpers (pick, shuffle, range)   ← DOM-free
       hittest.js             point-in-polygon, centroid, nearest-target,
                              stroke bounds, budget-ring clamp             ← DOM-free
-      registry.js            imports all 34 anomalies, exports ANOMALIES   ← DOM-free
+      registry.js            imports all 29 built anomalies, exports ANOMALIES ← DOM-free
       img.js                 pinned CDN url builders + SVG fallback markup ← DOM-free
       director.js            roll count, filter, pick, assign to pages     ← DOM-free
       run.js                 capture resolution, hearts, win/loss
       site.js                shadow root, page mount/swap, slot indexing
     anomalies/
-      text.js                T01–T08
-      style.js               S01–S07
-      motion.js              M01–M05
+      text.js                T01–T03, T05–T09   (T04 withdrawn)
+      style.js               S01, S05–S07       (S02–S04 not built)
+      motion.js              M01, M03, M06      (M02, M04, M05 not built)
       element.js             E01–E05
-      reactive.js            R01–R05
+      reactive.js            R01, R02, R04–R06  (R03 not built)
       image.js               I01–I04
     ui/
       menu.js                case archive / chapter select
@@ -1041,8 +1269,8 @@ games/tham-tu-mang/
       ch6-megalink.js
   sites/
     ch1-lumiere/      page.js                                   site.css
-    ch2-bep-nha-may/  index.page.js  post.page.js               site.css
-    ch3-san-do-cu/    listing.page.js  product.page.js  cart.page.js  site.css
+    ch2-bep-nha-may/  pages.js  (5 trang)                       site.css
+    ch3-san-do-cu/    pages.js  (14 trang)                      site.css
     ch4-ho-vang/      page.js                                   site.css
     ch5-hoa-ban/      page.js                                   site.css
     ch6-megalink/     page.js                                   site.css

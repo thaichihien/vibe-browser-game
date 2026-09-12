@@ -6,11 +6,17 @@
    Không có slot `nav` (blog cá nhân chỉ có một dòng tiêu đề), nên S07, E01 trên nav và R06
    không bao giờ rơi vào đây. Bù lại: chín bình luận, một ô gửi bình luận, và ba khuôn mặt. */
 
+import { picsum } from '../engine/img.js';
+
+/* Ảnh thay thế của I02 — đã ghim, và đã được xem tận mắt. Kích thước rộng rãi để cùng một
+   URL dùng được cho cả ảnh lớn lẫn ảnh trong lưới. */
+const swap = (id) => picsum({ w: 1800, h: 1350, id });
+
 export const CH2 = {
   id: 'ch2-bep-nha-may',
   title: 'BẾP NHÀ MÂY',
   slug: 'ch2-bep-nha-may',
-  subtitle: 'Blog nấu ăn · hai trang',
+  subtitle: 'Blog nấu ăn · năm trang',
   briefing: 'Một blog nấu ăn do em gái của người đã lập ra nó viết tiếp.',
   /* Năm trang, nên khoảng bốc phải đủ để mỗi trang có ít nhất một thứ — đạo diễn đảm bảo
      điều đó, và nếu min < số trang thì nó buộc phải thêm ngoài số đã bốc, làm con số BẰNG
@@ -64,7 +70,7 @@ export const CH2 = {
     T01: [
       'Chị viết công thức này bằng bút chì, nên có chỗ mờ. Chỗ mờ nhất là chỗ chị dặn đừng nấu vào ban đêm.',
       'Tôi nấu lại đúng như trong sổ. Bếp vẫn còn ấm từ hôm trước, dù cả tuần nay không ai bật.',
-      'Món này ăn hai người là vừa. Tôi vẫn dọn hai cái chén, và vẫn phải rửa cả hai.'
+      'Món này ăn hai người là vừa. Khi tôi nấu ăn một mình, tôi vẫn phải ra dọn hai cái chén và không hiểu tại sao.'
     ],
 
     // T02 — viết lại khi cuộn ngược. Bản sau PHẢI dài hơn hẳn và đổi giọng (spec §6 T02).
@@ -75,7 +81,7 @@ export const CH2 = {
       },
       {
         before: 'Chị tôi mất năm 2021, và tôi tiếp tục viết blog này.',
-        after: 'Chị tôi mất năm 2021. Tôi tiếp tục viết blog này. Có những bài tôi không nhớ mình đã viết lúc nào, và chữ trong đó không giống chữ tôi.'
+        after: 'Chị tôi mất năm 2021. Tôi tiếp tục viết blog này. Có những bài tôi không nhớ mình đã viết lúc nào, và nội dung trong đó không giống của tôi.'
       }
     ],
 
@@ -85,13 +91,6 @@ export const CH2 = {
       { text: 'Còn {n} người đang đọc bài này cùng bạn.', start: 9 }
     ],
 
-    // T04 — chỉ những điều trình duyệt biết THẬT. Xem FACTS trong anomalies/text.js.
-    T04: [
-      { fact: 'tz', text: 'Cảm ơn bạn đã ghé bếp từ {v}. Chị tôi cũng ở múi giờ đó.' },
-      { fact: 'screen', text: 'Trang này vừa khít {v}. Đúng bằng màn hình bạn đang nhìn.' },
-      { fact: 'cores', text: 'Máy của bạn có {v} lõi. Bạn không cần nhiều thế đâu, để đọc một công thức.' },
-      { fact: 'lang', text: 'Bản {v} đang được chuẩn bị riêng. Chúng tôi biết bạn cần nó.' }
-    ],
 
     // T05 — rê chuột lên thì trang nói ngược lại chính nó.
     T05: [
@@ -106,10 +105,10 @@ export const CH2 = {
        trữ ("Tháng 3, 2026"). Kho chữ tách theo hình dạng, không bao giờ trộn — một cái ngày
        đặt vào chỗ dòng tháng thì đọc ra là dữ liệu rác chứ không phải là mốc không tồn tại. */
     T07: {
-      date: ['31/02/2026', '00/00/0000', '14/03/2027', '32/13/2021', '14/03/1826'],
+      date: ['31/20/2026', '00/00/0000', '14/03/2027', '32/13/2021', '14/03/1826'],
       // Tháng 13 và tháng 0 thì không có; 2031 thì chưa tới, mà lưu trữ không lưu được
       // tương lai; 1826 thì blog chưa ra đời.
-      month: ['Tháng 13, 2026', 'Tháng 0, 2026', 'Tháng 3, 2031', 'Tháng 12, 1826']
+      month: ['Tháng 13, 2026', 'Tháng 0, 2026', 'Tháng 3, 3031', 'Tháng 12, 1726']
     },
 
     // T08 — chữ ký của người không còn nữa, đối chiếu với ô tưởng niệm ở thanh bên.
@@ -128,11 +127,19 @@ export const CH2 = {
       { family: '"Chalkboard SE", "Comic Sans MS", "Marker Felt"', spacing: '0.03em' }
     ],
 
-    // S05 — chú thích tự tin mô tả một tấm ảnh khác.
+    /* S05 — chú thích không khớp với tấm ảnh.
+       Chú thích phải LẠ, không chỉ là "tả một tấm ảnh khác": một cái tên sai thì người chơi
+       đọc ra là người bán/biên tập viên cẩu thả, còn một câu không thuộc về thế giới này thì
+       không giải thích được bằng sự cẩu thả.
+
+       RÀNG BUỘC NỘI DUNG (spec §3.4): S05 rơi được cả vào slot `avatar`, tức là ngay cạnh ảnh
+       một người có thật. Không câu nào được mô tả người trong ảnh là đã chết, mất tích, hay bị
+       hại. Chúng nói về hoàn cảnh tấm ảnh, không nói về người trong đó. */
     S05: [
-      'Ảnh: nồi canh chua chị nấu hôm 30 Tết',
-      'Ảnh: bếp nhà cũ, trước khi sửa',
-      'Ảnh: chị Mây và mẹ, chụp năm 2019'
+      'Ảnh: mâm cơm dọn cho ba người. Nhà này có hai người.',
+      'Ảnh: gian bếp lúc 3 giờ 40 sáng. Bếp đang bật.',
+      'Ảnh: chụp bằng máy của chị, sau khi máy đã hỏng.',
+      'Ảnh: chị tôi vào ngày chị ra đi.'
     ],
 
     // S06 — dòng chữ rời khỏi trang, mỗi lần bị nhìn lại thì đi thêm một đoạn.
@@ -157,24 +164,23 @@ export const CH2 = {
 
     // E04 — một dòng chân trang không trang nào có.
     E04: [
-      'Bài viết cuối cùng: 12/12/2021 — và mọi bài sau đó',
-      'Số người đang đọc: 1 (bạn) và 1',
-      'Bản quyền © 1994–2021 Mây'
+      'Bài viết cuối cùng: 12/12/2021 — lời nguyền vẫn ở đó',
+      'Blog về những công thức món ăn không được nấu',
+      'Mây sẽ trở lại vào một ngày nào đó'
     ],
 
     // E02 — một ô nhập không có lý do gì để tồn tại trong ô gửi bình luận.
     E02: [
       'Bạn đang ở một mình chứ?',
-      'Tên người đã giới thiệu bạn tới bếp này',
+      'Tên người đã chết ở đây',
       'Nhóm máu'
     ],
 
     // E05 — con trỏ sai chỗ.
     E05: [
-      { cursor: 'not-allowed' },
-      { cursor: 'crosshair' },
       { cursor: 'help' },
-      { cursor: 'progress' }
+      { cursor: 'wait' },
+      { cursor: 'not-allowed' }
     ],
 
     // R01 — bỏ trống ô tên rồi gửi. Bình luận lên, nhưng không phải của bạn.
@@ -184,10 +190,28 @@ export const CH2 = {
       { name: 'Mây', when: 'vừa xong', text: 'Em nhớ tắt bếp trước khi đi ngủ nhé.' }
     ],
 
+    /* I02 — ảnh đổi khi bạn quay lại, chú thích thì không. Ba tấm dưới đây đã được xem tận
+       mắt. Chúng không cần đáng sợ — cái đáng sợ là dòng chú thích bên dưới vẫn tả đúng tấm
+       ảnh mà bạn đã không còn nhìn thấy nữa. */
+    I02: [
+      { src: swap(137) },
+      { src: swap(44) },
+      { src: swap(151) }
+    ],
+
+    /* M06 — một đốm sáng đi qua bên trong tấm ảnh. Toạ độ là tỉ lệ của chính khung ảnh nên
+       cùng một đường bay chạy được trên mọi cỡ ảnh. */
+    M06: [
+      { seconds: 26, from: { x: 0.04, y: 0.80 }, to: { x: 0.94, y: 0.16 } },
+      { seconds: 34, from: { x: 0.96, y: 0.62 }, to: { x: 0.08, y: 0.10 } },
+      { seconds: 21, from: { x: 0.52, y: 0.96 }, to: { x: 0.56, y: 0.04 } }
+    ],
+
     // I01 / I03 / I04 — ảnh của năm khác, hai cái tên chung một khuôn mặt, ảnh mờ dần.
     I01: [
-      { filter: 'sepia(0.55) contrast(1.32) brightness(0.88) saturate(1.4)' },
-      { filter: 'sepia(0.38) contrast(1.45) brightness(0.82)' }
+      { filter: 'sepia(0.55) contrast(1.32) brightness(0.88) saturate(1.4)', rotate: 35 },
+      { filter: 'sepia(0.38) contrast(1.45) brightness(0.82)', rotate: 69 },
+      { filter: 'sepia(0.5) contrast(1.28) brightness(0.9) saturate(1.3)', rotate: 176 }
     ],
     I03: [
       { a: { name: 'Thuỳ Dung' }, b: { name: 'Lan Chi' } }

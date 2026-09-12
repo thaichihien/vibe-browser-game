@@ -85,4 +85,37 @@ export const E02 = {
   }
 };
 
-export const ELEMENT_ANOMALIES = [E01, E02, E04, E05];
+/* ── E03: thanh menu có thêm một mục ───────────────────────────────────
+   Thêm đúng MỘT mục vào thanh điều hướng, và mục đó nói về một chỗ mà trang này không thể
+   có. Nó không tự dựng kiểu dáng: nó NHÂN BẢN một liên kết đã có trong chính thanh đó rồi
+   chỉ đổi phần chữ — nhờ vậy nó khớp tuyệt đối với hàng xóm và chạy được trên mọi chương mà
+   không cần biết gì về CSS của trang. Nếu nó trông khác đi dù chỉ một chút thì người chơi
+   nhận ra bằng mắt chứ không phải bằng cách ĐỌC, mà chữ mới là toàn bộ dị thường.
+
+   Bấm vào thì trang trả lời bằng một cái 404 viết ở ngôi thứ nhất. Bấm KHÔNG tính điểm —
+   thử nghiệm không bao giờ mất máu, và cũng không bao giờ thay được động tác khoanh.
+
+   data-goto bị gỡ khỏi bản sao: ở chương nhiều trang, một liên kết sao chép còn giữ data-goto
+   sẽ điều hướng người chơi sang trang thật, và cái mục "không tồn tại" ấy hoá ra lại đi đến
+   một nơi có thật. */
+export const E03 = {
+  id: 'E03', family: 'ELEMENT', label: 'Thanh menu có thêm một mục', slots: ['nav'], weight: 3,
+  apply(ctx) {
+    const entry = pick(ctx.rng, ctx.flavour);
+    const links = [...ctx.slot.querySelectorAll('a')];
+    const model = links[links.length - 1];
+    if (!model) return;
+
+    const item = model.cloneNode(false);   // chỉ thuộc tính, không lấy phần tử con
+    item.textContent = entry.label;
+    item.setAttribute('href', '#');
+    item.removeAttribute('data-goto');
+    item.removeAttribute('data-slot');
+    model.insertAdjacentElement('afterend', item);
+
+    item.addEventListener('click', (e) => { e.preventDefault(); window.alert(entry.miss); });
+    ctx.mark(item);
+  }
+};
+
+export const ELEMENT_ANOMALIES = [E01, E02, E03, E04, E05];

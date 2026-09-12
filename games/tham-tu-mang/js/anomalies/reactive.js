@@ -18,6 +18,12 @@ export const R05 = {
       e.preventDefault();
       if (ctx.slot.querySelector('[data-anom="R05"]')) return;
 
+      /* Cờ cho nhánh sạch biết mà đứng im — cùng hợp đồng với R01. Trước đây nhánh sạch tự dò
+         [data-anom] trong khung, mà E02 cũng rơi vào slot newsletter và cái ô nhập thừa của nó
+         cũng mang data-anom: thành ra trên những ván chỉ có E02, ô đăng ký nuốt mất cú bấm rồi
+         im bặt. Một biểu mẫu không trả lời là một dị thường KHÔNG AI ĐẶT VÀO ĐÓ. */
+      form.dataset.handled = '1';
+
       /* Cùng một class với dòng xác nhận thật của trang (xem behaviour() trong page.js), nên
          hai bản trông GIỐNG HỆT nhau. Nếu bản dị thường có kiểu dáng riêng thì người chơi
          nhận ra nó bằng mắt mà không cần đọc, và cả dị thường này chỉ nằm ở chỗ được đọc. */
@@ -140,7 +146,7 @@ export const R01 = {
    Dòng hàng mới được NHÂN BẢN từ một dòng có sẵn rồi đổi chữ: tự dựng kiểu dáng thì nó sẽ
    khác hàng xóm một chút, và người chơi nhận ra nó bằng mắt thay vì bằng cách đọc. */
 export const R02 = {
-  id: 'R02', family: 'REACTIVE', label: 'Giỏ hàng có thêm một món bạn không bỏ vào',
+  id: 'R02', family: 'REACTIVE', label: 'Bỏ một món vào giỏ, giỏ tự thêm một món thứ hai',
   slots: ['cart-line'], weight: 3,
   deferred: true,
   apply(ctx) {
@@ -194,4 +200,60 @@ export const R02 = {
   }
 };
 
-export const REACTIVE_ANOMALIES = [R01, R02, R05, R06];
+/* ── R04: trang xác nhận cho nhiều khách hơn bạn điền ──────────────────
+   Điền hai cái ngày, để nguyên "2 khách", bấm KIỂM TRA PHÒNG TRỐNG. Trang trả lời đàng hoàng
+   như mọi trang đặt phòng khác — "Còn phòng cho khoảng ngày này. Lễ tân sẽ gọi lại trong 30
+   phút để xác nhận đặt phòng cho SÁU khách."
+
+   Bạn điền hai. Nó xác nhận sáu. Nó không hỏi lại, không báo lỗi, không xin lỗi.
+
+   Vì sao gắn vào lúc GỬI chứ không phải lúc gõ: đây là họ REACTIVE, và luật của họ là trang
+   trung thực cho tới khi người chơi thử một thao tác thật. Gõ một con số vào ô rồi thấy nó
+   đổi là chuyện của một widget; đặt phòng cho hai người rồi nhận về xác nhận cho sáu người
+   là một việc đã xảy ra với bạn.
+
+   Và nó có sẵn một cái thước ngay bên trên: dòng tóm tắt vẫn ghi "2 khách". Người chơi không
+   cần nhớ mình đã gõ gì — hai con số cãi nhau trong cùng một khung, cách nhau bốn dòng.
+
+   KHÔNG tự dựng lấy câu trả lời. Nó để nhánh sạch viết nguyên câu văn của trang rồi chỉ thay
+   đúng con số trong <span data-guest-count>. Tự dựng thì câu chữ sẽ lệch đi một chút so với
+   câu thật, và người chơi nhận ra dị thường bằng mắt thay vì bằng cách đọc — đúng cái lỗi mà
+   R05 đã mắc một lần với font-size.
+
+   Cũng vì thế nó KHÔNG cắm form.dataset.handled: nhánh sạch phải được chạy mỗi lần gửi, để
+   gửi lại với số khách khác thì câu trả lời vẫn tươi. Cả hai cùng hoãn một nhịp bằng
+   setTimeout(0), mà nhánh sạch đăng ký trước nên callback của nó xếp hàng trước — R04 luôn
+   viết đè lên một câu vừa mới được viết xong. */
+export const R04 = {
+  id: 'R04', family: 'REACTIVE', label: 'Trang xác nhận đặt phòng cho nhiều khách hơn bạn điền',
+  slots: ['booking-form'], weight: 3,
+  deferred: true,
+  apply(ctx) {
+    const entry = pick(ctx.rng, ctx.flavour);
+    const form = ctx.slot.querySelector('form');
+    const guests = ctx.slot.querySelector('[data-guests]');
+    if (!form || !guests) return;
+
+    form.addEventListener('submit', () => {
+      setTimeout(() => {
+        const answer = ctx.slot.querySelector('[data-booking-answer]');
+        const cell = answer?.querySelector('[data-guest-count]');
+        // Trang chưa trả lời được (thiếu ngày) thì chưa có con số nào để thổi lên. Để dành
+        // cho lần gửi sau chứ không bịa ra một dòng của riêng mình.
+        if (!cell) return;
+
+        const typed = Math.max(1, Number(guests.value || 1));
+        cell.textContent = String(typed + (entry.gap ?? 1));
+
+        /* Đánh dấu CẢ câu lẫn con số. Thứ người chơi đọc ra là cả câu, nên khoanh cả câu phải
+           tính điểm; nhưng một vòng nhỏ ôm lấy đúng con số thì không bao lấy tâm của cả câu,
+           nên nếu chỉ đánh dấu câu thì người chơi khoanh trúng thứ mình nhìn ra mà vẫn mất
+           máu. run.found lưu theo ID nên khoanh cái nào cũng ghi được một lần (xem I03). */
+        ctx.mark(answer);
+        ctx.mark(cell);
+      }, 0);
+    });
+  }
+};
+
+export const REACTIVE_ANOMALIES = [R01, R02, R04, R05, R06];

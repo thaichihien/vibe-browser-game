@@ -3,9 +3,10 @@
 import { CH1 } from './ch1-lumiere.js';
 import { CH2 } from './ch2-bep-nha-may.js';
 import { CH3 } from './ch3-san-do-cu.js';
+import { CH4 } from './ch4-ho-vang.js';
 import { isCleared } from '../storage.js';
 
-export const CHAPTERS = [CH1, CH2, CH3];
+export const CHAPTERS = [CH1, CH2, CH3, CH4];
 
 export const chapterById = (id) => CHAPTERS.find((c) => c.id === id) ?? null;
 

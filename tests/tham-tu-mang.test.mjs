@@ -351,7 +351,11 @@ test('T02 replacements change the SHAPE of the block, not one character', () => 
 
 import { ANOMALIES, byId } from '../games/tham-tu-mang/js/engine/registry.js';
 
-const STAGE1_IDS = ['T01','T02','T03','T04','T05','T06','T07','T08','S01','S05','S06','S07','M01','M03','E01','E02','E04','E05','R01','R02','R05','R06','I01','I03','I04'];
+/* Mọi dị thường đã dựng. T09, M06, E03, I02 và R04 vào cùng chương 4 — bốn cái đầu vì
+   chương đó là chỗ đầu tiên có `map`, có bảy tấm ảnh và có một thanh nav chưa ai dùng hết,
+   còn R04 thì spec §6 đã dành sẵn cho ô đặt phòng của nó. */
+const STAGE1_IDS = ['T01','T02','T03','T05','T06','T07','T08','T09','S01','S05','S06','S07',
+  'M01','M03','M06','E01','E02','E03','E04','E05','R01','R02','R04','R05','R06','I01','I02','I03','I04'];
 const FAMILIES = ['TEXT','STYLE','MOTION','ELEMENT','REACTIVE','IMAGE'];
 
 test('the registry holds exactly the anomalies that are built', () => {
@@ -711,6 +715,9 @@ test('every anomaly the director can place has a slot that exists on the page', 
 import { CH2 } from '../games/tham-tu-mang/js/chapters/ch2-bep-nha-may.js';
 import { CH3 } from '../games/tham-tu-mang/js/chapters/ch3-san-do-cu.js';
 import { CH3_PAGES, GOODS, CATEGORIES } from '../games/tham-tu-mang/sites/ch3-san-do-cu/pages.js';
+import { CH4 } from '../games/tham-tu-mang/js/chapters/ch4-ho-vang.js';
+import { PAGE_INDEX as CH4_INDEX } from '../games/tham-tu-mang/sites/ch4-ho-vang/page.js';
+const CH4_PAGES = [CH4_INDEX];
 const CH3_BY_ID = Object.fromEntries(CH3_PAGES.map((p) => [p.id, p]));
 import { CH2_PAGES, CH2_INDEX, CH2_POST } from '../games/tham-tu-mang/sites/ch2-bep-nha-may/pages.js';
 const CH2_BY_ID = Object.fromEntries(CH2_PAGES.map((p) => [p.id, p]));
@@ -766,7 +773,8 @@ test('T07 knows every timestamp shape the chapters actually contain', () => {
     date: /\d{1,2}\/\d{1,2}\/\d{4}/,
     month: /Tháng\s+\d{1,2},\s*\d{4}/
   };
-  const MARKUP = { [CH1.id]: [PAGE_INDEX], [CH2.id]: CH2_PAGES, [CH3.id]: CH3_PAGES };
+  const MARKUP = { [CH1.id]: [PAGE_INDEX], [CH2.id]: CH2_PAGES, [CH3.id]: CH3_PAGES,
+                   [CH4.id]: CH4_PAGES };
   for (const chapter of CHAPTERS) {
     const pool = chapter.flavour.T07;
     if (!pool) continue;
@@ -996,7 +1004,8 @@ test('no text-rewriting slot ever wraps a navigation link', () => {
      own text leaves the element, its href and its data-goto intact. */
   const REWRITERS = new Set(['paragraph', 'notice', 'post-title', 'product-title', 'price',
                              'tile', 'gallery-caption', 'avatar', 'photo', 'hero-title']);
-  const ALL = [[CH1.id, [PAGE_INDEX]], [CH2.id, CH2_PAGES], [CH3.id, CH3_PAGES]];
+  const ALL = [[CH1.id, [PAGE_INDEX]], [CH2.id, CH2_PAGES], [CH3.id, CH3_PAGES],
+               [CH4.id, CH4_PAGES]];
   for (const [chapterId, pages] of ALL) {
     for (const page of pages) {
       // Crude but sufficient: an opening tag that declares a rewriting slot, followed by a
@@ -1283,7 +1292,7 @@ test('S01 declares no fixed word list — it must read the page it lands on', ()
 
 test('only the two-stage reactive anomalies are marked deferred', () => {
   const deferred = ANOMALIES.filter((a) => a.deferred).map((a) => a.id);
-  assert.deepStrictEqual(deferred, ['R01', 'R02', 'R05', 'R06'],
+  assert.deepStrictEqual(deferred, ['R01', 'R02', 'R04', 'R05', 'R06'],
     'only two-stage reactive anomalies may be absent from the DOM after apply()');
   for (const id of deferred) assert.strictEqual(byId(id).family, 'REACTIVE');
 });
@@ -1444,4 +1453,199 @@ test('the LUMIÈRE copy really does contain stacked Vietnamese diacritics', () =
   const stacked = /[ằẳẵặầẩẫậềểễệồổỗộừửữựờởỡợắấéếóốớúứíì]/;
   assert.ok(stacked.test(PAGE_INDEX.html),
     'page copy has no stacked-diacritic characters to exercise the font stack');
+});
+
+/* ── Chapter 4: Hồ Vắng, and the four anomalies it introduces ───────────── */
+
+import { T09 } from '../games/tham-tu-mang/js/anomalies/text.js';
+import { M06 } from '../games/tham-tu-mang/js/anomalies/motion.js';
+import { E03 } from '../games/tham-tu-mang/js/anomalies/element.js';
+import { I01, I02, I04 } from '../games/tham-tu-mang/js/anomalies/image.js';
+import { R04 } from '../games/tham-tu-mang/js/anomalies/reactive.js';
+
+test('the Hồ Vắng page ships exactly the slots it declares', () => {
+  assert.deepStrictEqual(slotCounts(CH4_INDEX.html), CH4.pages[0].slots,
+    'chapter 4 markup does not match its declaration');
+});
+
+test('chapter 4 rolls 7 to 9 and places every one of them', () => {
+  for (const seed of SEEDS) {
+    const { count, picks } = plan(CH4, seed);
+    assert.ok(count >= 7 && count <= 9, `seed ${seed} rolled ${count}`);
+    assert.strictEqual(picks.length, count, `seed ${seed} promised ${count}, placed ${picks.length}`);
+  }
+});
+
+test('chapter 4 keeps the director within its own rules on every seed', () => {
+  for (const seed of SEEDS) {
+    const picks = plan(CH4, seed).picks;
+    const keys = picks.map((p) => `${p.page}:${p.slot}:${p.nth}`);
+    assert.strictEqual(new Set(keys).size, keys.length, `seed ${seed} stacked two on one element`);
+    const counts = {};
+    for (const p of picks) counts[p.family] = (counts[p.family] || 0) + 1;
+    for (const [family, n] of Object.entries(counts)) {
+      assert.ok(n <= 2, `seed ${seed} took ${n} from ${family}`);
+    }
+    assert.ok(new Set(picks.map((p) => p.family)).size >= 3, `seed ${seed} used too few families`);
+    for (const p of picks) {
+      assert.ok((CH4.pages[0].slots[p.slot] || 0) > p.nth,
+        `seed ${seed}: ${p.id} wants ${p.slot}[${p.nth}]`);
+      assert.ok(byId(p.id).slots.includes(p.slot), `${p.id} does not accept ${p.slot}`);
+    }
+  }
+});
+
+test('the lễ tân notice is clean content, never an anomaly slot', () => {
+  /* T08 measures a signature against the name in this box, exactly the way chapter 2's
+     memorial works. If the box could itself be rewritten the director would be moving the
+     ruler. On seeds without T08 it is only a sad piece of reception housekeeping — the site
+     has to be able to be sad without being wrong. */
+  const html = CH4_INDEX.html;
+  const box = html.slice(html.indexOf('class="lost"'), html.indexOf('</aside>'));
+  assert.ok(box.length > 100, 'the lost-property notice is gone');
+  assert.ok(!box.includes('data-slot'), 'the lễ tân notice became an anomaly slot');
+  for (const entry of CH4.flavour.T08) {
+    assert.ok(box.includes(entry.name),
+      `T08 signs "${entry.name}", a name the notice never mentions`);
+  }
+});
+
+test('T09 starts from the coordinate actually printed on the page and ends somewhere impossible', () => {
+  /* Step 0 has to match the markup exactly: the first read must give the player nothing to
+     be suspicious about, or the drift afterwards is not a drift, it is just a wrong number. */
+  const printed = CH4_INDEX.html.match(/data-coords>([^<]+)</)[1];
+  for (const entry of CH4.flavour.T09) {
+    assert.ok(Array.isArray(entry.steps) && entry.steps.length >= 3,
+      'T09 needs a sequence to walk, not a single value');
+    assert.strictEqual(entry.steps[0], printed,
+      `T09 opens on "${entry.steps[0]}" but the page prints "${printed}"`);
+    /* Bước cuối phải là một chỗ KHÔNG CÓ trên Trái Đất: hoặc vĩ độ vượt 90°, hoặc kinh độ
+       vượt 180°, hoặc cụm đó thôi không còn đọc ra là một cặp toạ độ nữa. */
+    const last = entry.steps[entry.steps.length - 1];
+    const m = last.match(/^(\d+)°(\d+)′(\d+)″[BN]\s*·\s*(\d+)°(\d+)′(\d+)″[ĐTEW]$/);
+    const offEarth = !m || Number(m[1]) > 90 || Number(m[4]) > 180;
+    assert.ok(offEarth, `T09 ends at "${last}", which is a real place on this planet`);
+    assert.notStrictEqual(last, printed, 'T09 ends where it started');
+  }
+});
+
+test('T09 has a coordinate hook inside the only map on the page', () => {
+  const html = CH4_INDEX.html;
+  const map = html.slice(html.indexOf('data-slot="map"'), html.indexOf('</div>', html.indexOf('map-facts')));
+  assert.match(map, /data-coords/, 'the map slot has no [data-coords] for T09 to rewrite');
+  assert.strictEqual(T09.slots.join(), 'map');
+});
+
+test('R04 has every hook it needs, and the honest booking answer names the guest count', () => {
+  const html = CH4_INDEX.html;
+  assert.match(html, /data-guests/, 'no guest field for R04 to read');
+  assert.match(html, /max="6"/, 'the guest field has no ceiling, so the honest widget cannot clamp');
+  assert.strictEqual(R04.deferred, true, 'R04 is two-stage and must be exempt from reconcile()');
+
+  /* R04 never writes its own sentence — it lets the site answer and then changes one number
+     inside it, so the wording is the site's own and the two branches cannot be told apart by
+     eye. Both hooks are created by behaviour() at submit time, so they are asserted there. */
+  const behaviour = String(CH4_INDEX.behaviour);
+  assert.match(behaviour, /data-booking-answer/, 'the answer line carries no hook for R04');
+  assert.match(behaviour, /data-guest-count/, 'the guest number is not isolated for R04 to rewrite');
+  assert.match(behaviour, /xác nhận đặt phòng cho/, 'the honest answer no longer names the guest count');
+
+  /* And the honest branch must stand down on a flag, not on "is there any [data-anom] in this
+     box" — E02 also lands on booking-form, and its extra field carries data-anom, so the old
+     test made the form go silent on runs that had E02 and nothing else. A form that swallows
+     the player's click and says nothing is an anomaly nobody placed. */
+  assert.match(behaviour, /form\.dataset\.handled/,
+    'the clean branch stands down on the wrong signal; E02 would silence the form');
+
+  for (const entry of CH4.flavour.R04) {
+    assert.ok(Number.isInteger(entry.gap) && entry.gap >= 1 && entry.gap <= 5,
+      `R04 gap ${entry.gap} is outside the +1..+5 the chapter advertises`);
+  }
+  assert.deepStrictEqual(CH4.flavour.R04.map((e) => e.gap), [1, 2, 3, 4, 5],
+    'R04 should offer the whole +1..+5 range');
+});
+
+test('E03 can only land on a nav that has a link for it to copy', () => {
+  /* It clones an existing link so it matches its neighbours exactly. A nav with no <a> would
+     leave it marking nothing — placed, counted in BẰNG CHỨNG, and invisible. */
+  const MARKUP = { [CH1.id]: [PAGE_INDEX], [CH3.id]: CH3_PAGES, [CH4.id]: CH4_PAGES };
+  for (const chapter of CHAPTERS) {
+    if (!chapter.pages.some((p) => p.slots.nav)) continue;
+    assert.ok(chapter.flavour.E03, `${chapter.id} offers a nav but has no E03 pool`);
+    for (const entry of chapter.flavour.E03) {
+      assert.ok(entry.label && entry.miss, 'E03 needs a label and a first-person 404');
+    }
+    for (const page of MARKUP[chapter.id]) {
+      if (!/data-slot="nav"/.test(page.html)) continue;
+      const nav = page.html.slice(page.html.indexOf('data-slot="nav"'), page.html.indexOf('</nav>'));
+      assert.ok((nav.match(/<a /g) || []).length >= 2,
+        `${chapter.id}/${page.id}: the nav has nothing for E03 to clone`);
+    }
+  }
+});
+
+test('every I02 replacement is a pinned photograph', () => {
+  // An unpinned swap returns a different picture each load, so the anomaly stops being a
+  // photograph that changed and becomes a photograph that is simply unstable.
+  for (const chapter of CHAPTERS) {
+    for (const entry of chapter.flavour.I02 ?? []) {
+      assert.ok(isPinned(entry.src), `${chapter.id}: I02 swap "${entry.src}" is not pinned`);
+    }
+  }
+});
+
+test('M06 flies inside the frame and takes its time doing it', () => {
+  for (const chapter of CHAPTERS) {
+    for (const entry of chapter.flavour.M06 ?? []) {
+      for (const p of [entry.from, entry.to]) {
+        assert.ok(p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1,
+          `${chapter.id}: M06 path leaves the photograph`);
+      }
+      // Fast enough to be seen head-on, slow enough that a glance cannot be sure — the whole
+      // MOTION family lives at that threshold.
+      assert.ok(entry.seconds >= 15 && entry.seconds <= 45,
+        `${chapter.id}: M06 crosses in ${entry.seconds}s`);
+    }
+  }
+});
+
+test('every slot M06, I01, I02 and I04 can take sits in a figure with an image', () => {
+  /* All four reach the photograph with ctx.slot.closest('figure'). A caption slot outside a
+     figure, or a figure with no <img>, means the anomaly attaches to nothing — and it would
+     be counted in BẰNG CHỨNG before anyone noticed. */
+  const IMAGE_SLOTS = new Set([...I01.slots, ...I02.slots, ...I04.slots, ...M06.slots]
+    .filter((s) => s !== 'avatar'));
+  const ALL = [[CH1.id, [PAGE_INDEX]], [CH2.id, CH2_PAGES], [CH3.id, CH3_PAGES], [CH4.id, CH4_PAGES]];
+  for (const [chapterId, pages] of ALL) {
+    for (const page of pages) {
+      for (const m of page.html.matchAll(/<figcaption[^>]*data-slot="([^"]+)"/g)) {
+        if (!IMAGE_SLOTS.has(m[1])) continue;
+        const before = page.html.slice(0, m.index);
+        const open = before.lastIndexOf('<figure');
+        const close = before.lastIndexOf('</figure>');
+        assert.ok(open > close, `${chapterId}/${page.id}: a ${m[1]} caption sits outside any figure`);
+        assert.match(page.html.slice(open, m.index), /<img/,
+          `${chapterId}/${page.id}: the figure around a ${m[1]} has no image`);
+      }
+    }
+  }
+});
+
+test('no two photographs on the Hồ Vắng page are the same shot', () => {
+  // Seven pinned images, and I01/I02 both depend on the player being able to tell one frame
+  // from another. A repeat would read as an anomaly nobody placed.
+  const ids = [...CH4_INDEX.html.matchAll(/picsum\.photos\/id\/(\d+)\//g)].map((m) => m[1]);
+  assert.ok(ids.length >= 7, `only ${ids.length} photographs on the page`);
+  assert.strictEqual(new Set(ids).size, ids.length, 'a photograph is used twice');
+});
+
+test('chapter 4 site markup carries no script and no remote stylesheet', () => {
+  assert.ok(!/<script/i.test(CH4_INDEX.html), 'the page carries a script');
+  assert.ok(!/<link[^>]+href="http/i.test(CH4_INDEX.html), 'the page loads a remote stylesheet');
+});
+
+test('chapter 4 unlocks only after chapter 3 is cleared', () => {
+  const upToCh2 = (id) => id === CH1.id || id === CH2.id;
+  assert.strictEqual(isUnlocked(CH4.id, upToCh2), false);
+  assert.strictEqual(isUnlocked(CH4.id, (id) => id !== CH4.id), true);
 });

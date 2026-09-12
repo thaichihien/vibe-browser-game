@@ -72,7 +72,10 @@ export const PAGE_INDEX = {
          gọi đồng bộ rồi mới xem trong khung này đã có ai trả lời chưa, thì thứ tự đăng ký
          listener không còn quan trọng nữa — nếu dị thường đã lên tiếng, bản sạch im lặng. */
       setTimeout(() => {
-        if (section.querySelector('[data-anom]')) return;
+        /* Đứng im theo CỜ chứ không theo phép dò [data-anom] trong khung: E02 cũng rơi vào
+           slot newsletter và ô nhập thừa của nó cũng mang data-anom, nên phép dò ấy làm ô
+           đăng ký câm bặt trên những ván chỉ có E02 — một dị thường không ai đặt vào đó. */
+        if (form.dataset.handled) return;
 
         let note = section.querySelector('.news-ok');
         if (!note) {

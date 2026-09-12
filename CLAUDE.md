@@ -73,12 +73,14 @@ Every URL there must stay **pinned** — a `lock=`, an `/id/`, or a portrait ind
 its captions are written against a known photograph and an unpinned URL silently breaks
 them; every `<img>` carries an `onerror` fallback to a procedural SVG, so the game degrades
 to a stylised site rather than a page of broken-image icons. `img.js` still exports a
-`loremflickr` builder for chapters 2–6, but **chapter 1 no longer uses it**: loremflickr
+`loremflickr` builder, but **no built chapter uses it** (1–4 are built): loremflickr
 burns an attribution strip and a licence badge into every frame, so a page of its photos
 reads as scraped stock rather than a brand's own site, and its keywords do not reliably
 return the subject asked for (`portrait,woman` returned a newsstand). Prefer picsum, whose
 `/id/` names a specific curated photograph, and write each caption against the photo you
-actually looked at. Both music players
+actually looked at. Each chapter's site.css must also stay visually distinct from the
+others — same reason: six case files are meant to be six different websites, and two that
+share a visual language read as one page with the words swapped. Both music players
 treat a failed track as "skip to the next one", so the games still run if the files are
 missing. Single-file games keep their audio under `games/music/<slug>/` rather than a
 sibling folder, which would read as a folder game. `games/jungle-king.backup.html` is a

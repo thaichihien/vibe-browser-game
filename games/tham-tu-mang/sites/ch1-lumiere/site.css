@@ -12,7 +12,7 @@
       một cái nút position:absolute ra lề — cả hai bị cắt mất nếu thẻ cha biết cắt.
    2. Đừng đặt transform trong :hover của cta/avatar. M01 và M03 điều khiển transform của
       đúng những phần tử đó; hover đổi màu và đổi bóng thì không tranh chấp.
-   3. Mọi ảnh vẫn nằm trong <figure> cùng <figcaption>. I01, I03 và I04 đều tìm ảnh bằng
+   3. Mọi ảnh vẫn nằm trong <figure> cùng <figcaption>. I01–I04 và M06 đều tìm ảnh bằng
       ctx.slot.closest('figure').
 
    (Bóng đổ nền vẫn nằm trên chính thẻ <img> và vẫn đổ xuống dưới–sang phải, nhưng giờ chỉ

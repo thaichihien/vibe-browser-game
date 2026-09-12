@@ -2,6 +2,12 @@
    dị thường dễ thấy nhất trong thư viện, để người chơi học động tác khoanh trên một thứ
    không thể nhầm. Spec §5.1. */
 
+import { picsum } from '../engine/img.js';
+
+/* Ảnh thay thế của I02 — đã ghim, và đã được xem tận mắt. Kích thước rộng rãi để cùng một
+   URL dùng được cho cả ảnh lớn lẫn ảnh trong lưới. */
+const swap = (id) => picsum({ w: 1800, h: 1350, id });
+
 export const CH1 = {
   id: 'ch1-lumiere',
   title: 'LUMIÈRE',
@@ -38,7 +44,7 @@ export const CH1 = {
     T01: [
       'Thoa đều lên da mặt mỗi tối, tránh vùng mắt. Đừng thoa lên gương. Gương sẽ thoa lại.',
       'Bảo quản nơi khô ráo, tránh ánh nắng trực tiếp. Nếu nắp tự mở, đừng đóng lại.',
-      'Ngưng sử dụng nếu thấy kích ứng. Ngưng sử dụng nếu thấy nó ấm khi bạn không cầm.'
+      'Ngưng sử dụng nếu thấy kích ứng. Ngưng sử dụng nếu thấy nó đang khóc khi bạn không cầm.'
     ],
 
     // T02 — viết lại khi cuộn ngược. Bản sau PHẢI dài hơn hẳn (xem test §6 T02).
@@ -49,7 +55,7 @@ export const CH1 = {
       },
       {
         before: 'Chúng tôi cam kết hoàn tiền trong 30 ngày.',
-        after: 'Chúng tôi cam kết hoàn tiền trong 30 ngày. Chưa ai kịp dùng hết 30 ngày để đòi.'
+        after: 'Chúng tôi cam kết hoàn tiền trong 30 ngày. Liệu có ai sống đến 30 ngày để đòi.'
       }
     ],
 
@@ -84,15 +90,23 @@ export const CH1 = {
       { family: 'Luminari, Papyrus, "Trattatello"', spacing: '0.08em' }
     ],
 
-    // S05 — chú thích tự tin mô tả một tấm ảnh khác.
+    /* S05 — chú thích không khớp với tấm ảnh.
+       Chú thích phải LẠ, không chỉ là "tả một tấm ảnh khác": một cái tên sai thì người chơi
+       đọc ra là người bán/biên tập viên cẩu thả, còn một câu không thuộc về thế giới này thì
+       không giải thích được bằng sự cẩu thả.
+
+       RÀNG BUỘC NỘI DUNG (spec §3.4): S05 rơi được cả vào slot `avatar`, tức là ngay cạnh ảnh
+       một người có thật. Không câu nào được mô tả người trong ảnh là đã chết, mất tích, hay bị
+       hại. Chúng nói về hoàn cảnh tấm ảnh, không nói về người trong đó. */
     S05: [
-      'Ảnh: bạn Ngọc Anh sau 4 tuần sử dụng',
-      'Ảnh: phòng thí nghiệm của chúng tôi tại Đà Lạt',
-      'Ảnh: mẻ hoa cúc La Mã thu hoạch tháng trước'
+      'Ảnh: buổi lễ hiến cho chúa tể quỷ vào tháng Ba.',
+      'Ảnh: căn phòng thứ sáu sáu và sáu.',
+      'Ảnh: mẻ đầu tiên sau khi sát hại đủ 6 người.',
+      'Ảnh: thứ còn lại trong nồi sau bảy bảy bốn mươi chín đêm ủ.'
     ],
 
     // S07 — emoji lạc loài giữa ✨🌿💧🧴.
-    S07: ['🩸', '🕳️', '👁️', '🦷'],
+    S07: ['🩸', '🕳️', '👁️', '🦷', '👽', '🌚', '🧿', '🃏', '🪬'],
 
     // E01 — cái nút không thuộc về đâu cả.
     E01: [
@@ -103,9 +117,9 @@ export const CH1 = {
 
     // E04 — một dòng chân trang không trang nào có.
     E04: [
-      'Bản quyền © 1834–2026 LUMIÈRE',
-      'Số người đang xem: 1 (bạn) và 4',
-      'GPKD số 03:17 — cấp lúc 03:17'
+      'Bản quyền © 1529–1826 LUMIÈRE',
+      'Sản phẩm tốt nhất cho bạn, cừu và quỷ',
+      'Chúng tôi luôn hân hạnh cho đến ngày cuối cùng'
     ],
 
     // R05 — đăng ký nhận tin, và hoá ra bạn đã đăng ký từ lâu.
@@ -114,13 +128,6 @@ export const CH1 = {
       { since: '02/02/2009', unsub: 'KHÔNG THỂ' }
     ],
 
-    // T04 — chỉ những điều trình duyệt biết thật. Xem FACTS trong anomalies/text.js.
-    T04: [
-      { fact: 'tz', text: 'Chúng tôi rất vui được phục vụ khách hàng ở khu vực {v}.' },
-      { fact: 'screen', text: 'Trang này hiển thị đẹp nhất ở {v}. Đúng bằng màn hình của bạn.' },
-      { fact: 'cores', text: 'Máy của bạn có {v} lõi. Chúng tôi chỉ cần một.' },
-      { fact: 'lang', text: 'Bản {v} đang được chuẩn bị riêng. Chúng tôi biết bạn cần nó.' }
-    ],
 
     // T05 — chú thích ẩn nói ngược lại chữ nhìn thấy. Chỉ hiện khi rê chuột lên.
     T05: [
@@ -151,16 +158,15 @@ export const CH1 = {
     // E02 — một ô nhập không có lý do gì để tồn tại trong ô đăng ký nhận thư.
     E02: [
       'Nhóm máu',
-      'Tên người sẽ nhận thư thay bạn',
+      'Năm mất',
       'Đêm qua bạn mơ thấy gì?'
     ],
 
     // E05 — con trỏ sai chỗ.
     E05: [
-      { cursor: 'not-allowed' },
-      { cursor: 'crosshair' },
       { cursor: 'help' },
-      { cursor: 'progress' }
+      { cursor: 'wait' },
+      { cursor: 'not-allowed' }
     ],
 
     // M01 / M03 — chuyển động không cần lời, nhưng vẫn giữ pool để đồng nhất hình dạng.
@@ -171,11 +177,36 @@ export const CH1 = {
       { scale: 1.038, seconds: 2.6 }
     ],
 
+    // E03 — thanh menu có thêm một mục, và mục đó đi tới một chỗ trang này không thể có.
+    E03: [
+      { label: 'TẦNG HẦM', miss: 'Tôi không tìm thấy trang đó. Tôi đã tìm rất lâu.' },
+      { label: 'PHÒNG SỐ 6', miss: 'Phòng đó không mở cho khách. Chưa bao giờ mở.' },
+      { label: 'DANH SÁCH CŨ', miss: 'Danh sách đã được gỡ xuống. Tên của bạn thì chưa.' }
+    ],
+
+    /* I02 — ảnh đổi khi bạn quay lại, chú thích thì không. Ba tấm dưới đây đã được xem tận
+       mắt. Chúng không cần đáng sợ — cái đáng sợ là dòng chú thích bên dưới vẫn tả đúng tấm
+       ảnh mà bạn đã không còn nhìn thấy nữa. */
+    I02: [
+      { src: swap(137) },
+      { src: swap(151) },
+      { src: swap(117) }
+    ],
+
+    /* M06 — một đốm sáng đi qua bên trong tấm ảnh. Toạ độ là tỉ lệ của chính khung ảnh nên
+       cùng một đường bay chạy được trên mọi cỡ ảnh. */
+    M06: [
+      { seconds: 26, from: { x: 0.04, y: 0.80 }, to: { x: 0.94, y: 0.16 } },
+      { seconds: 34, from: { x: 0.96, y: 0.62 }, to: { x: 0.08, y: 0.10 } },
+      { seconds: 21, from: { x: 0.52, y: 0.96 }, to: { x: 0.56, y: 0.04 } }
+    ],
+
     // I01 / I03 / I04 — ảnh mất màu, hai cái tên chung một khuôn mặt, và ảnh mờ dần.
     // I01 — CDN trả ảnh đen trắng, rồi CSS đẩy nó thành một tấm ảnh của mấy chục năm trước.
     I01: [
-      { filter: 'sepia(0.55) contrast(1.32) brightness(0.88) saturate(1.4)' },
-      { filter: 'sepia(0.38) contrast(1.45) brightness(0.82)' }
+      { filter: 'sepia(0.55) contrast(1.32) brightness(0.88) saturate(1.4)', rotate: 35 },
+      { filter: 'sepia(0.38) contrast(1.45) brightness(0.82)', rotate: 69 },
+      { filter: 'sepia(0.5) contrast(1.28) brightness(0.9) saturate(1.3)', rotate: 176 }
     ],
     I04: [{ note: 'mờ dần mỗi lần vào khung nhìn' }],
     I03: [

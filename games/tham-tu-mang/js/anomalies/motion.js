@@ -40,4 +40,72 @@ export const M03 = {
   }
 };
 
-export const MOTION_ANOMALIES = [M01, M03];
+/* ── M06: có gì đó đang bay bên trong một tấm ảnh ──────────────────────
+   Một tấm ảnh TĨNH thì không có gì trong nó di chuyển được. Đó là toàn bộ dị thường này, và
+   đó cũng là lý do nó sống sót qua câu hỏi "…hay trang nó vốn thế?" tốt hơn mọi thứ khác
+   trong họ MOTION: một khối phóng to thu nhỏ còn giải thích được là hiệu ứng giao diện, chứ
+   một đốm sáng đi ngang qua bức ảnh chụp mặt hồ thì không có cách nào là cố ý cả.
+
+   Chậm là bắt buộc. Đủ nhanh để nhận ra khi nhìn thẳng vào ảnh, đủ chậm để liếc qua thì
+   tưởng mình hoa mắt — đúng ngưỡng mà cả họ MOTION nhắm tới.
+
+   ĐÁNH DẤU CẢ ĐỐM SÁNG LẪN TẤM ẢNH. Thứ người chơi nhìn thấy là cái đốm, nên khoanh quanh
+   cái đốm phải tính điểm; nhưng một vòng tròn nhỏ quanh nó KHÔNG bao lấy tâm của tấm ảnh,
+   nên nếu chỉ đánh dấu tấm ảnh thì người chơi khoanh đúng thứ mình nhìn ra và mất một trái
+   tim. run.found lưu theo ID dị thường chứ không theo phần tử, nên khoanh cái nào cũng ghi
+   được một lần, và khoanh nốt cái kia trả về ĐÃ GHI RỒI thay vì trừ máu (xem I03).
+
+   Đường bay được dựng LÚC TẤM ẢNH LỌT VÀO KHUNG NHÌN LẦN ĐẦU, không phải lúc apply(). Ở
+   chương nhiều trang, mọi trang đều được gắn cùng lúc và các trang chưa mở đang display:none,
+   nên đo lúc apply() sẽ ra khung 0×0 và đốm sáng đứng im tại chỗ. */
+export const M06 = {
+  id: 'M06', family: 'MOTION', label: 'Có gì đó đang bay bên trong một tấm ảnh',
+  slots: ['photo', 'gallery-caption'], weight: 2,
+  apply(ctx) {
+    const figure = ctx.slot.closest('figure') ?? ctx.slot.parentElement;
+    const img = figure?.querySelector('img');
+    if (!figure || !img) return;
+    const entry = pick(ctx.rng, ctx.flavour);
+    ctx.mark(img);
+
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+
+      const fr = figure.getBoundingClientRect();
+      const r = img.getBoundingClientRect();
+      if (!r.width || !r.height) { started = false; return; }   // chưa có khung thì đợi lần sau
+
+      if (getComputedStyle(figure).position === 'static') figure.style.position = 'relative';
+
+      const dot = document.createElement('span');
+      dot.style.cssText =
+        'position:absolute;width:7px;height:7px;border-radius:50%;background:#fff;' +
+        'box-shadow:0 0 7px 2px rgba(255,255,255,.8);pointer-events:none;z-index:2;';
+      dot.style.left = `${(r.left - fr.left).toFixed(1)}px`;
+      dot.style.top = `${(r.top - fr.top).toFixed(1)}px`;
+      figure.appendChild(dot);
+      ctx.mark(dot);
+
+      const at = (p) => `translate(${(p.x * r.width).toFixed(1)}px, ${(p.y * r.height).toFixed(1)}px)`;
+      dot.animate([
+        { transform: at(entry.from), opacity: 0 },
+        { opacity: 0.95, offset: 0.12 },
+        { opacity: 0.95, offset: 0.88 },
+        { transform: at(entry.to), opacity: 0 }
+      ], { duration: entry.seconds * 1000, iterations: Infinity, easing: 'linear' });
+    };
+
+    const seen = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        start();
+        if (started) seen.disconnect();
+      }
+    }, { threshold: 0.2 });
+    seen.observe(img);
+  }
+};
+
+export const MOTION_ANOMALIES = [M01, M03, M06];

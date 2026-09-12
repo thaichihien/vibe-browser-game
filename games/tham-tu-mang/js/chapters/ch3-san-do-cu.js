@@ -11,6 +11,12 @@
    Dòng "tài khoản của Hạnh đã ngừng hoạt động" ở trang giỏ hàng là NỘI DUNG SẠCH và luôn có
    mặt, giống ô tưởng niệm của chương 2: nó là cái mốc cho T08. */
 
+import { picsum } from '../engine/img.js';
+
+/* Ảnh thay thế của I02 — đã ghim, và đã được xem tận mắt. Kích thước rộng rãi để cùng một
+   URL dùng được cho cả ảnh lớn lẫn ảnh trong lưới. */
+const swap = (id) => picsum({ w: 1800, h: 1350, id });
+
 export const CH3 = {
   id: 'ch3-san-do-cu',
   title: 'SĂNĐỒCŨ.VN',
@@ -64,8 +70,8 @@ export const CH3 = {
   flavour: {
     // T01 — một câu bị thay bằng lời nguyền, vẫn đúng giọng điều khoản của sàn.
     T01: [
-      'Hàng đã qua sử dụng nên có dấu vết của người dùng trước. Một vài món còn giữ cả thói quen của họ.',
-      'Chúng tôi không kiểm tra từng món. Có những món tự được rao lại sau khi đã bán xong.',
+      'Hàng đã qua sử dụng nên có dấu vết của người dùng trước. Một vài món đồ vẫn còn giữ cả thói quen của họ.',
+      'Chúng tôi không kiểm tra từng món. Có những món tự quay về chủ cũ sau khi đã bán xong.',
       'Xem kỹ ảnh trước khi chuyển tiền. Nếu trong ảnh có thêm một người, đừng mua món đó.'
     ],
 
@@ -88,13 +94,6 @@ export const CH3 = {
       { text: 'Món này đã được bán {n} lần.', start: 9 }
     ],
 
-    // T04 — chỉ những điều trình duyệt biết THẬT. Xem FACTS trong anomalies/text.js.
-    T04: [
-      { fact: 'tz', text: 'Đang hiển thị các món gần bạn, khu vực {v}.' },
-      { fact: 'screen', text: 'Ảnh hiển thị rõ nhất ở {v}. Đúng bằng màn hình của bạn.' },
-      { fact: 'cores', text: 'Máy của bạn có {v} lõi. Chúng tôi chỉ cần một để tìm bạn.' },
-      { fact: 'lang', text: 'Bản {v} đang được chuẩn bị riêng. Chúng tôi biết bạn cần nó.' }
-    ],
 
     // T05 — rê chuột lên thì trang nói ngược lại chính nó.
     T05: [
@@ -125,19 +124,26 @@ export const CH3 = {
       { family: '"Chalkboard SE", "Comic Sans MS", "Marker Felt"', spacing: '0.03em' }
     ],
 
-    // S05 — chú thích tự tin mô tả một món hoàn toàn khác.
+    /* S05 — chú thích không khớp với tấm ảnh.
+       Chú thích phải LẠ, không chỉ là "tả một tấm ảnh khác": một cái tên sai thì người chơi
+       đọc ra là người bán/biên tập viên cẩu thả, còn một câu không thuộc về thế giới này thì
+       không giải thích được bằng sự cẩu thả.
+
+       RÀNG BUỘC NỘI DUNG (spec §3.4): S05 rơi được cả vào slot `avatar`, tức là ngay cạnh ảnh
+       một người có thật. Không câu nào được mô tả người trong ảnh là đã chết, mất tích, hay bị
+       hại. Chúng nói về hoàn cảnh tấm ảnh, không nói về người trong đó. */
     S05: [
-      'Máy ảnh Canon AE-1, còn hộp',
-      'Xe đạp mini Nhật, còn phanh',
-      'Bộ ấm chén gốm Bát Tràng, đủ sáu chén',
-      'Tủ gỗ hai cánh, đã tháo rời'
+      'Ảnh: món hàng lúc nó còn vui vẻ.',
+      'Ảnh: chụp lúc 4 giờ 12 sáng. Không ai bật đèn.',
+      'Ảnh: thứ tìm thấy bên trong khi mở món hàng ra.',
+      'Ảnh: kho hàng ở tầng dưới. Toà nhà không có tầng dưới.'
     ],
 
     // S06 — dòng chữ rời khỏi trang, mỗi lần bị nhìn lại thì đi thêm một đoạn.
     S06: [{ step: 18, max: 96 }, { step: 12, max: 72 }],
 
     // S07 — emoji lạc loài. Thanh điều hướng chỉ có chữ, nên một cái emoji ở đó là lạc hẳn.
-    S07: ['🩸', '🕳️', '👁️', '🦷'],
+    S07: ['🩸', '🕳️', '👁️', '🦷', '👽', '🌚', '🧿', '🃏', '🪬'],
 
     // M01 / M03 — chuyển động dưới ngưỡng chắc chắn.
     M01: [{ max: 6 }],
@@ -152,35 +158,50 @@ export const CH3 = {
 
     // E02 — một ô nhập không có lý do gì để tồn tại trong biểu mẫu giao hàng.
     E02: [
-      'Tên người sẽ nhận đồ của bạn',
+      'Tên người chủ của món hàng này',
       'Số người sẽ về cùng bạn',
       'Nhóm máu',
-      'Ai giới thiệu bạn tới món này?'
+      'Địa chủ cụ thể nhà hoặc phòng của bạn'
     ],
 
     // E04 — một dòng chân trang không trang nào có.
     E04: [
-      'Số món đang được rao lại sau khi đã bán: 214',
-      'Số người đang xem trang này: 1 (bạn) và 3',
-      'Bản quyền © 1961–2026 SănĐồCũ.vn'
+      'Mọi món trên sàn đều đã có chủ. Chúng tôi chỉ đang tìm lại họ.',
+      'Hãy kiểm tra kĩ lại hàng và đừng trả lại cho chúng tôi',
+      'Bản quyền © 1361–1526 SănĐồCũ.vn'
     ],
 
     // E05 — con trỏ sai chỗ.
-    E05: [{ cursor: 'not-allowed' }, { cursor: 'crosshair' }, { cursor: 'help' }, { cursor: 'progress' }],
+    E05: [
+      { cursor: 'help' },
+      { cursor: 'wait' },
+      { cursor: 'not-allowed' }
+    ],
 
-    // R02 — bỏ một món vào giỏ, giỏ có thêm hai. Cùng người bán, và địa chỉ nhận hàng là của
-    // chính người bán đó.
+    /* R02 — bỏ một món vào giỏ thì giỏ có thêm HAI.
+       Món thừa phải rõ ràng KHÔNG PHẢI của bạn. Bản đầu để nó là "hộp đựng máy ảnh" và "dây
+       đeo máy ảnh" — phụ kiện hợp lý của đúng món đang xem, giá 0₫, cùng người bán — nên người
+       chơi đọc ra là hàng tặng kèm, và một món tặng kèm thì không có gì sai cả. Giờ nó không
+       phải hàng hoá: không ai bán nó, không ai gửi nó, và dòng người bán tự nói ra rằng nó
+       không gỡ được. Vẫn để 0₫ để tạm tính không lệch — con số phải khớp, cái sai nằm ở chỗ
+       trong giỏ có một thứ bạn chưa từng bấm vào. */
     R02: [
       {
-        title: 'Hộp đựng máy ảnh, đã mở',
+        title: 'Một hộp không ghi gì bên ngoài',
         price: '0₫',
-        seller: 'Người bán: Dũng · Q. Bình Thạnh',
+        seller: 'Người gửi: không rõ · tự thêm vào mọi giỏ hàng',
         address: '38/7 Nguyễn Văn Đậu, P.6, Q. Bình Thạnh'
       },
       {
-        title: 'Dây đeo máy ảnh, còn mùi',
+        title: 'Đồ của người mua trước',
         price: '0₫',
-        seller: 'Người bán: Dũng · Q. Bình Thạnh',
+        seller: 'Người gửi: không rõ · không gỡ khỏi giỏ được',
+        address: '38/7 Nguyễn Văn Đậu, P.6, Q. Bình Thạnh'
+      },
+      {
+        title: 'Thứ bạn để quên ở đây lần trước',
+        price: '0₫',
+        seller: 'Người gửi: không rõ · bạn đã nhận món này rồi',
         address: '38/7 Nguyễn Văn Đậu, P.6, Q. Bình Thạnh'
       }
     ],
@@ -192,10 +213,35 @@ export const CH3 = {
       { q: 'how to return a cursed object', label: 'TRẢ VỀ' }
     ],
 
+    // E03 — thanh menu có thêm một mục, và mục đó đi tới một chỗ trang này không thể có.
+    E03: [
+      { label: 'HÀNG KHÔNG BÁN', miss: 'Tôi không tìm thấy trang đó. Tôi đã tìm rất lâu.' },
+      { label: 'KHO TẦNG DƯỚI', miss: 'Kho đó đã khoá. Chìa nằm bên trong.' },
+      { label: 'ĐỒ CỦA BẠN', miss: 'Chưa có gì ở đây. Chúng tôi vẫn đang chờ.' }
+    ],
+
+    /* I02 — ảnh đổi khi bạn quay lại, chú thích thì không. Ba tấm dưới đây đã được xem tận
+       mắt. Chúng không cần đáng sợ — cái đáng sợ là dòng chú thích bên dưới vẫn tả đúng tấm
+       ảnh mà bạn đã không còn nhìn thấy nữa. */
+    I02: [
+      { src: swap(137) },
+      { src: swap(117) },
+      { src: swap(151) }
+    ],
+
+    /* M06 — một đốm sáng đi qua bên trong tấm ảnh. Toạ độ là tỉ lệ của chính khung ảnh nên
+       cùng một đường bay chạy được trên mọi cỡ ảnh. */
+    M06: [
+      { seconds: 26, from: { x: 0.04, y: 0.80 }, to: { x: 0.94, y: 0.16 } },
+      { seconds: 34, from: { x: 0.96, y: 0.62 }, to: { x: 0.08, y: 0.10 } },
+      { seconds: 21, from: { x: 0.52, y: 0.96 }, to: { x: 0.56, y: 0.04 } }
+    ],
+
     // I01 / I03 / I04 — ảnh của năm khác, hai cái tên chung một khuôn mặt, ảnh mờ dần.
     I01: [
-      { filter: 'sepia(0.55) contrast(1.32) brightness(0.88) saturate(1.4)' },
-      { filter: 'sepia(0.38) contrast(1.45) brightness(0.82)' }
+      { filter: 'sepia(0.55) contrast(1.32) brightness(0.88) saturate(1.4)', rotate: 35 },
+      { filter: 'sepia(0.38) contrast(1.45) brightness(0.82)', rotate: 69 },
+      { filter: 'sepia(0.5) contrast(1.28) brightness(0.9) saturate(1.3)', rotate: 176 }
     ],
     I03: [{ a: { name: 'Hồng Nhung' }, b: { name: 'Lê Vĩnh' } }],
     I04: [{ note: 'mờ dần mỗi lần vào khung nhìn' }]

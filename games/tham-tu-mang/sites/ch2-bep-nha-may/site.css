@@ -10,7 +10,7 @@
    1. KHÔNG overflow:hidden ở thẻ nào bọc một data-slot — S06 dịch chữ ra ngoài lề, E01 thả
       một cái nút position:absolute ra đó.
    2. Không transform trong :hover của avatar — M01 và M03 đang điều khiển transform của nó.
-   3. Mọi ảnh nằm trong <figure> cùng <figcaption>; I01, I03, I04 tìm ảnh qua closest('figure').
+   3. Mọi ảnh nằm trong <figure> cùng <figcaption>; I01–I04 và M06 tìm ảnh qua closest('figure').
 
    PHÔNG: Georgia và Times KHÔNG có glyph tiếng Việt dựng sẵn (ằ ặ ệ ộ ữ). Hai stack dưới đây
    phủ đủ trên cả macOS lẫn Windows. */

@@ -1,0 +1,545 @@
+/* HỒ VẮNG — style riêng của trang giả. Nạp BÊN TRONG shadow root nên selector trần như
+   h1 {} không bao giờ chạm tới chrome của trò chơi.
+
+   VÌ SAO TRANG NÀY PHẢI KHÁC HẲN CHƯƠNG 1 — đây là yêu cầu của luật chơi, không phải của
+   thẩm mỹ. Tiền đề là mỗi hồ sơ dẫn tới một trang web KHÁC, do người khác dựng. Hai chương
+   dùng chung một ngôn ngữ thị giác thì người chơi đọc ra là "vẫn cái trang lúc nãy, đổi
+   chữ", và cùng với đó là cảm giác rằng cả sáu trang đều do một bàn tay bịa ra — mà nghi ngờ
+   đó thì đúng, và nó giết luôn câu hỏi "…hay trang nó vốn thế?" mà mọi dị thường sống nhờ.
+
+     chương 1 (bán kem)           chương 4 (khu nghỉ)
+     ─────────────────────        ─────────────────────
+     nền kem, điểm nhấn hồng      trắng giấy + dải tối rừng, điểm nhấn hoàng thổ
+     tiêu đề serif                tiêu đề sans mảnh, chữ lớn
+     thẻ bo 18px, bóng đổ mềm     góc vuông tuyệt đối, không bóng, chỉ nét kẻ 1px
+     hero chia đôi ảnh/chữ        ảnh tràn viền 92vh, nav trong suốt đè lên
+     lưới đều tăm tắp             mục đánh số 01–07, ảnh phòng tràn ra mép trang
+     thư viện 3×2 đều nhau        thư viện xếp lệch 4+2 / 2+2+2 / 6
+
+   BA CHỖ CSS PHẢI CHỪA LẠI CHO DỊ THƯỜNG (sửa ở đây là làm hỏng chúng trong im lặng):
+   1. KHÔNG overflow:hidden ở bất kỳ thẻ nào bọc một data-slot. S06 đẩy cả dòng chữ ra ngoài
+      lề bằng translateX, còn E01 thả một cái nút position:absolute ra lề — cả hai bị cắt cụt
+      nếu thẻ cha biết cắt. (I01 thì KHÔNG còn cần điều này: nó xoay ruột ảnh bên trong khung
+      bằng clip-path, khung không suy suyển — xem anomalies/image.js.)
+   2. Đừng đặt transform trong :hover của cta/avatar/tile. M01 và M03 điều khiển transform
+      của đúng những phần tử đó; hover đổi màu và đổi viền thì không tranh chấp.
+   3. Mọi ảnh vẫn nằm trong <figure> cùng <figcaption>. I01, I02, I03, I04 và M06 đều tìm
+      ảnh bằng ctx.slot.closest('figure').
+   4. .mapbox phải là position:relative và KHÔNG được cắt: M03 cho cả khối bản đồ thở, T09
+      viết lại đúng cái <b data-coords> nằm trong nó.
+
+   PHÔNG CHỮ — vấn đề tiếng Việt, không phải thẩm mỹ. Georgia và Times New Roman KHÔNG chứa
+   các glyph dựng sẵn như ằ, ặ, ệ, ộ, ữ; gặp chữ thiếu trình duyệt thay phông ngay giữa từ và
+   chữ trông như thừa một khoảng trắng. system-ui phủ đủ tiếng Việt trên cả hai hệ. */
+
+:host {
+  display: block;
+
+  --paper:  #ffffff;
+  --stone:  #f1f1ec;
+  --ink:    #15191a;
+  --dim:    #6a716f;
+  --line:   #dcdcd4;
+
+  --dark:    #16211d;
+  --dark-2:  #0d1512;
+  --on-dark: #e8ece9;
+  --dim-dark:#98a39e;
+  --line-dark: rgba(232, 236, 233, 0.16);
+
+  --ochre:  #b0803f;
+
+  --maxw: 1240px;
+  --pad: max(28px, calc((100% - var(--maxw)) / 2));
+
+  /* system-ui phủ đủ tiếng Việt ở cả hai hệ (SF Pro trên macOS, Segoe UI trên Windows). */
+  --sans: system-ui, -apple-system, "Segoe UI", Tahoma, "Noto Sans", Arial, sans-serif;
+
+  font: 400 15.5px/1.72 var(--sans);
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+
+/* Không bo góc ở bất cứ đâu, và không bóng đổ ở bất cứ đâu. Đó là cả nửa sự khác biệt so
+   với chương 1 — thẻ bo tròn có bóng là chữ ký của một trang bán hàng, còn một trang khu
+   nghỉ boutique thì chỉ có ảnh, khoảng trắng và nét kẻ. */
+img { display: block; object-fit: cover; height: auto; border-radius: 0; }
+figure { margin: 0; }
+figcaption {
+  font-size: 12.5px; line-height: 1.55;
+  color: var(--dim);
+  padding-top: 10px;
+  letter-spacing: 0.005em;
+}
+
+h1, h2 {
+  font-weight: 300;            /* mảnh và lớn — đối cực của serif chương 1 */
+  color: inherit;
+  line-height: 1.16;
+  margin: 0;
+  letter-spacing: -0.018em;
+}
+h2 { font-size: clamp(28px, 3vw, 42px); margin-bottom: 16px; }
+p { margin: 0 0 16px; max-width: 62ch; color: var(--dim); }
+
+/* ── Hero tràn viền ─────────────────────────────────────────────────────── */
+
+.hero {
+  position: relative;
+  min-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: var(--dark-2);
+  color: var(--on-dark);
+  padding: 0 var(--pad) 64px;
+}
+.hero-shot { position: absolute; inset: 0; }
+.hero-shot img { width: 100%; height: 100%; }
+/* Chú thích ảnh hero nằm đè lên chính tấm ảnh, sát mép phải dưới — đúng chỗ mà một trang
+   khu nghỉ hay để tên địa điểm. Vẫn là figcaption trong figure, nên IMAGE family không đổi. */
+.hero-shot figcaption {
+  position: absolute;
+  right: var(--pad); bottom: 22px;
+  z-index: 3;
+  padding-top: 0;
+  max-width: 44ch; text-align: right;
+  color: rgba(232, 236, 233, 0.82);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.75);
+}
+/* Lớp phủ là một LỚP RIÊNG chứ không phải bộ lọc đặt trên ảnh: I01 và I02 đều đổi hẳn thứ
+   nằm trong khung hero, mà lớp phủ thì không đổi theo — nên chữ trắng không bao giờ rơi xuống
+   một nền sáng và mất khả năng đọc, dù bên dưới có là tấm ảnh nào. */
+.scrim {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom,
+    rgba(8, 14, 12, 0.62) 0%, rgba(8, 14, 12, 0.18) 34%, rgba(8, 14, 12, 0.86) 100%);
+}
+
+.bar {
+  position: absolute; top: 0; left: 0; right: 0;
+  z-index: 4;
+  display: flex; align-items: baseline; gap: 18px;
+  padding: 26px var(--pad);
+  border-bottom: 1px solid var(--line-dark);
+}
+.brand {
+  font-size: 17px; font-weight: 500;
+  letter-spacing: 0.42em;
+  color: #fff;
+}
+.brand-sub { font-size: 11.5px; color: var(--dim-dark); letter-spacing: 0.06em; }
+nav { display: flex; gap: 26px; margin-left: auto; }
+nav a {
+  color: rgba(232, 236, 233, 0.86); text-decoration: none;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.18em;
+  padding-bottom: 4px; border-bottom: 1px solid transparent;
+}
+nav a:hover { color: #fff; border-bottom-color: var(--ochre); }
+.bar-cta {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.14em;
+  color: #fff;
+  border: 1px solid var(--line-dark);
+  padding: 8px 15px;
+}
+
+/* Bóng chữ nhẹ, không phải để trang trí: dải phủ mỏng nhất ở khoảng giữa ảnh, mà đó đúng
+   là chỗ dòng kicker rơi vào — trên mặt nước sáng nó gần như biến mất. */
+.hero-copy {
+  position: relative; z-index: 3; max-width: 900px;
+  text-shadow: 0 1px 16px rgba(8, 14, 12, 0.55);
+}
+.kicker {
+  display: block;
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--ochre);
+  margin-bottom: 22px;
+}
+.hero h1 {
+  font-size: clamp(36px, 5.2vw, 68px);
+  color: #fff;
+  margin-bottom: 22px;
+}
+.hero p { color: rgba(232, 236, 233, 0.82); max-width: 54ch; font-size: 16px; }
+
+.hero-act { display: flex; align-items: center; gap: 34px; flex-wrap: wrap; margin-top: 26px; }
+.assure {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 6px 24px;
+  font-size: 12px; color: var(--dim-dark);
+  letter-spacing: 0.04em;
+}
+
+/* ── Nút: vuông, viền một pixel, chữ hoa giãn rộng ──────────────────────── */
+
+.cta-solid, .cta-ghost {
+  font: 500 11px/1 var(--sans);
+  letter-spacing: 0.2em;
+  padding: 17px 32px;
+  border-radius: 0;
+  cursor: pointer;
+}
+.cta-solid { background: var(--ochre); color: #14100a; border: 1px solid var(--ochre); }
+.cta-solid:hover { background: #c08f49; border-color: #c08f49; }
+.cta-ghost { background: transparent; color: inherit; border: 1px solid currentColor; }
+.cta-ghost:hover { background: rgba(176, 128, 63, 0.14); border-color: var(--ochre); }
+
+/* ── Dải điều kiện hôm nay ──────────────────────────────────────────────── */
+
+.strip {
+  display: flex; flex-wrap: wrap; gap: 0 44px;
+  padding: 0 var(--pad);
+  background: var(--dark);
+  color: var(--on-dark);
+  border-bottom: 1px solid var(--line-dark);
+}
+.chip {
+  padding: 18px 0;
+  font-size: 12.5px;
+  letter-spacing: 0.03em;
+  color: var(--dim-dark);
+}
+
+/* ── Nhịp chung của các dải ─────────────────────────────────────────────── */
+
+.band { padding: 92px var(--pad); }
+.band.dark { background: var(--dark); color: var(--on-dark); }
+.band.dark p, .band.dark figcaption { color: var(--dim-dark); }
+.band.dark .note { color: var(--dim-dark); }
+
+/* Đầu mục đánh số — cột số hẹp, nét kẻ chạy hết chiều ngang phía trên. */
+.band-head {
+  display: grid; grid-template-columns: 86px 1fr;
+  gap: 0 28px;
+  padding-top: 26px;
+  border-top: 1px solid var(--line);
+  max-width: 100%;
+}
+.band.dark .band-head { border-top-color: var(--line-dark); }
+.num {
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.24em;
+  color: var(--ochre);
+  padding-top: 10px;
+}
+
+/* ── 01 · Vì sao ────────────────────────────────────────────────────────── */
+
+.why-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  margin-top: 56px;
+  border-top: 1px solid var(--line);
+}
+.why-card {
+  padding: 32px 26px 34px 0;
+  border-right: 1px solid var(--line);
+}
+.why-card:last-child { border-right: 0; }
+.why-card:not(:first-child) { padding-left: 26px; }
+.why-card .ico { font-size: 22px; line-height: 1; display: block; margin-bottom: 18px; }
+.why-card b { display: block; font-size: 15px; font-weight: 500; margin-bottom: 5px; }
+.why-card span { font-size: 13px; color: var(--dim); }
+
+/* ── 02 · Chỗ ở — ảnh tràn ra mép trang, trái phải xen kẽ ───────────────── */
+
+.room {
+  display: grid; grid-template-columns: 1.25fr 1fr;
+  gap: 0 56px; align-items: center;
+  margin-top: 82px;
+}
+.room figure { margin-left: calc(var(--pad) * -1); }
+.room img { width: 100%; aspect-ratio: 4 / 3; }
+.room figcaption { padding-left: var(--pad); }
+/* Đảo bên thì phải đảo cả tỉ lệ cột, nếu không tấm ảnh bên phải sẽ rơi vào cột hẹp và hai
+   phòng trông như hai cỡ ảnh khác nhau — đọc ra là lỗi dựng trang chứ không phải nhịp xen kẽ. */
+.room.flip { grid-template-columns: 1fr 1.25fr; }
+.room.flip figure { order: 2; margin-left: 0; margin-right: calc(var(--pad) * -1); }
+.room.flip figcaption { padding-left: 0; padding-right: var(--pad); text-align: right; }
+.room.flip .room-copy { order: 1; }
+.room-copy b {
+  display: block;
+  font-size: clamp(21px, 2vw, 27px); font-weight: 300;
+  letter-spacing: -0.01em;
+  margin-bottom: 12px;
+}
+.room-copy p { font-size: 14.5px; }
+.price {
+  font-size: 12px; font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--ochre);
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  margin-top: 20px;
+}
+
+.rooms-foot {
+  display: flex; flex-wrap: wrap; gap: 40px 64px; align-items: flex-start;
+  margin-top: 72px;
+}
+.note { font-size: 12.5px; color: var(--dim); margin: 0; }
+.hours-box { min-width: 320px; }
+.hours-box b {
+  display: block;
+  font-size: 10.5px; font-weight: 500;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--ochre);
+  margin-bottom: 12px;
+}
+.hours {
+  display: flex; gap: 14px;
+  font-size: 13.5px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+.band.dark .hours { border-top-color: var(--line-dark); }
+.hours span { min-width: 116px; color: var(--dim); }
+
+/* ── 03 · Thư viện ảnh — xếp lệch, không phải lưới đều ──────────────────── */
+
+.gal {
+  display: grid; grid-template-columns: repeat(6, 1fr);
+  gap: 34px 22px;
+  margin-top: 56px;
+}
+.gal figure { grid-column: span 2; }
+.gal figure:nth-child(1) { grid-column: span 4; }
+.gal figure:nth-child(6) { grid-column: span 6; }
+.gal img { width: 100%; aspect-ratio: 3 / 2; }
+.gal figure:nth-child(1) img { aspect-ratio: 16 / 9; }
+/* Tấm thứ hai cao hơn để hai cột cùng hàng kết thúc gần bằng nhau — một khoảng trống
+   200px dưới nó thì đọc ra là lưới hỏng chứ không phải là bố cục xếp lệch. */
+.gal figure:nth-child(2) img { aspect-ratio: 5 / 6; }
+.gal figure:nth-child(6) img { aspect-ratio: 24 / 7; }
+.gal-foot {
+  display: flex; flex-wrap: wrap; gap: 24px 40px;
+  align-items: center; justify-content: space-between;
+  margin-top: 52px;
+}
+
+/* ── 04 · Ô đặt phòng ───────────────────────────────────────────────────── */
+
+.booking {
+  margin-top: 52px;
+  border: 1px solid var(--line);
+  padding: 36px 36px 30px;
+}
+.band.dark .booking { border-color: var(--line-dark); }
+.book-form {
+  display: grid; grid-template-columns: repeat(4, 1fr) auto;
+  gap: 22px; align-items: end;
+}
+.bk { display: block; }
+.bk > span {
+  display: block; margin-bottom: 9px;
+  font-size: 10.5px; font-weight: 500;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--dim);
+}
+.book-form input, .book-form select {
+  width: 100%;
+  font: 400 14.5px/1.4 var(--sans);
+  color: var(--ink);
+  background: transparent;
+  border: 0; border-bottom: 1px solid var(--ink);
+  border-radius: 0;
+  padding: 9px 0;
+}
+.book-form input:focus, .book-form select:focus {
+  outline: 0; border-bottom-color: var(--ochre);
+}
+.book-form button {
+  font: 500 11px/1 var(--sans);
+  letter-spacing: 0.2em;
+  background: var(--ink); color: #fff;
+  border: 1px solid var(--ink); border-radius: 0;
+  padding: 16px 24px;
+  cursor: pointer;
+}
+.book-form button:hover { background: var(--ochre); border-color: var(--ochre); color: #14100a; }
+.book-sum {
+  margin: 34px 0 0;
+  font-size: clamp(19px, 1.8vw, 24px); font-weight: 300;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.book-note { font-size: 12.5px; margin: 8px 0 0; }
+/* Câu trả lời của trang khi gửi biểu mẫu: cùng cỡ, cùng màu với mọi ghi chú khác — một câu
+   trả lời có kiểu dáng riêng thì nhận ra được bằng mắt, và đó là chỗ dị thường phản ứng núp. */
+.book-ok { font-size: 13px; color: var(--ochre); margin: 14px 0 0; letter-spacing: 0.02em; }
+
+/* ── 05 · Nội quy ───────────────────────────────────────────────────────── */
+
+.rule-list {
+  margin: 52px 0 0; padding: 0;
+  list-style: none;
+  counter-reset: rule;
+  max-width: 74ch;
+}
+.rule-list li {
+  counter-increment: rule;
+  position: relative;
+  padding: 18px 0 18px 54px;
+  border-top: 1px solid var(--line);
+  font-size: 15.5px;
+}
+.rule-list li::before {
+  content: counter(rule, decimal-leading-zero);
+  position: absolute; left: 0; top: 20px;
+  font-size: 11px; letter-spacing: 0.18em;
+  color: var(--ochre);
+}
+.rules .note { margin-top: 22px; }
+.lost {
+  margin-top: 46px;
+  border-left: 2px solid var(--ochre);
+  padding: 4px 0 4px 22px;
+  max-width: 64ch;
+}
+.lost b {
+  font-size: 10.5px; font-weight: 500;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--ochre);
+}
+.lost p { font-size: 14px; margin: 9px 0 0; }
+
+/* ── 06 · Đường đi ──────────────────────────────────────────────────────── */
+
+/* position:relative và không cắt — xem ghi chú (4) ở đầu file. */
+.mapbox {
+  position: relative;
+  display: grid; grid-template-columns: 380px 1fr;
+  gap: 0 48px; align-items: center;
+  margin-top: 56px;
+  border: 1px solid var(--line-dark);
+  padding: 28px;
+}
+.map-art { width: 100%; height: auto; display: block; }
+.map-facts { list-style: none; margin: 0; padding: 0; }
+.map-facts li {
+  display: flex; gap: 18px; align-items: baseline;
+  font-size: 14px;
+  padding: 13px 0;
+  border-top: 1px solid var(--line-dark);
+}
+.map-facts li:first-child { border-top: 0; }
+.map-facts li > span {
+  min-width: 212px;
+  font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--dim-dark);
+}
+.map-facts b { font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+.wide-shot { margin-top: 52px; }
+.wide-shot img { width: 100%; aspect-ratio: 24 / 8; }
+
+/* ── 07 · Đánh giá ──────────────────────────────────────────────────────── */
+
+.rev-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin-top: 56px;
+  border-top: 1px solid var(--line);
+}
+.rev { padding: 34px 30px 34px 0; border-right: 1px solid var(--line); }
+.rev:last-child { border-right: 0; }
+.rev:not(:first-child) { padding-left: 30px; }
+.rev-face { display: flex; align-items: center; gap: 14px; }
+.rev img.face { width: 48px; height: 48px; border-radius: 50%; flex: none; }
+.rev-face figcaption {
+  padding-top: 0;
+  font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase;
+}
+.rev-head { margin: 22px 0 10px; font-size: 14px; color: var(--ink); }
+.rev-head b { font-weight: 500; }
+.rev-when { color: var(--dim); font-size: 12px; margin-left: 10px; }
+.rev p { font-size: 14px; margin-bottom: 0; }
+.reviews .cta-ghost { margin-top: 48px; }
+
+/* ── Chân trang ─────────────────────────────────────────────────────────── */
+
+footer {
+  display: flex; flex-wrap: wrap; gap: 8px 46px;
+  padding: 46px var(--pad) 64px;
+  background: var(--dark-2);
+  color: var(--dim-dark);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+}
+
+/* ── Màn hình hẹp ───────────────────────────────────────────────────────── */
+
+@media (max-width: 980px) {
+  .band { padding: 66px var(--pad); }
+  .band-head { grid-template-columns: 1fr; gap: 10px; }
+  .num { padding-top: 0; }
+  .hero { min-height: 80vh; padding-bottom: 48px; }
+  .bar { flex-wrap: wrap; gap: 10px 16px; }
+  nav { margin-left: 0; order: 3; width: 100%; flex-wrap: wrap; gap: 16px; }
+  .why-grid { grid-template-columns: 1fr 1fr; }
+  .why-card { border-bottom: 1px solid var(--line); }
+  .room, .room.flip { grid-template-columns: 1fr; gap: 26px; }
+  .room figure, .room.flip figure {
+    order: 1; margin-left: calc(var(--pad) * -1); margin-right: calc(var(--pad) * -1);
+  }
+  .room.flip figcaption { text-align: left; padding-right: 0; padding-left: var(--pad); }
+  .room .room-copy, .room.flip .room-copy { order: 2; }
+  .gal { grid-template-columns: repeat(2, 1fr); }
+  .gal figure, .gal figure:nth-child(1), .gal figure:nth-child(6) { grid-column: span 2; }
+  .gal img, .gal figure:nth-child(1) img, .gal figure:nth-child(6) img { aspect-ratio: 3 / 2; }
+  .book-form { grid-template-columns: 1fr 1fr; }
+  .mapbox { grid-template-columns: 1fr; gap: 26px; }
+  .map-facts li > span { min-width: 150px; }
+  .rev-grid { grid-template-columns: 1fr; }
+  .rev, .rev:not(:first-child) {
+    padding: 28px 0; border-right: 0; border-bottom: 1px solid var(--line);
+  }
+}
+
+/* ── Chrome của trò chơi vẽ đè lên trang ────────────────────────────────── */
+
+/* Vòng ngắm — phần tử sẽ bị tính điểm nếu thả tay ngay bây giờ. MÀU TRUNG TÍNH có chủ ý:
+   nó cho biết bạn đang khoanh CÁI GÌ, tuyệt đối không cho biết cái đó đúng hay sai. */
+.aim-ring {
+  outline: 2px solid rgba(120, 160, 150, 0.95);
+  outline-offset: 2px;
+  background: rgba(120, 160, 150, 0.16);
+}
+.evidence-ring { outline: 2px solid #4fa88b; outline-offset: 3px; }
+.missed-ring {
+  outline: 2px dashed #d9a441;
+  outline-offset: 3px;
+  animation: loRa 1.4s ease-out 3;
+}
+@keyframes loRa {
+  0%   { box-shadow: 0 0 0 0 rgba(217, 164, 65, 0.55); }
+  100% { box-shadow: 0 0 0 14px rgba(217, 164, 65, 0); }
+}
+
+/* M03 — nhịp thở. Biên độ do chính dị thường đặt qua --tho-scale. Các mốc KHÔNG chia đều:
+   hít vào nhanh, GIỮ, rồi thở ra chậm — một dao động chia đều đọc ra là hiệu ứng giao diện,
+   chính quãng giữ mới làm nó đọc ra là một thứ đang thở. */
+@keyframes tho {
+  0%   { transform: scale(1); }
+  38%  { transform: scale(var(--tho-scale, 1.04)); }
+  56%  { transform: scale(var(--tho-scale, 1.04)); }
+  100% { transform: scale(1); }
+}
+
+/* T05 — dòng chữ chỉ hiện khi rê chuột. Trang tự vẽ lấy thay vì dùng title= của trình duyệt:
+   tooltip mặc định đợi gần một giây và vẽ bằng phông hệ thống, nên nó trông như một phần của
+   TRÌNH DUYỆT — mà thứ trông như chrome trình duyệt thì không đọc ra là dị thường của trang. */
+.ghost-tip {
+  position: fixed;
+  z-index: 5;
+  max-width: 280px;
+  padding: 10px 14px;
+  background: var(--dark-2);
+  color: var(--on-dark);
+  font: 400 12.5px/1.5 var(--sans);
+  box-shadow: 0 10px 26px -10px rgba(8, 14, 12, 0.7);
+  pointer-events: none;
+}
