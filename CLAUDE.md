@@ -9,6 +9,15 @@ A collection of vanilla HTML/CSS/JS browser games, deployed as a static site to 
 `package.json`, no dependencies to install. `index.html` is the hub; every game is one
 self-contained file in `games/`.
 
+**`.nojekyll` at the repo root is load-bearing — do not delete it.** GitHub Pages runs Jekyll
+by default, and Jekyll's Liquid templating parses `{{ … }}` in *every* file it publishes,
+**including inside fenced code blocks**, because Liquid runs before the Markdown converter. A
+JSDoc type in a design doc (`@param {{x:number,y:number}[]} points`) is enough to fail the whole
+deploy with `Liquid syntax error … Variable was not properly terminated`. Nothing here uses
+Jekyll — there is no `_config.yml`, no `Gemfile`, no `_layouts`, no front matter — so the fix is
+to turn it off rather than to litter the docs with `{% raw %}`. With `.nojekyll` present, Pages
+skips the build and serves the files verbatim, which is all this site ever needed.
+
 ## Commands
 
 ```bash
