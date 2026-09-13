@@ -256,4 +256,89 @@ export const R04 = {
   }
 };
 
-export const REACTIVE_ANOMALIES = [R01, R02, R04, R05, R06];
+/* ── R03: tìm một thứ không có, và tìm thấy một thứ khác ───────────────
+   Gõ vào ô tìm kiếm một thứ mà cái sàn này không bán — "xe máy", "tủ lạnh", một chuỗi ký tự
+   vô nghĩa. Trên một ván bình thường trang trả lời đúng như mọi trang rao vặt: "Không có món
+   nào khớp với bộ lọc." Ở đây thì có. Đúng MỘT món hiện ra.
+
+   Nó trông y hệt chín món kia — cùng khung ảnh, cùng cỡ chữ, cùng hàng giá — vì nó được NHÂN
+   BẢN từ một thẻ có sẵn rồi chỉ thay phần chữ và tấm ảnh. Rồi bấm vào tên món: không mở ra gì
+   cả. Chín thẻ kia đều mở, thẻ này thì không, và đó mới là nửa sau của dị thường — người chơi
+   phải THỬ mới biết, đúng luật của họ REACTIVE.
+
+   Chỉ bắn khi ô tìm kiếm CÓ CHỮ và không món nào khớp. Lọc theo loại hàng hay theo giá mà ra
+   rỗng thì trang vẫn nói "không có món nào" như thường: nếu bất cứ trạng thái rỗng nào cũng
+   sinh ra một món thì người chơi không cần đọc, chỉ cần thấy. Ở đây họ phải tự nghĩ ra việc
+   đi tìm một thứ không tồn tại.
+
+   Con số "đang hiển thị" được sửa thành 1 cho khớp. Bỏ qua bước ấy thì nhãn ghi 0 mà bên dưới
+   có một thẻ, và người chơi đọc ra là trang đếm sai — tức là một cái LỖI, thứ người ta bỏ qua
+   (cùng bài học với R02). Dị thường mạnh hơn khi mọi con số đều đồng ý với nhau.
+
+   Thẻ nhân bản được TẨY SẠCH dấu vết dị thường trước khi dùng: thẻ gốc có thể đã bị I01 làm
+   ngả màu hay T03 gắn bộ đếm, mà một bản sao mang theo data-anom thì sẽ tính điểm cho một dị
+   thường nằm ở chỗ khác. */
+export const R03 = {
+  id: 'R03', family: 'REACTIVE', label: 'Tìm một thứ không có, và trang tìm ra một món',
+  slots: ['search'], weight: 3,
+  deferred: true,
+  apply(ctx) {
+    const entry = pick(ctx.rng, ctx.flavour);
+    if (!ctx.slot.querySelector('input')) return;
+
+    const grid = ctx.root.querySelector('[data-grid]');
+    const model = grid?.firstElementChild;
+    if (!grid || !model) return;
+    const empty = ctx.root.querySelector('[data-empty]');
+    const countOut = ctx.root.querySelector('[data-result-count]');
+
+    let card = null;
+    const build = () => {
+      card = model.cloneNode(true);
+      // Tẩy mọi dấu vết: chỗ bám, dị thường đã áp lên thẻ gốc, kiểu dáng do chúng đặt vào.
+      for (const el of [card, ...card.querySelectorAll('*')]) {
+        el.removeAttribute('data-slot');
+        el.removeAttribute('data-anom');
+        el.removeAttribute('style');
+        el.classList.remove('evidence-ring', 'missed-ring', 'aim-ring');
+      }
+      // Thẻ này không thuộc loại nào và không có giá nào, nên nó không lọt qua bộ lọc nữa.
+      card.removeAttribute('data-title');
+      card.removeAttribute('data-cat');
+      card.removeAttribute('data-price');
+
+      /* Vẫn là một liên kết, vẫn gạch chân, vẫn đổi con trỏ — chỉ là không đi đâu cả.
+         Gỡ hẳn thẻ <a> đi thì nhìn đã thấy nó khác chín món kia, mà cái khác biệt ấy phải
+         chỉ lộ ra khi người chơi BẤM. */
+      const link = card.querySelector('[data-goto]') ?? card.querySelector('a');
+      if (link) {
+        link.removeAttribute('data-goto');
+        link.setAttribute('href', '#');
+        link.textContent = entry.title;
+      }
+      const img = card.querySelector('img');
+      if (img) { img.setAttribute('src', entry.src); img.setAttribute('alt', entry.cap); }
+      const cap = card.querySelector('figcaption');
+      if (cap) cap.textContent = entry.cap;
+      const price = card.querySelector('.price');
+      if (price) price.textContent = entry.price;
+      const sub = card.querySelector('.sub');
+      if (sub) sub.textContent = entry.sub;
+
+      grid.appendChild(card);
+      ctx.mark(card);
+    };
+
+    ctx.root.addEventListener('site:filtered', (e) => {
+      const found = Boolean(e.detail?.query) && e.detail.shown === 0;
+      if (found && !card) build();
+      if (!card) return;
+      card.style.display = found ? '' : 'none';
+      if (!found) return;
+      if (empty) empty.hidden = true;
+      if (countOut) countOut.textContent = '1';
+    });
+  }
+};
+
+export const REACTIVE_ANOMALIES = [R01, R02, R03, R04, R05, R06];

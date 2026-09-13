@@ -1,20 +1,22 @@
 /* Chương 3 — SănĐồCũ.vn. Chợ đồ cũ, ba trang. Ngữ vực: thương mại điện tử. Spec §5.3.
 
-   Chương của KHỐI LƯỢNG. Mười hai tấm ảnh do mười hai người chụp, mười hai cái tên món, mười
-   hai cái giá — ở một trang mà mọi thứ vốn đã lệch nhau, một thứ lệch thêm sẽ không nhô ra.
-   Đây cũng là nơi T06 (quên dần cách viết tiếng Việt) có lưới đủ dày để rữa dần mà không bị
-   bắt ngay ở mục thứ hai.
+   Chương của KHỐI LƯỢNG. Chín tấm ảnh do chín người chụp, chín cái tên món, chín cái giá —
+   ở một trang mà mọi thứ vốn đã lệch nhau, một thứ lệch thêm sẽ không nhô ra. Đây cũng là nơi
+   T06 (quên dần cách viết tiếng Việt) có lưới đủ dày để rữa dần mà không bị bắt ngay ở mục
+   thứ hai.
 
    Nhà của R02 (giỏ tự thêm một món) — dị thường đầu tiên bắc qua hai trang: bấm ở trang sản
-   phẩm, bằng chứng nằm ở trang giỏ hàng.
+   phẩm, bằng chứng nằm ở trang giỏ hàng — và của R03 (tìm một thứ không có thì trang tìm ra
+   một món), dị thường duy nhất nấp sau một trạng thái RỖNG.
 
    Dòng "tài khoản của Hạnh đã ngừng hoạt động" ở trang giỏ hàng là NỘI DUNG SẠCH và luôn có
    mặt, giống ô tưởng niệm của chương 2: nó là cái mốc cho T08. */
 
 import { picsum } from '../engine/img.js';
 
-/* Ảnh thay thế của I02 — đã ghim, và đã được xem tận mắt. Kích thước rộng rãi để cùng một
-   URL dùng được cho cả ảnh lớn lẫn ảnh trong lưới. */
+/* Ảnh ghim dùng cho hai dị thường cần một tấm ảnh KHÔNG có sẵn trên trang: I02 (ảnh đổi khi
+   bạn quay lại) và R03 (món hàng hiện ra khi tìm một thứ không có). Cả ba tấm đều đã được xem
+   tận mắt. Kích thước rộng rãi để cùng một URL dùng được cho cả ảnh lớn lẫn ô ảnh trong lưới. */
 const swap = (id) => picsum({ w: 1800, h: 1350, id });
 
 export const CH3 = {
@@ -23,23 +25,23 @@ export const CH3 = {
   slug: 'ch3-san-do-cu',
   subtitle: 'Chợ đồ cũ · ba trang',
   briefing: 'Một sàn rao vặt đồ đã qua sử dụng.',
-  min: 6,
-  max: 7,
+  min: 5,
+  max: 6,
   exclude: [],
   force: [],
 
   pages: [
     {
       id: 'listing',
-      slots: { nav: 1, paragraph: 1, photo: 12, 'product-title': 12, price: 12, footer: 1 }
+      slots: { nav: 1, search: 1, paragraph: 1, photo: 9, 'product-title': 9, price: 9, footer: 1 }
     },
 
-    /* Mười hai trang món hàng. `optional: true` — chúng vẫn nhận dị thường bình thường, chỉ
-       là không được BẢO ĐẢM có. Không thể rải 6–8 dị thường cho mười bốn trang, mà cũng không
+    /* Chín trang món hàng. `optional: true` — chúng vẫn nhận dị thường bình thường, chỉ là
+       không được BẢO ĐẢM có. Không thể rải 5–6 dị thường cho mười một trang, mà cũng không
        nên: một sàn rao vặt mà món nào cũng có gì đó sai thì không còn là một cái sàn nữa.
-       Chỉ trang đầu khai đủ slot — nếu cả mười hai cùng khai thì kho slot của các trang chi
-       tiết áp đảo trang danh sách, và gần như mọi dị thường sẽ nằm sau một cú bấm, trong khi
-       chính cái lưới mười hai món mới là lớp nguỵ trang của chương (spec §5.3). */
+       Chỉ trang đầu khai đủ slot — nếu cả chín cùng khai thì kho slot của các trang chi tiết
+       áp đảo trang danh sách, và gần như mọi dị thường sẽ nằm sau một cú bấm, trong khi chính
+       cái lưới chín món mới là lớp nguỵ trang của chương (spec §5.3). */
     {
       id: 'may-anh', optional: true,
       slots: {
@@ -54,10 +56,7 @@ export const CH3 = {
     { id: 'loa-ban', optional: true, slots: { 'product-title': 1, price: 1, photo: 1, paragraph: 1, cta: 1 } },
     { id: 'sach-cu', optional: true, slots: { 'product-title': 1, price: 1, photo: 1, paragraph: 1, cta: 1 } },
     { id: 'den-ban', optional: true, slots: { 'product-title': 1, price: 1, photo: 1, paragraph: 1, cta: 1 } },
-    { id: 'ca-men', optional: true, slots: { 'product-title': 1, price: 1, photo: 1, paragraph: 1, cta: 1 } },
-    { id: 'but-chi-mau', optional: true, slots: { 'product-title': 1, price: 1, photo: 1, paragraph: 1, cta: 1 } },
     { id: 'bo-dung-cu', optional: true, slots: { 'product-title': 1, price: 1, photo: 1, paragraph: 1, cta: 1 } },
-    { id: 'khung-anh', optional: true, slots: { 'product-title': 1, price: 1, photo: 1, paragraph: 1, cta: 1 } },
 
     {
       id: 'cart',
@@ -203,6 +202,34 @@ export const CH3 = {
         price: '0₫',
         seller: 'Người gửi: không rõ · bạn đã nhận món này rồi',
         address: '38/7 Nguyễn Văn Đậu, P.6, Q. Bình Thạnh'
+      }
+    ],
+
+    /* R03 — gõ một thứ cái sàn này không bán, và nó vẫn tìm ra đúng một món.
+       Ảnh đã ghim và đã được xem tận mắt: một cái bẫy mộng treo ngược sáng, một cỗ máy không
+       rõ là máy gì, và một mặt bàn bày mấy thứ nhỏ không gọi được tên. Cả ba đều trông y như
+       ảnh do người bán tự chụp — đó mới là chỗ đáng sợ, chứ không phải ở chỗ ảnh ghê rợn. */
+    R03: [
+      {
+        title: 'Món bạn vừa tìm. Đã có người giữ chỗ.',
+        cap: 'Ảnh người bán tự chụp, không rõ ngày',
+        price: 'Không bán',
+        sub: 'Chưa từng được rao · không rõ khu vực',
+        src: swap(104)
+      },
+      {
+        title: 'Không rõ tên món — người bán để trống',
+        cap: 'Người bán không viết gì dưới ảnh này',
+        price: '0₫',
+        sub: 'Đăng lúc 03:00 · không rõ khu vực',
+        src: swap(145)
+      },
+      {
+        title: 'Thứ này không thuộc loại hàng nào',
+        cap: 'Chụp trong một căn phòng không có trong tin đăng',
+        price: '0₫',
+        sub: 'Không ai rao · không ai gỡ xuống',
+        src: swap(26)
       }
     ],
 

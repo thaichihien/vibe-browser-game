@@ -372,7 +372,7 @@ clearing chapter N unlocks N+1. Each clear stores a rank.
 |---|---|---|---|---|---|
 | 1 | **LUMIÈRE** — kem dưỡng ẩm | 1 | 5–6 | landing page bán hàng | Cult |
 | 2 | **Bếp Nhà Mây** — blog nấu ăn | 5 | 6–8 | blog cá nhân | Người đã mất |
-| 3 | **SănĐồCũ.vn** — chợ đồ cũ | 3 | 6–7 | thương mại điện tử | Monster |
+| 3 | **SănĐồCũ.vn** — chợ đồ cũ | 11 | 5–6 | thương mại điện tử | Monster |
 | 4 | **Hồ Vắng** — khu du lịch sinh thái | 1 | 7–9 | trang đặt phòng | Alien |
 | 5 | **Tiểu học Hoa Ban** — trang thông báo | 1 | 6–8 | trang cơ quan | Cult |
 | 6 | **MegaLink** — trạng thái hệ thống | 1 | 7–8 | dashboard kỹ thuật | Thứ trong đường truyền |
@@ -496,17 +496,22 @@ than blanking a whole comment.
 
 ### 5.3 Chapter 3 — SănĐồCũ.vn · BUILT
 
-Three pages: `listing` (grid of 12 second-hand items), `product` (one item, seller card,
-description, Q&A), `cart` (line items, shipping form, total).
+Eleven pages: `listing` (grid of **9** second-hand items), one page per item (seller card,
+description, Q&A), `cart` (line items, shipping form, total). The roll is **5–6**.
+
+*(It was twelve items and 6–7 anomalies. Trimmed on play: twelve cards of near-identical
+chrome is past the point where volume is camouflage and into where it is just a long scroll,
+and six-to-seven finds across eleven pages made every run a sweep rather than a read.)*
 
 Slots as built, per page:
 
 | | `listing` | `product` | `cart` |
 |---|---|---|---|
 | `nav` | 1 | 1 | 1 |
-| `product-title` | 12 | 1 | — |
-| `price` | 12 | 1 | 1 |
-| `photo` | 12 | 1 | — |
+| `search` | 1 | — | — |
+| `product-title` | 9 | 1 | — |
+| `price` | 9 | 1 | 1 |
+| `photo` | 9 | 1 | — |
 | `paragraph` | 1 | 2 | 1 |
 | `date` | — | 1 | — |
 | `tile` | — | 1 | — |
@@ -526,16 +531,29 @@ region of the page that can only ever cost the player a heart.
 The product page carries **three** avatars (the seller plus two of the four askers) rather than
 one, so `I03` — which needs two faces on a page — has a home here.
 
-Imagery: twelve pinned `picsum` shots of twelve unrelated objects — a camera, a typewriter, a
-wall clock, a child's tricycle, a chair, a speaker, a book, a desk lamp, an enamel mug, coloured
-pencils, hand tools, picture frames. Second-hand listings photographed by twelve different
-people is exactly the visual incoherence a real marketplace has, and it is the best camouflage
-in the game: on a page where every photograph already clashes, one more that clashes does not
-stand out. There is a test that no two goods share a photograph.
+Imagery: nine pinned `picsum` shots of nine unrelated objects — a camera, a typewriter, a wall
+clock, a child's tricycle, a chair, a speaker, a book, a desk lamp, hand tools. Second-hand
+listings photographed by nine different people is exactly the visual incoherence a real
+marketplace has, and it is the best camouflage in the game: on a page where every photograph
+already clashes, one more that clashes does not stand out. There is a test that no two goods
+share a photograph, and that `R03`'s find reuses none of them — the same photograph twice on
+one grid reads as a CMS slip, which is the "it's just a bug" escape hatch §1 exists to close.
 
-Home of `R02 gio-hang-tu-them`. The listing grid's sheer volume of prices and titles makes
-this the chapter where `T03 dem-nguoc-trong-van-ban` and `T06 chinh-ta-sai-tang-dan` are
-hardest to spot — twelve cards of noise.
+**Every category the filter rail offers has to keep at least one item in it.** Trimming the grid
+could otherwise leave a checkbox that only ever produces an empty result — and an empty result is
+now `R03`'s trigger, so a dead filter would hand the player the anomaly without them ever
+searching for anything. There is a test.
+
+**The search ignores diacritics.** Typing `may anh` for *máy ảnh* is what Vietnamese users
+actually do, and a marketplace that returns nothing for it is a badly built site. This is a rule
+of the game rather than a convenience: the empty search result is `R03`'s trigger, so if `may anh`
+came back empty the anomaly would fire on a perfectly reasonable query — the player would trip
+over it instead of thinking of it. Folded to ASCII before comparing, empty means *this place does
+not have that thing*.
+
+Home of `R02 gio-hang-tu-them` and of `R03 tim-kiem-tra-ve-chinh-minh`. The listing grid's
+volume of prices and titles makes this the chapter where `T03 dem-nguoc-trong-van-ban` and
+`T06 chinh-ta-sai-tang-dan` are hardest to spot.
 
 **The cart is real state that survives navigation.** Pressing "bỏ vào giỏ" on the product page
 adds a line to the cart page and updates the badge on all three navs. Without that, `R02` has
@@ -1032,9 +1050,46 @@ which is a *bug*, and bugs get ignored. The anomaly is far stronger when every n
 nothing is broken, there is simply something in your cart you never chose. Its own items are
 priced 0₫ so the total stays honest.
 
-**R03 · `tim-kiem-tra-ve-chinh-minh`** — slots: `nav` (search box) · Ch3, Ch6
-Search anything. Among plausible results sits one whose title is the player's exact query
-prefixed with *"chúng tôi đã tìm thấy"*, or one titled with the current clock time.
+**R03 · `tim-kiem-tra-ve-chinh-minh`** — slots: `search` · Ch3 · BUILT
+Type something this marketplace does not sell — *"tủ lạnh"*, *"xe máy"*, a string of nonsense.
+On an ordinary run the site answers the way every classifieds site answers: *"Không có món nào
+khớp với bộ lọc."* Here it does not. Exactly **one** item comes back.
+
+It looks identical to the nine real ones — same frame, same type, same price row — because it is
+**cloned from a card already in the grid** and only its words and its photograph are replaced.
+Then click the title: nothing opens. The other nine all open. That is the second half of the
+anomaly, and it only exists if the player *tries* it — the REACTIVE family's rule.
+
+The link keeps its `href` and its styling and loses only `data-goto`, so it still looks and
+behaves like a link right up until the moment it should navigate. Stripping the `<a>` outright
+would make the card visibly different from its neighbours, and the difference has to wait for
+the click.
+
+**It fires only when the search box has text and nothing matched.** An empty result from the
+category or price filters alone still gets the honest message: if *any* empty state produced an
+item, the player would not have to read anything, only to notice. Here they have to arrive at the
+idea of looking for something that is not there.
+
+**It corrects the result count to 1.** Skip that and the label says 0 above a visible card, which
+the player reads as a site that cannot count — a *bug*, and bugs get ignored. Same lesson as
+`R02`: the anomaly is strongest when every number agrees.
+
+**The honest filter announces its own result** — `site:filtered` with `{ shown, query }` — and
+`R03` listens for it. Counting the visible cards itself would mean a shared anomaly carrying
+hard-coded knowledge of one chapter's markup.
+
+**The cloned card is scrubbed of anomaly traces first** (`data-slot`, `data-anom`, inline styles,
+ring classes). The card it copies may already be carrying `I01`'s colour cast or `T03`'s counter,
+and a clone that inherited `data-anom` would score an anomaly that lives somewhere else.
+
+The `search` slot is declared on the **listing page only**. `R03` is two-stage, so `reconcile()`
+will not drop it when it attaches to nothing; placed on the search box of a product or cart page
+it would find no grid inside its own page, produce nothing, and still be counted in BẰNG CHỨNG —
+an unwinnable run with nothing on screen to say so. There is a test.
+
+*(The original sketch had it return a result titled with the player's own query, or with the
+current clock time. What shipped is colder: the site does not echo you, it simply has one thing
+that nobody listed and nobody can open.)*
 
 **R04 · `xac-nhan-thua-khach`** — slots: `booking-form` · Ch4 · BUILT
 Fill in the dates, leave the guest count at **2**, and press KIỂM TRA PHÒNG TRỐNG. The site
@@ -1175,7 +1230,7 @@ and never resets. Looking at it is what does it.
 
 ### 6.1 Coverage check
 
-**29 built anomalies across six families, 35 designed.** The four built chapters below are
+**30 built anomalies across six families, 35 designed.** The four built chapters below are
 counted from the code — the registry matched against each chapter's declared slots, and
 re-checked by the test suite — so those columns are measurements, not estimates. Ch5 and Ch6
 are still projections against their sketched inventories.
@@ -1186,10 +1241,10 @@ are still projections against their sketched inventories.
 | STYLE (4) | 4 | 3 | 4 | 4 | 4 | 3 |
 | MOTION (3) | 3 | 3 | 3 | 3 | 3 | 2 |
 | ELEMENT (5) | 5 | 4 | 5 | 5 | 4 | 5 |
-| REACTIVE (5) | 2 | 1 | 2 | 2 | 0 | 2 |
+| REACTIVE (6) | 2 | 1 | 3 | 2 | 0 | 3 |
 | IMAGE (4) | 4 | 4 | 4 | 4 | 4 | 0 |
-| **eligible** | **23** | **21** | **25** | **26** | 23* | 17* |
-| roll | 6–8 | 6–8 | 6–7 | 7–9 | 6–8* | 7–8* |
+| **eligible** | **23** | **21** | **26** | **26** | 23* | 18* |
+| roll | 6–8 | 6–8 | 5–6 | 7–9 | 6–8* | 7–8* |
 | families available | 6 | 6 | 6 | 6 | 5 | 5 |
 
 Ch4's TEXT reaches all eight — it is the only chapter carrying every timestamp shape, a

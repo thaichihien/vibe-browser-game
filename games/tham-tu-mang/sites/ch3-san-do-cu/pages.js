@@ -1,6 +1,6 @@
-/* SănĐồCũ.vn — chợ đồ cũ, mười bốn trang. Bản SẠCH: không có dị thường nào ở đây.
+/* SănĐồCũ.vn — chợ đồ cũ, mười một trang. Bản SẠCH: không có dị thường nào ở đây.
 
-   MƯỜI HAI TẤM ẢNH CỐ TÌNH KHÔNG ĂN NHẬP VỚI NHAU. Mỗi món do một người khác chụp, ánh sáng
+   CHÍN TẤM ẢNH CỐ TÌNH KHÔNG ĂN NHẬP VỚI NHAU. Mỗi món do một người khác chụp, ánh sáng
    khác, nền khác, độ nét khác — đó đúng là cái mà một sàn đồ cũ thật trông như thế, và nó là
    lớp nguỵ trang tốt nhất trong cả trò chơi: ở một trang mà mọi tấm ảnh đều lệch nhau, một
    tấm ảnh sai sẽ không nhô ra nữa (spec §5.3).
@@ -10,9 +10,9 @@
    nội dung mỗi lần bấm sang món khác thì dị thường hoặc bị xoá, hoặc còn lại trên một món
    không phải món của nó. Nội dung tĩnh từ đầu là điều kiện để dị thường sống được.
 
-   Mười hai trang đó khai `optional: true` (xem ch3-san-do-cu.js): chúng vẫn nhận dị thường
-   bình thường, chỉ là không được BẢO ĐẢM có — 6–8 dị thường không rải nổi cho mười bốn trang,
-   và một sàn mà món nào cũng có gì đó sai thì không còn là một cái sàn nữa.
+   Chín trang đó khai `optional: true` (xem ch3-san-do-cu.js): chúng vẫn nhận dị thường bình
+   thường, chỉ là không được BẢO ĐẢM có — 5–6 dị thường không rải nổi cho mười một trang, và
+   một sàn mà món nào cũng có gì đó sai thì không còn là một cái sàn nữa.
 
    GIỎ HÀNG LÀ TRẠNG THÁI THẬT, ĐI XUYÊN TRANG. Bấm "bỏ vào giỏ" ở bất kỳ trang món nào thì
    trang giỏ phải có thêm một dòng, con số trên mọi thanh điều hướng phải đổi, và tạm tính
@@ -29,7 +29,7 @@ const photo = (id, alt, w, h) =>
 const face = (set, n, alt) =>
   imgHtml({ src: portrait({ set, n }), alt, w: 128, h: 128, tint: TINT, cls: 'face' });
 
-/* Mười hai món. `cap` là chú thích viết THEO tấm ảnh — ảnh chọn trước, chữ viết sau.
+/* Chín món. `cap` là chú thích viết THEO tấm ảnh — ảnh chọn trước, chữ viết sau.
    `cat` dùng cho bộ lọc; `q` là các câu hỏi cho trang chi tiết. */
 export const GOODS = [
   { key: 'may-anh', img: 250, cat: 'Điện tử',
@@ -105,24 +105,6 @@ export const GOODS = [
            'Sơn có tróc nhẹ ở khớp giữa. Mình để ở Gò Vấp, bạn qua lấy giúp.'],
     q: [{ who: 'Phương Uyên', set: 'women', n: 48, when: '2 tuần trước', ask: 'Chị còn giữ bóng kèm theo không?', ans: 'Còn một bóng led 9W, mình tặng luôn.' }] },
 
-  { key: 'ca-men', img: 30, cat: 'Gia dụng',
-    title: 'Ca men tráng sứ, có sứt một chỗ', price: 60000,
-    cap: 'Ca men in chữ, đặt ngoài nắng',
-    cond: 'Đã dùng · sứt một chỗ', area: 'Q. Bình Thạnh', date: '25/02/2026',
-    seller: { name: 'Nga', set: 'women', n: 2, since: 2022, rate: 27 },
-    desc: ['Ca men cũ, in chữ còn rõ. Có một chỗ sứt bằng đầu đũa ở miệng ca, không sắc, vẫn uống bình thường.',
-           'Hợp để cắm bút hoặc trồng cây nhỏ hơn là uống nước.'],
-    q: [{ who: 'Tuấn Kiệt', set: 'men', n: 4, when: '2 tuần trước', ask: 'Dung tích chừng bao nhiêu ml vậy chị?', ans: 'Khoảng 350ml bạn nhé.' }] },
-
-  { key: 'but-chi-mau', img: 533, cat: 'Đồ chơi',
-    title: 'Bộ bút chì màu, thiếu hai cây', price: 110000,
-    cap: 'Bút chì màu xếp thành hàng',
-    cond: 'Đã dùng · thiếu hai cây', area: 'Q. Tân Phú', date: '22/02/2026',
-    seller: { name: 'Khoa', set: 'men', n: 49, since: 2020, rate: 63 },
-    desc: ['Bộ 36 cây, còn 34. Các cây còn lại đều dài trên hai phần ba, ruột không gãy.',
-           'Hộp thiếc còn nguyên nắp, có móp nhẹ ở góc.'],
-    q: [{ who: 'Bảo Ngân', set: 'women', n: 35, when: '3 tuần trước', ask: 'Thiếu hai màu nào vậy bạn?', ans: 'Thiếu trắng và vàng nhạt.' }] },
-
   { key: 'bo-dung-cu', img: 491, cat: 'Dụng cụ',
     title: 'Bộ dụng cụ cầm tay', price: 850000,
     cap: 'Kìm, búa và tua vít bày trên gỗ',
@@ -130,31 +112,27 @@ export const GOODS = [
     seller: { name: 'Bình', set: 'men', n: 4, since: 2018, rate: 210 },
     desc: ['Gồm búa, hai kìm, bộ tua vít sáu cây và thước dây. Thép còn sáng, không rỉ, tay cầm không nứt.',
            'Dọn xưởng nên bán cả bộ, không tách lẻ.'],
-    q: [{ who: 'Hữu Phước', set: 'men', n: 36, when: '3 tuần trước', ask: 'Có bán riêng bộ tua vít không anh?', ans: 'Mình bán nguyên bộ thôi bạn.' }] },
-
-  { key: 'khung-anh', img: 834, cat: 'Đồ gỗ',
-    title: 'Ba khung ảnh gỗ cỡ A4', price: 240000,
-    cap: 'Ba khung ảnh treo trên tường sáng',
-    cond: 'Đã dùng · kính còn nguyên', area: 'Q.2', date: '18/02/2026',
-    seller: { name: 'Hạnh', set: 'women', n: 17, since: 2017, rate: 92 },
-    desc: ['Ba khung gỗ sồi cỡ A4, kính còn nguyên, có đủ móc treo phía sau. Bán cả ba, không tách lẻ.',
-           'Gỗ có vân đẹp, một khung xước nhẹ ở cạnh dưới.'],
-    q: [{ who: 'Lan Chi', set: 'women', n: 44, when: '1 tháng trước', ask: 'Khung treo dọc hay ngang được cả chứ ạ?', ans: 'Cả hai bạn nhé, móc sau xoay được.' }] }
+    q: [{ who: 'Hữu Phước', set: 'men', n: 36, when: '3 tuần trước', ask: 'Có bán riêng bộ tua vít không anh?', ans: 'Mình bán nguyên bộ thôi bạn.' }] }
 ];
 
 export const CATEGORIES = [...new Set(GOODS.map((g) => g.cat))].sort();
 
 const money = (n) => `${n.toLocaleString('vi-VN')}₫`;
 
-/* `slot` phát ra data-slot hay không tuỳ trang: markup của mười hai trang món là như nhau,
-   nhưng chỉ trang đầu khai đủ slot. Nếu cả mười hai cùng khai thì kho slot của các trang chi
-   tiết áp đảo trang danh sách, và gần như mọi dị thường sẽ nằm sau một cú bấm. */
+/* `slot` phát ra data-slot hay không tuỳ trang: markup của chín trang món là như nhau, nhưng
+   chỉ trang đầu khai đủ slot. Nếu cả chín cùng khai thì kho slot của các trang chi tiết áp đảo
+   trang danh sách, và gần như mọi dị thường sẽ nằm sau một cú bấm. */
 const slot = (on, name) => (on ? ` data-slot="${name}"` : '');
 
-const nav = (rich) => `
+/* `findable` tách riêng khỏi `rich`: thanh tìm kiếm có mặt trên MỌI trang, nhưng chỗ bám
+   `search` chỉ được khai ở trang danh sách. R03 cần cái lưới hàng nằm trong ctx.root của nó;
+   đặt nó lên ô tìm kiếm của trang món hay trang giỏ thì nó chẳng có lưới nào để chèn thẻ vào,
+   mà vì nó là dị thường hai giai đoạn nên reconcile() KHÔNG loại nó đi — bảng BẰNG CHỨNG sẽ
+   đếm tới một con số không bao giờ đạt được, và ván đó không thắng nổi. */
+const nav = (rich, findable = false) => `
 <header class="bar">
   <span class="brand" data-catch><a href="#" data-goto="listing">SănĐồCũ<span class="dot">.vn</span></a></span>
-  <form class="find" data-find>
+  <form class="find"${slot(findable, 'search')} data-find data-catch>
     <input type="search" name="q" placeholder="Tìm món bạn cần…" aria-label="Tìm kiếm" data-catch>
     <button type="submit" data-catch>TÌM</button>
   </form>
@@ -326,15 +304,25 @@ export const CH3_LISTING = {
 
     const vnd = (n) => `${Number(n).toLocaleString('vi-VN')}₫`;
 
+    /* Tìm kiếm BỎ QUA DẤU: người Việt gõ "may anh" ra "máy ảnh" là chuyện thường ngày, và
+       một ô tìm kiếm bắt gõ đủ dấu mới ra kết quả thì đó là một cái sàn làm ăn cẩu thả.
+
+       Đây không phải chuyện tiện dụng, nó là chuyện luật chơi: trạng thái rỗng của ô tìm kiếm
+       chính là cò súng của R03. Nếu "may anh" trả về rỗng thì dị thường bắn ra sau một câu
+       tìm kiếm hoàn toàn hợp lý, và người chơi vấp phải nó chứ không phải nghĩ ra nó. Bỏ dấu
+       rồi mới so thì rỗng nghĩa đúng là NƠI NÀY KHÔNG CÓ THỨ ĐÓ. */
+    const phang = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+
     function apply() {
       const typed = searches.find((s) => s.value.trim());
-      const q = (typed ? typed.value : '').trim().toLowerCase();
+      const q = phang((typed ? typed.value : '').trim());
       const cats = boxes.filter((b) => b.checked).map((b) => b.value);
       const cap = Number(maxPrice.value);
       let shown = 0;
 
       for (const c of cards) {
-        const okText = !q || c.dataset.title.includes(q);
+        const okText = !q || phang(c.dataset.title).includes(q);
         const okCat = !cats.length || cats.includes(c.dataset.cat);
         const okPrice = Number(c.dataset.price) <= cap;
         const show = okText && okCat && okPrice;
@@ -345,6 +333,13 @@ export const CH3_LISTING = {
       if (priceOut) priceOut.textContent = vnd(cap);
       if (countOut) countOut.textContent = String(shown);
       if (empty) empty.hidden = shown > 0;
+
+      /* Trang tự khai kết quả vừa lọc ra. R03 cần biết đúng hai điều — người chơi có gõ gì
+         không, và có món nào khớp không — mà nó không được phép tự đi đếm lấy: đếm lấy nghĩa
+         là một dị thường dùng chung dựng sẵn hiểu biết về CSS của riêng chương này. Một sự
+         kiện khai ra hai con số thì hợp đồng nằm ở đây, nhìn thấy được, và trang vẫn chạy y
+         nguyên khi không có ai nghe. */
+      page.dispatchEvent(new CustomEvent('site:filtered', { detail: { shown, query: q } }));
     }
 
     for (const b of boxes) b.addEventListener('change', apply);
@@ -367,7 +362,7 @@ export const CH3_LISTING = {
   },
 
   html: `
-${nav(true)}
+${nav(true, true)}
 <main class="shell">
   <h1 data-catch>Đồ cũ đang bán gần bạn</h1>
   <p class="lead" data-slot="paragraph" data-catch>
@@ -386,7 +381,7 @@ ${nav(true)}
 
       <fieldset>
         <legend data-catch>Giá tối đa</legend>
-        <input type="range" min="60000" max="2400000" step="10000" value="2400000"
+        <input type="range" min="90000" max="2400000" step="10000" value="2400000"
                aria-label="Giá tối đa" data-price-filter data-catch>
         <span class="price-out" data-price-out data-catch>2.400.000₫</span>
       </fieldset>
@@ -395,8 +390,8 @@ ${nav(true)}
     </aside>
 
     <div>
-      <p class="count" data-catch><b data-result-count>12</b> món đang hiển thị</p>
-      <div class="grid">${GOODS.map(card).join('')}
+      <p class="count" data-catch><b data-result-count>9</b> món đang hiển thị</p>
+      <div class="grid" data-grid>${GOODS.map(card).join('')}
       </div>
       <p class="empty" data-empty hidden data-catch>Không có món nào khớp với bộ lọc.</p>
     </div>

@@ -355,7 +355,7 @@ import { ANOMALIES, byId } from '../games/tham-tu-mang/js/engine/registry.js';
    chương đó là chỗ đầu tiên có `map`, có bảy tấm ảnh và có một thanh nav chưa ai dùng hết,
    còn R04 thì spec §6 đã dành sẵn cho ô đặt phòng của nó. */
 const STAGE1_IDS = ['T01','T02','T03','T05','T06','T07','T08','T09','S01','S05','S06','S07',
-  'M01','M03','M06','E01','E02','E03','E04','E05','R01','R02','R04','R05','R06','I01','I02','I03','I04'];
+  'M01','M03','M06','E01','E02','E03','E04','E05','R01','R02','R03','R04','R05','R06','I01','I02','I03','I04'];
 const FAMILIES = ['TEXT','STYLE','MOTION','ELEMENT','REACTIVE','IMAGE'];
 
 test('the registry holds exactly the anomalies that are built', () => {
@@ -714,7 +714,7 @@ test('every anomaly the director can place has a slot that exists on the page', 
 
 import { CH2 } from '../games/tham-tu-mang/js/chapters/ch2-bep-nha-may.js';
 import { CH3 } from '../games/tham-tu-mang/js/chapters/ch3-san-do-cu.js';
-import { CH3_PAGES, GOODS, CATEGORIES } from '../games/tham-tu-mang/sites/ch3-san-do-cu/pages.js';
+import { CH3_PAGES, CH3_LISTING, GOODS, CATEGORIES } from '../games/tham-tu-mang/sites/ch3-san-do-cu/pages.js';
 import { CH4 } from '../games/tham-tu-mang/js/chapters/ch4-ho-vang.js';
 import { PAGE_INDEX as CH4_INDEX } from '../games/tham-tu-mang/sites/ch4-ho-vang/page.js';
 const CH4_PAGES = [CH4_INDEX];
@@ -1093,10 +1093,19 @@ test('every image in chapter 3 is pinned and degrades, and no two goods share a 
       assert.ok(isPinned(m[1]), `unpinned image src: ${m[1]}`);
     }
   }
-  // Twelve different sellers photographing twelve different things is the camouflage (§5.3).
+  // Nine different sellers photographing nine different things is the camouflage (§5.3).
   for (const m of CH3_BY_ID.listing.html.matchAll(/picsum\.photos\/id\/(\d+)\//g)) srcs.push(m[1]);
-  assert.strictEqual(srcs.length, 12, 'the listing grid is twelve goods');
-  assert.strictEqual(new Set(srcs).size, 12, `two goods share a photograph: ${srcs}`);
+  assert.strictEqual(srcs.length, GOODS.length, `the listing grid is ${GOODS.length} goods`);
+  assert.strictEqual(new Set(srcs).size, GOODS.length, `two goods share a photograph: ${srcs}`);
+
+  /* R03's cursed listing must not reuse one of them. A photograph appearing twice on the same
+     grid reads as a CMS slip, which is exactly the "it's just a bug" escape hatch §1 says every
+     anomaly has to survive. */
+  for (const entry of CH3.flavour.R03) {
+    assert.ok(isPinned(entry.src), `R03 photo is not pinned: ${entry.src}`);
+    const id = entry.src.match(/picsum\.photos\/id\/(\d+)\//)[1];
+    assert.ok(!srcs.includes(id), `R03 reuses good photograph ${id}`);
+  }
 });
 
 test('chapter 3 site markup carries no script and no remote stylesheet', () => {
@@ -1292,7 +1301,7 @@ test('S01 declares no fixed word list — it must read the page it lands on', ()
 
 test('only the two-stage reactive anomalies are marked deferred', () => {
   const deferred = ANOMALIES.filter((a) => a.deferred).map((a) => a.id);
-  assert.deepStrictEqual(deferred, ['R01', 'R02', 'R04', 'R05', 'R06'],
+  assert.deepStrictEqual(deferred, ['R01', 'R02', 'R03', 'R04', 'R05', 'R06'],
     'only two-stage reactive anomalies may be absent from the DOM after apply()');
   for (const id of deferred) assert.strictEqual(byId(id).family, 'REACTIVE');
 });
@@ -1648,4 +1657,88 @@ test('chapter 4 unlocks only after chapter 3 is cleared', () => {
   const upToCh2 = (id) => id === CH1.id || id === CH2.id;
   assert.strictEqual(isUnlocked(CH4.id, upToCh2), false);
   assert.strictEqual(isUnlocked(CH4.id, (id) => id !== CH4.id), true);
+});
+
+/* ── Chapter 3, after the trim: nine goods and the cursed search result ─── */
+
+import { R03 } from '../games/tham-tu-mang/js/anomalies/reactive.js';
+
+test('the marketplace carries nine goods and rolls 5 to 6', () => {
+  assert.strictEqual(GOODS.length, 9);
+  assert.strictEqual(CH3.min, 5);
+  assert.strictEqual(CH3.max, 6);
+  // listing + nine goods + cart
+  assert.strictEqual(CH3.pages.length, 11);
+  for (const seed of SEEDS) {
+    const { count, picks } = plan(CH3, seed);
+    assert.ok(count >= 5 && count <= 6, `seed ${seed} rolled ${count}`);
+    assert.strictEqual(picks.length, count, `seed ${seed} promised ${count}, placed ${picks.length}`);
+  }
+});
+
+test('every category the filter rail offers still has something in it', () => {
+  /* CATEGORIES is derived from GOODS, so trimming the grid could leave a checkbox that can
+     only ever produce an empty result — and an empty result is now R03's trigger. A filter
+     that fires an anomaly by itself would let the player find it without ever searching. */
+  for (const cat of CATEGORIES) {
+    assert.ok(GOODS.some((g) => g.cat === cat), `category "${cat}" has no goods left`);
+  }
+  const cheapest = Math.min(...GOODS.map((g) => g.price));
+  const slider = CH3_BY_ID.listing.html.match(/data-price-filter[^>]*/);
+  const min = Number(CH3_BY_ID.listing.html.match(/type="range" min="(\d+)"/)[1]);
+  assert.ok(slider, 'no price slider');
+  assert.ok(min <= cheapest, `the slider floor ${min} is above the cheapest good ${cheapest}`);
+});
+
+test('the search slot exists only where R03 has a grid to put its find into', () => {
+  /* R03 is two-stage, so reconcile() will NOT drop it when it fails to attach. Placed on the
+     search box of a product or cart page it would find no [data-grid] in its own page, produce
+     nothing, and still be counted in BẰNG CHỨNG — a run that cannot be won, with nothing on
+     screen to say so. */
+  assert.deepStrictEqual(R03.slots, ['search']);
+  for (const page of CH3.pages) {
+    if (!page.slots.search) continue;
+    assert.strictEqual(page.id, 'listing', `page "${page.id}" must not offer a search slot`);
+  }
+  for (const page of CH3_PAGES) {
+    const declared = (page.html.match(/data-slot="search"/g) || []).length;
+    assert.strictEqual(declared, page.id === 'listing' ? 1 : 0,
+      `page "${page.id}" declares the wrong number of search slots`);
+    // the box itself is on every page — only the slot is exclusive
+    assert.match(page.html, /data-find/, `page "${page.id}" lost its search box`);
+  }
+  for (const seed of SEEDS) {
+    for (const p of plan(CH3, seed).picks) {
+      if (p.id === 'R03') assert.strictEqual(p.page, 'listing', `seed ${seed} put R03 on ${p.page}`);
+    }
+  }
+});
+
+test('R03 has a grid to clone from and the honest empty state it replaces', () => {
+  const html = CH3_BY_ID.listing.html;
+  assert.match(html, /data-grid/, 'nothing for R03 to append its find to');
+  assert.match(html, /data-empty/, 'no honest empty state for R03 to suppress');
+  assert.match(html, /data-result-count/, 'no count for R03 to keep honest');
+  assert.match(html, /Không có món nào khớp/, 'the honest empty message is gone');
+
+  // It clones a real card, so the grid's first child has to carry every part it rewrites.
+  const firstCard = html.slice(html.indexOf('data-grid'), html.indexOf('</article>'));
+  for (const hook of ['<img', 'figcaption', 'class="price"', 'class="sub"', 'data-goto']) {
+    assert.ok(firstCard.includes(hook), `the card R03 clones has no ${hook}`);
+  }
+
+  for (const entry of CH3.flavour.R03) {
+    for (const key of ['title', 'cap', 'price', 'sub', 'src']) {
+      assert.ok(entry[key], `R03 pool entry is missing ${key}`);
+    }
+  }
+});
+
+test('the honest filter announces what it found, or R03 has to guess', () => {
+  /* The contract R03 listens on. Without it the anomaly would have to count visible cards
+     itself, i.e. a shared anomaly carrying hard-coded knowledge of this one chapter's CSS. */
+  const behaviour = String(CH3_LISTING.behaviour);
+  assert.match(behaviour, /site:filtered/, 'the filter no longer announces its result');
+  assert.match(behaviour, /shown/, 'the event carries no match count');
+  assert.match(behaviour, /query/, 'the event carries no query, so R03 cannot tell filters from search');
 });
