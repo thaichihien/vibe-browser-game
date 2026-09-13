@@ -354,7 +354,7 @@ import { ANOMALIES, byId } from '../games/tham-tu-mang/js/engine/registry.js';
 /* Mọi dị thường đã dựng. T09, M06, E03, I02 và R04 vào cùng chương 4 — bốn cái đầu vì
    chương đó là chỗ đầu tiên có `map`, có bảy tấm ảnh và có một thanh nav chưa ai dùng hết,
    còn R04 thì spec §6 đã dành sẵn cho ô đặt phòng của nó. */
-const STAGE1_IDS = ['T01','T02','T03','T05','T06','T07','T08','T09','S01','S05','S06','S07',
+const STAGE1_IDS = ['T01','T02','T03','T05','T06','T07','T08','T09','T10','S01','S05','S06','S07',
   'M01','M03','M06','E01','E02','E03','E04','E05','R01','R02','R03','R04','R05','R06','I01','I02','I03','I04'];
 const FAMILIES = ['TEXT','STYLE','MOTION','ELEMENT','REACTIVE','IMAGE'];
 
@@ -718,6 +718,9 @@ import { CH3_PAGES, CH3_LISTING, GOODS, CATEGORIES } from '../games/tham-tu-mang
 import { CH4 } from '../games/tham-tu-mang/js/chapters/ch4-ho-vang.js';
 import { PAGE_INDEX as CH4_INDEX } from '../games/tham-tu-mang/sites/ch4-ho-vang/page.js';
 const CH4_PAGES = [CH4_INDEX];
+import { CH5 } from '../games/tham-tu-mang/js/chapters/ch5-hoa-ban.js';
+import { CH5_PAGES } from '../games/tham-tu-mang/sites/ch5-hoa-ban/pages.js';
+const CH5_BY_ID = Object.fromEntries(CH5_PAGES.map((p) => [p.id, p]));
 const CH3_BY_ID = Object.fromEntries(CH3_PAGES.map((p) => [p.id, p]));
 import { CH2_PAGES, CH2_INDEX, CH2_POST } from '../games/tham-tu-mang/sites/ch2-bep-nha-may/pages.js';
 const CH2_BY_ID = Object.fromEntries(CH2_PAGES.map((p) => [p.id, p]));
@@ -774,7 +777,7 @@ test('T07 knows every timestamp shape the chapters actually contain', () => {
     month: /Tháng\s+\d{1,2},\s*\d{4}/
   };
   const MARKUP = { [CH1.id]: [PAGE_INDEX], [CH2.id]: CH2_PAGES, [CH3.id]: CH3_PAGES,
-                   [CH4.id]: CH4_PAGES };
+                   [CH4.id]: CH4_PAGES, [CH5.id]: CH5_PAGES };
   for (const chapter of CHAPTERS) {
     const pool = chapter.flavour.T07;
     if (!pool) continue;
@@ -1005,7 +1008,7 @@ test('no text-rewriting slot ever wraps a navigation link', () => {
   const REWRITERS = new Set(['paragraph', 'notice', 'post-title', 'product-title', 'price',
                              'tile', 'gallery-caption', 'avatar', 'photo', 'hero-title']);
   const ALL = [[CH1.id, [PAGE_INDEX]], [CH2.id, CH2_PAGES], [CH3.id, CH3_PAGES],
-               [CH4.id, CH4_PAGES]];
+               [CH4.id, CH4_PAGES], [CH5.id, CH5_PAGES]];
   for (const [chapterId, pages] of ALL) {
     for (const page of pages) {
       // Crude but sufficient: an opening tag that declares a rewriting slot, followed by a
@@ -1577,7 +1580,8 @@ test('R04 has every hook it needs, and the honest booking answer names the guest
 test('E03 can only land on a nav that has a link for it to copy', () => {
   /* It clones an existing link so it matches its neighbours exactly. A nav with no <a> would
      leave it marking nothing — placed, counted in BẰNG CHỨNG, and invisible. */
-  const MARKUP = { [CH1.id]: [PAGE_INDEX], [CH3.id]: CH3_PAGES, [CH4.id]: CH4_PAGES };
+  const MARKUP = { [CH1.id]: [PAGE_INDEX], [CH3.id]: CH3_PAGES, [CH4.id]: CH4_PAGES,
+                   [CH5.id]: CH5_PAGES };
   for (const chapter of CHAPTERS) {
     if (!chapter.pages.some((p) => p.slots.nav)) continue;
     assert.ok(chapter.flavour.E03, `${chapter.id} offers a nav but has no E03 pool`);
@@ -1624,7 +1628,8 @@ test('every slot M06, I01, I02 and I04 can take sits in a figure with an image',
      be counted in BẰNG CHỨNG before anyone noticed. */
   const IMAGE_SLOTS = new Set([...I01.slots, ...I02.slots, ...I04.slots, ...M06.slots]
     .filter((s) => s !== 'avatar'));
-  const ALL = [[CH1.id, [PAGE_INDEX]], [CH2.id, CH2_PAGES], [CH3.id, CH3_PAGES], [CH4.id, CH4_PAGES]];
+  const ALL = [[CH1.id, [PAGE_INDEX]], [CH2.id, CH2_PAGES], [CH3.id, CH3_PAGES],
+               [CH4.id, CH4_PAGES], [CH5.id, CH5_PAGES]];
   for (const [chapterId, pages] of ALL) {
     for (const page of pages) {
       for (const m of page.html.matchAll(/<figcaption[^>]*data-slot="([^"]+)"/g)) {
@@ -1741,4 +1746,131 @@ test('the honest filter announces what it found, or R03 has to guess', () => {
   assert.match(behaviour, /site:filtered/, 'the filter no longer announces its result');
   assert.match(behaviour, /shown/, 'the event carries no match count');
   assert.match(behaviour, /query/, 'the event carries no query, so R03 cannot tell filters from search');
+});
+
+/* ── Chapter 5: the school, and the table that stops adding up ──────────── */
+
+import { T10 } from '../games/tham-tu-mang/js/anomalies/text.js';
+
+test('all five Hoa Ban pages ship exactly the slots they declare', () => {
+  for (const page of CH5.pages) {
+    assert.deepStrictEqual(slotCounts(CH5_BY_ID[page.id].html), page.slots,
+      `chapter 5 page "${page.id}" markup does not match its declaration`);
+  }
+});
+
+test('chapter 5 rolls 7 to 9 and keeps the director inside its own rules', () => {
+  assert.strictEqual(CH5.min, 7);
+  assert.strictEqual(CH5.max, 9);
+  assert.strictEqual(CH5.pages.length, 5);
+  for (const seed of SEEDS) {
+    const { count, picks } = plan(CH5, seed);
+    assert.ok(count >= 7 && count <= 9, `seed ${seed} rolled ${count}`);
+    assert.strictEqual(picks.length, count, `seed ${seed} promised ${count}, placed ${picks.length}`);
+    const counts = {};
+    for (const p of picks) counts[p.family] = (counts[p.family] || 0) + 1;
+    for (const [family, n] of Object.entries(counts)) {
+      assert.ok(n <= 2, `seed ${seed} took ${n} from ${family}`);
+    }
+    /* Five families against a roll of 9 is a capacity of 10 — the tightest in the game, and
+       the only chapter where the director has almost no slack. If it ever cannot place what
+       it rolled, this is where it will show up first. */
+    assert.ok(new Set(picks.map((p) => p.family)).size >= 3, `seed ${seed} used too few families`);
+  }
+});
+
+test('the school bulletin board has no reactive anomaly at all', () => {
+  /* Spec §6.1: it is a read-only notice board — nothing to submit, nothing to add to a cart,
+     nothing to search. R06 technically fits its nav and cta, so the characterisation only
+     holds because the chapter excludes it by name. */
+  assert.ok(CH5.exclude.includes('R06'), 'R06 must be excluded to keep Ch5 read-only');
+  for (const page of CH5_PAGES) {
+    assert.ok(!/<form/i.test(page.html), `page "${page.id}" grew a form`);
+    assert.ok(!/<input/i.test(page.html), `page "${page.id}" grew an input`);
+  }
+  for (const seed of SEEDS) {
+    for (const p of plan(CH5, seed).picks) {
+      assert.notStrictEqual(byId(p.id).family, 'REACTIVE',
+        `seed ${seed} placed reactive ${p.id} on a read-only board`);
+    }
+  }
+});
+
+test('the school history box is clean content, never an anomaly slot', () => {
+  /* T08 measures a signature against the years in this box, the same job chapter 2's memorial
+     and chapter 3's closed-account line do. If the director could rewrite it, it would be
+     moving the ruler. On seeds without T08 it is just a dull paragraph of school history. */
+  const html = CH5_BY_ID['gioi-thieu'].html;
+  const box = html.slice(html.indexOf('class="history"'), html.indexOf('</div>', html.indexOf('class="history"') + 40));
+  assert.ok(box.includes('Lịch sử nhà trường'), 'the history box is gone');
+  assert.ok(!box.includes('data-slot'), 'the history box became an anomaly slot');
+  for (const entry of CH5.flavour.T08) {
+    assert.ok(box.includes(entry.name),
+      `T08 signs "${entry.name}", a name the history box never mentions`);
+  }
+  assert.match(box, /\b2012\b/, 'the history box no longer says when he left');
+});
+
+test('the honest statistics table closes three separate ways', () => {
+  /* T10 changes ONE cell. It is only findable because the clean table agrees with itself in
+     three independent places — the row, the column, and a sentence above it. If the authored
+     table were already inconsistent, the anomaly would have nothing to deviate from, and a
+     player who checked the arithmetic would find a discrepancy on every run. */
+  const html = CH5_BY_ID['gioi-thieu'].html;
+  const table = html.slice(html.indexOf('class="stats"'), html.indexOf('</table>'));
+
+  const rows = [...table.matchAll(/<tr(?! class="sum")[^>]*><td[^>]*>Khối \d+<\/td><td[^>]*>(\d+)<\/td>\s*<td data-n[^>]*>(\d+)<\/td><td[^>]*>(\d+)<\/td>/g)]
+    .map((m) => ({ lop: Number(m[1]), hs: Number(m[2]), tb: Number(m[3]) }));
+  assert.strictEqual(rows.length, 5, `expected five grade rows, parsed ${rows.length}`);
+
+  for (const r of rows) {
+    assert.strictEqual(r.hs / r.lop, r.tb,
+      `row ${r.hs}/${r.lop} does not give the stated average ${r.tb}`);
+  }
+
+  const total = Number(table.match(/<td data-sum[^>]*>(\d+)<\/td>/)[1]);
+  assert.strictEqual(rows.reduce((n, r) => n + r.hs, 0), total, 'the student column does not add up');
+  const classes = Number(table.match(/class="sum"><td[^>]*>Toàn trường<\/td><td[^>]*>(\d+)<\/td>/)[1]);
+  assert.strictEqual(rows.reduce((n, r) => n + r.lop, 0), classes, 'the class column does not add up');
+
+  // …and the paragraph above the table says the same number a third time.
+  assert.ok(html.includes(`có ${total} học sinh`),
+    `the intro paragraph does not restate the total ${total}`);
+});
+
+test('T10 needs numeric cells, and only ever raises one of them', () => {
+  assert.deepStrictEqual(T10.slots, ['table']);
+  assert.ok(!T10.deferred, 'T10 attaches at apply time and must be reconciled like any other');
+  const table = CH5_BY_ID['gioi-thieu'].html;
+  assert.strictEqual((table.match(/data-n\b/g) || []).length, 5, 'T10 has no pool of cells to pick from');
+  assert.match(table, /data-sum/, 'the total has no hook, so a future edit could corrupt it too');
+  for (const entry of CH5.flavour.T10) {
+    assert.ok(Number.isInteger(entry.delta) && entry.delta > 0,
+      `T10 delta ${entry.delta} must be a whole number of extra pupils`);
+  }
+});
+
+test('nothing happens to a child anywhere in chapter 5', () => {
+  /* Spec §5.5's one rule, kept mechanical so it survives future edits. The horror here is
+     what the administration writes down, never what is done to a pupil. */
+  const BANNED = /chết|tử vong|mất tích|thi thể|giết|sát hại|bắt cóc|tai nạn/i;
+  for (const [id, pool] of Object.entries(CH5.flavour)) {
+    const text = JSON.stringify(pool);
+    assert.ok(!BANNED.test(text), `chapter 5 pool ${id} describes harm coming to someone`);
+  }
+  for (const page of CH5_PAGES) {
+    assert.ok(!BANNED.test(page.html), `chapter 5 page "${page.id}" describes harm coming to someone`);
+  }
+});
+
+test('chapter 5 site markup carries no script and no remote stylesheet', () => {
+  for (const page of CH5_PAGES) {
+    assert.ok(!/<script/i.test(page.html), `${page.id} carries a script`);
+    assert.ok(!/<link[^>]+href="http/i.test(page.html), `${page.id} loads a remote stylesheet`);
+  }
+});
+
+test('chapter 5 unlocks only after chapter 4 is cleared', () => {
+  assert.strictEqual(isUnlocked(CH5.id, (id) => id !== CH4.id && id !== CH5.id), false);
+  assert.strictEqual(isUnlocked(CH5.id, (id) => id !== CH5.id), true);
 });

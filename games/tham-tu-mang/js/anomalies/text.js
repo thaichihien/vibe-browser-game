@@ -316,4 +316,42 @@ export const T09 = {
   }
 };
 
-export const TEXT_ANOMALIES = [T01, T02, T03, T05, T06, T07, T08, T09];
+/* ── T10: một bảng số liệu không cộng lại được ─────────────────────────
+   Dị thường đầu tiên không nằm ở CHỮ mà nằm ở SỐ HỌC. Không có gì trên màn hình biến dạng,
+   không câu nào đổi giọng, không chữ nào sai phông: một ô trong bảng thống kê đổi thành một
+   con số khác, và từ đó bảng thôi không tự khớp với chính nó nữa.
+
+   Vì thế nó đòi người chơi một động tác mới mà cả thư viện chưa có cái nào đòi: CỘNG LẠI.
+   Không phải nhớ, không phải rê chuột, không phải đối chiếu hai trang — chỉ là làm đúng cái
+   phép tính mà nhà trường đáng lẽ đã làm.
+
+   Bảng sạch được viết cho khớp ở BA chỗ độc lập, nên sửa một ô là gãy cả ba:
+     · hàng   — số học sinh chia số lớp phải ra đúng sĩ số trung bình đã ghi;
+     · cột    — các hàng cộng lại phải ra đúng dòng tổng;
+     · và một đoạn văn ở trên nhắc lại con số tổng ấy một lần nữa.
+   Người chơi bắt được ở chỗ nào cũng được. Nếu chỉ phá cột thì phải cộng năm số mới thấy, mà
+   một dị thường chỉ tìm ra được bằng cách làm toán năm phút thì không phải là khó, nó là nản.
+
+   Dòng TỔNG không bao giờ bị đụng tới. Sửa cả ô lẻ lẫn dòng tổng thì bảng lại khớp, và chẳng
+   còn gì sai cả; sửa mỗi dòng tổng thì đọc ra là gõ nhầm một chỗ. Sai ở một hàng, trong khi
+   mọi hàng khác vẫn đúng răm rắp, mới là thứ không giải thích được bằng sự cẩu thả. */
+export const T10 = {
+  id: 'T10', family: 'TEXT', label: 'Một bảng số liệu không cộng lại được',
+  slots: ['table'], weight: 3,
+  apply(ctx) {
+    const entry = pick(ctx.rng, ctx.flavour);
+    const cells = [...ctx.slot.querySelectorAll('[data-n]')]
+      .filter((c) => /^\d+$/.test(c.textContent.trim()));
+    if (!cells.length) return;
+
+    const cell = pick(ctx.rng, cells);
+    const was = Number(cell.textContent.trim());
+    /* Cộng thêm, không bớt đi. Ở một trường tiểu học thì một con số học sinh NHIỀU HƠN sổ
+       sách là câu hỏi đáng sợ hơn hẳn một con số ít hơn: thiếu thì còn giải thích được bằng
+       chuyển trường, thừa thì không giải thích được bằng gì cả. */
+    cell.textContent = String(was + (entry.delta ?? 1));
+    ctx.mark(cell);
+  }
+};
+
+export const TEXT_ANOMALIES = [T01, T02, T03, T05, T06, T07, T08, T09, T10];

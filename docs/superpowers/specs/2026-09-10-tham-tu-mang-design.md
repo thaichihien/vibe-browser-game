@@ -374,7 +374,7 @@ clearing chapter N unlocks N+1. Each clear stores a rank.
 | 2 | **Bếp Nhà Mây** — blog nấu ăn | 5 | 6–8 | blog cá nhân | Người đã mất |
 | 3 | **SănĐồCũ.vn** — chợ đồ cũ | 11 | 5–6 | thương mại điện tử | Monster |
 | 4 | **Hồ Vắng** — khu du lịch sinh thái | 1 | 7–9 | trang đặt phòng | Alien |
-| 5 | **Tiểu học Hoa Ban** — trang thông báo | 1 | 6–8 | trang cơ quan | Cult |
+| 5 | **Tiểu học Hoa Ban** — trang thông báo | 5 | 7–9 | trang cơ quan | Giọng cơ quan |
 | 6 | **MegaLink** — trạng thái hệ thống | 1 | 7–8 | dashboard kỹ thuật | Thứ trong đường truyền |
 
 **Rank** per chapter, stored in `localStorage`:
@@ -651,25 +651,81 @@ reasonable explanation and refuse to fit inside it.
 Imagery: ten pinned `picsum` photographs and three `randomuser` portraits. Captions were
 written against the photographs after looking at them, per §3.4.
 
-### 5.5 Chapter 5 — Trường Tiểu học Hoa Ban
+### 5.5 Chapter 5 — Trường Tiểu học Hoa Ban · BUILT
 
-Single page, deliberately ugly in the way real Vietnamese school sites are: a marquee header,
-a red-bordered notice table, a *"Thông báo mới nhất"* list of eight dated items, a principal's
-message, a photo strip from a khai giảng ceremony, a visitor counter, and a footer with a hit
-counter and a `Best viewed in 1024×768` line.
+**Five pages, not one.** `index` (latest notices, the principal's letter, a photo strip),
+`gioi-thieu` (history, the statistics table, the leadership team), `thong-bao` (all eight
+notices in a dated table), `thong-bao-13` (one notice in full, signed), `hinh-anh` (an album).
+Roll **7–9**.
 
-Slots: `notice` ×8, `date` ×8, `paragraph` ×2, `photo` ×4 (ảnh lễ khai giảng),
-`gallery-caption` ×4, `avatar` (ảnh hiệu trưởng), `cta` (*"Xem tất cả thông báo"*), `nav`,
-`counter`, `footer`, `marquee`.
+The single page in the original sketch could not carry this chapter. A real school site's
+front page is only the gate — four latest notices, a letter, a few photographs; everything
+worth reading is a click deeper, in the full notice list, in a numbered document with a
+signature block, in a "giới thiệu" page with a table of figures. Collapsing all of it onto one
+page stops it looking like a school site at all.
 
-Imagery: `loremflickr.com/…/school,classroom?lock=…`, deliberately low-resolution and slightly
-over-compressed, the way a school site's photographs always are. Per §3.4, no photograph here
-is ever captioned as a missing or harmed child.
+**It is deliberately dated, and that is the fifth distinct visual language.** Verdana, a fixed
+1000px frame, an institutional blue gradient, a red scrolling marquee, ruled tables, thin
+photo borders, a visitor counter in the sidebar, and *"hiển thị tốt nhất ở 1024×768"* in the
+footer. Vietnamese state school sites look exactly like this, and §1's test cuts both ways:
+after four well-designed sites, a rough one means an anomaly cannot hide in *looking* wrong —
+it has to be wrong in something the player **reads**.
 
-The hardest chapter tonally, and it has one rule: **nothing happens to a child on screen.**
-The horror is entirely in what the administration writes down and how calmly it writes it —
-dates that do not exist, attendance arithmetic that does not close, a notice addressed to the
-parents of students who are not listed. Institutional voice doing all the work.
+Slots as built, per page:
+
+| | `index` | `gioi-thieu` | `thong-bao` | `thong-bao-13` | `hinh-anh` |
+|---|---|---|---|---|---|
+| `nav` | 1 | 1 | 1 | 1 | 1 |
+| `notice` | 4 | — | 8 | 1 | — |
+| `date` | 4 | 1 | 8 | 1 | — |
+| `paragraph` | 2 | 2 | 1 | 3 | 1 |
+| `avatar` | 1 | 3 | — | — | — |
+| `photo` | 3 | — | — | — | — |
+| `gallery-caption` | — | — | — | — | 4 |
+| `table` | — | 1 | — | — | — |
+| `tile` | 1 | — | — | — | — |
+| `byline` | — | — | — | 1 | — |
+| `cta` | 1 | — | — | 1 | — |
+| `footer` | 1 | 1 | 1 | 1 | 1 |
+
+`counter` and `marquee` from the sketch are gone. The visitor counter is a **`tile`**, which
+`T03`, `M01`, `M03` and `S07` all accept — and a counter is the one thing on the page that has
+only ever gone up, which makes it the best surface in the game for `T03`. The marquee is
+**clean content with no slot at all**: it is already moving, so `S06` would be invisible on it
+and `T06` needs a list rather than a lone line. Both changes exist to avoid a declared slot
+type no anomaly can use — a region that could only ever cost the player a heart (§5.3).
+
+**Home of `T10 bang-so-khong-cong-lai-duoc`**, and the only chapter with a `table` slot.
+
+**No reactive anomaly, by design.** It is a read-only notice board: no form, no input, nothing
+to submit. `R06` fits its `nav` and `cta`, so the chapter carries it in `exclude` — otherwise
+the characterisation would be an accident rather than a decision. There is a test asserting
+both the exclusion and that no page grows a `<form>` or `<input>`.
+
+That leaves **five families against a maximum roll of 9** — a capacity of 10, the tightest in
+the game and the only chapter where the director has almost no slack. 3000 seeds place every
+anomaly they roll, keep every family at ≤2, and leave no page clean.
+
+**The history box on `gioi-thieu` is clean content and always present**, the same job chapter
+2's memorial and chapter 3's closed-account line do: it says Nguyễn Văn Đệ was principal from
+1998 until he retired in 2012, which is the only thing that makes `T08` mean anything when a
+notice dated November 2026 turns up over his signature. It carries no `data-slot` and never
+may. Note that it is on a **different page** from the byline it measures — the player has to
+have read both.
+
+**The one rule: nothing happens to a child on screen.** Not in a caption, not in a notice, not
+in a pool line. The horror is entirely in what the administration writes down and how calmly —
+a date that cannot exist, a sum that does not close, a notice about pupils who are not on any
+list, a line saying that if your child was in the yard before six in the morning, that was not
+your child. A test greps every pool and every page for the vocabulary of harm.
+
+Imagery: seven pinned `picsum` photographs — a colonnaded block, a stairwell, a chair by a
+window, an assembly hall, a clock, a vase of flowers, a sheet of drawing symbols. **None of
+them contains a child**, which is both §3.4's rule and the simplest way to keep the one above.
+Three `randomuser` portraits for the leadership team, and at this chapter the *index* into that
+set became a real decision rather than an arbitrary number: the collection is mostly Western
+faces, and a Sơn La primary school whose principal is a blonde stranger makes the player
+distrust the whole page — in the wrong place, because that is not an anomaly anybody planted.
 
 ### 5.6 Chapter 6 — MegaLink — Trạng thái hệ thống
 
@@ -691,7 +747,7 @@ which is why it rolls 7–8. Home of `R05 huy-dang-ky-khong-huy`.
 
 ---
 
-## 6. The anomaly library — 35 designed, 29 built
+## 6. The anomaly library — 36 designed, 31 built
 
 Six families. `slots` lists what the anomaly can attach to; the director only offers it to a
 chapter that has one. The flavour lines below are the authored pools, not placeholders.
@@ -703,11 +759,12 @@ library stayed at **34** — STYLE dropped to 6, REACTIVE rose to 6.
 
 Chapter 4 moved it twice more. `T04` had already been **withdrawn** at the player's request,
 taking TEXT to 7; building chapter 4 added `T09 toa-do-troi` (TEXT back to 8) and
-`M06 anh-sang-di-qua-anh` (MOTION to 6), so **35 are designed and 29 are built**. Both new
-ones exist because chapter 4 is the first site with a surface for them: it is the only chapter
-with a `map` slot, and it carries more photographs than any other.
+`M06 anh-sang-di-qua-anh` (MOTION to 6). Chapter 5 then added `T10 bang-so-khong-cong-lai-duoc`
+(TEXT to 9), so **36 are designed and 31 are built**. All three new ones exist because their
+chapter was the first site with a surface for them: chapter 4 is the only one with a `map` and
+carries more photographs than any other, and chapter 5 is the only one with a `table`.
 
-### TEXT — 8 (T04 withdrawn, T09 added)
+### TEXT — 9 (T04 withdrawn; T09, T10 added)
 
 **T01 · `loi-nguyen-chen-giua`** — slots: `paragraph`, `notice`
 One sentence inside an ordinary paragraph is replaced with a liturgical or cursed line, in
@@ -868,6 +925,35 @@ It is the only anomaly that walks through **several** states rather than changin
 swaps and is done, while this leaves a trail the player can confirm by scrolling around a few
 more times. The final step is a **stop**. If it drifted forever the player could never know
 they had seen enough of it.
+
+**T10 · `bang-so-khong-cong-lai-duoc`** — slots: `table` · Ch5 · BUILT
+The first anomaly that is not in the **words** but in the **arithmetic**. Nothing on screen is
+deformed, no sentence changes voice, no letter is in the wrong font: one cell of a statistics
+table holds a different number, and from that moment the table stops agreeing with itself.
+
+It therefore asks the player for a verb nothing else in the library asks for — **add it up**.
+Not remember, not hover, not cross-reference two pages: just do the sum the school should have
+done.
+
+The honest table is authored to agree in **three independent places**, so changing one cell
+breaks all three at once:
+
+- the **row** — pupils ÷ classes must give exactly the stated class average;
+- the **column** — the grades must add to the stated school total;
+- and a **sentence above the table** states that same total a third time.
+
+Any of the three is a way in. Breaking only the column would mean the anomaly is findable only
+by adding five numbers, and something you can only find after five minutes of mental arithmetic
+is not difficult, it is tedious.
+
+**The total row is never touched.** Change the cell and the total together and the table agrees
+again, so nothing is wrong; change only the total and it reads as one mistyped figure. One row
+being wrong while every other row is exactly right is the thing carelessness cannot explain.
+
+The delta is always **added**, never subtracted. At a primary school a count that is *higher*
+than the register is the worse question: fewer can be explained by a transfer, more cannot be
+explained by anything.
+- Ch5: *"Khối 5 · 2 lớp · 71 học sinh · sĩ số trung bình 32"*, under a total that still says 442.
 
 ### STYLE — 6 (S04 withdrawn)
 
@@ -1230,22 +1316,22 @@ and never resets. Looking at it is what does it.
 
 ### 6.1 Coverage check
 
-**30 built anomalies across six families, 35 designed.** The four built chapters below are
+**31 built anomalies across six families, 36 designed.** The four built chapters below are
 counted from the code — the registry matched against each chapter's declared slots, and
 re-checked by the test suite — so those columns are measurements, not estimates. Ch5 and Ch6
 are still projections against their sketched inventories.
 
-| Family (built) | Ch1 | Ch2 | Ch3 | Ch4 | Ch5* | Ch6* |
+| Family (built) | Ch1 | Ch2 | Ch3 | Ch4 | Ch5 | Ch6* |
 |---|---|---|---|---|---|---|
-| TEXT (8) | 5 | 6 | 7 | 8 | 8 | 5 |
+| TEXT (9) | 5 | 6 | 7 | 8 | 8 | 5 |
 | STYLE (4) | 4 | 3 | 4 | 4 | 4 | 3 |
 | MOTION (3) | 3 | 3 | 3 | 3 | 3 | 2 |
 | ELEMENT (5) | 5 | 4 | 5 | 5 | 4 | 5 |
-| REACTIVE (6) | 2 | 1 | 3 | 2 | 0 | 3 |
+| REACTIVE (6) | 2 | 1 | 3 | 2 | **0** | 3 |
 | IMAGE (4) | 4 | 4 | 4 | 4 | 4 | 0 |
-| **eligible** | **23** | **21** | **26** | **26** | 23* | 18* |
-| roll | 6–8 | 6–8 | 5–6 | 7–9 | 6–8* | 7–8* |
-| families available | 6 | 6 | 6 | 6 | 5 | 5 |
+| **eligible** | **23** | **21** | **26** | **26** | **23** | 18* |
+| roll | 6–8 | 6–8 | 5–6 | 7–9 | 7–9 | 7–8* |
+| families available | 6 | 6 | 6 | 6 | **5** | 5 |
 
 Ch4's TEXT reaches all eight — it is the only chapter carrying every timestamp shape, a
 `comment`, a `notice` list and the game's only `map`. Ch2 stays lowest because a personal blog
@@ -1256,10 +1342,11 @@ wherever there is a nav or a photograph, so chapters 1–3 each gained two or th
 be wrong without a line of their markup changing. That is the runtime-mutation architecture
 (§3.1) paying out exactly as intended — one anomaly written once, six sites richer.
 
-Every chapter clears the director's "≥3 families, ≤2 per family" rule at its maximum roll with
-room to spare — the tightest is Ch6, whose five families give a capacity of 10 against a roll
-of 8. Ch4 rolls up to 9 against six families, i.e. a capacity of 12; the suite asserts that on
-500 seeds.
+Every chapter clears the director's "≥3 families, ≤2 per family" rule at its maximum roll.
+**Ch5 is now the tightest in the game**: five families give a capacity of 10 against a roll of
+9, so a run of nine has to use every family and fill four of them to the cap. It holds — 3000
+seeds place everything they roll, break no family cap, and leave no page clean — but it is the
+chapter where any future change to the registry will fail first, and the suite checks it.
 
 **Adding photographs resolved the Chapter 5 problem.** Before the IMAGE family, Ch5 had four
 families against a maximum roll of 8, filling every family to its cap with zero slack — the
@@ -1269,10 +1356,10 @@ main reason the coverage table is now worth trusting.
 
 Two deliberate absences remain, both of them characterisation rather than oversight:
 
-- **Ch5 has no REACTIVE anomaly.** It is a read-only bulletin board — nothing to submit,
-  nothing to interact with, only to read. `R06` technically fits its `nav` and `cta`, so when
-  Ch5 is built it must carry `R06` in its `exclude` list to keep that characterisation; the
-  table above counts it as 0 on that basis.
+- **Ch5 has no REACTIVE anomaly** — built that way. It is a read-only bulletin board: no form,
+  no input, nothing to submit. `R06` fits its `nav` and `cta`, so the chapter carries `R06` in
+  `exclude`; a test asserts both that and the absence of any `<form>` or `<input>` in its markup,
+  so the characterisation cannot rot into an accident.
 - **Ch6 has no IMAGE anomaly** and no `photo` or `avatar` slots at all. A status dashboard has
   no photographs, so the finale is pure text, colour and motion.
 - **Ch2 has no `nav` slot,** so `E03` and `S07` never appear there; a personal blog with a
@@ -1295,17 +1382,17 @@ games/tham-tu-mang/
       rng.js                 mulberry32 + helpers (pick, shuffle, range)   ← DOM-free
       hittest.js             point-in-polygon, centroid, nearest-target,
                              stroke bounds, budget-ring clamp             ← DOM-free
-      registry.js            imports all 29 built anomalies, exports ANOMALIES ← DOM-free
+      registry.js            imports all 31 built anomalies, exports ANOMALIES ← DOM-free
       img.js                 pinned CDN url builders + SVG fallback markup ← DOM-free
       director.js            roll count, filter, pick, assign to pages     ← DOM-free
       run.js                 capture resolution, hearts, win/loss
       site.js                shadow root, page mount/swap, slot indexing
     anomalies/
-      text.js                T01–T03, T05–T09   (T04 withdrawn)
+      text.js                T01–T03, T05–T10   (T04 withdrawn)
       style.js               S01, S05–S07       (S02–S04 not built)
       motion.js              M01, M03, M06      (M02, M04, M05 not built)
       element.js             E01–E05
-      reactive.js            R01, R02, R04–R06  (R03 not built)
+      reactive.js            R01–R06
       image.js               I01–I04
     ui/
       menu.js                case archive / chapter select
@@ -1327,7 +1414,7 @@ games/tham-tu-mang/
     ch2-bep-nha-may/  pages.js  (5 trang)                       site.css
     ch3-san-do-cu/    pages.js  (14 trang)                      site.css
     ch4-ho-vang/      page.js                                   site.css
-    ch5-hoa-ban/      page.js                                   site.css
+    ch5-hoa-ban/      pages.js  (5 trang)                       site.css
     ch6-megalink/     page.js                                   site.css
 
 tests/tham-tu-mang.test.mjs   imports the DOM-free engine modules directly

@@ -23,7 +23,7 @@ export const CH3 = {
   id: 'ch3-san-do-cu',
   title: 'SĂNĐỒCŨ.VN',
   slug: 'ch3-san-do-cu',
-  subtitle: 'Chợ đồ cũ · ba trang',
+  subtitle: 'Chợ đồ cũ · mười một trang',
   briefing: 'Một sàn rao vặt đồ đã qua sử dụng.',
   min: 5,
   max: 6,
