@@ -423,6 +423,21 @@ footer {
   100%      { transform: scale(1); }
 }
 
+/* S03 — bôi đen dòng chữ thì hiện ra chữ không có trên trang.
+   Lớp chữ giấu nằm NGOÀI dòng chảy (position:absolute) nên không đẩy gì đi đâu, và trong
+   suốt cho tới khi bị bôi trúng. Quy tắc ::selection không đặt được bằng style inline, nên
+   nó buộc phải nằm ở đây — chương nào mở slot cho S03 thì phải có hai khối này. */
+.sel-ghost {
+  position: absolute;
+  left: 0; top: 100%;
+  width: max-content;
+  max-width: 100%;
+  font: inherit;
+  color: transparent;
+  line-height: 1.45;
+}
+.sel-ghost::selection { color: #ffffff; background: #2b2b2b; }
+
 /* T05 — dòng chữ chỉ hiện khi rê chuột.
    Trang tự vẽ lấy thay vì dùng title= của trình duyệt: tooltip mặc định đợi gần một giây,
    vẽ bằng phông hệ thống, và trông như một phần của TRÌNH DUYỆT — mà thứ trông như chrome

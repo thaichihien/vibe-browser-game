@@ -8,7 +8,7 @@ import { plan } from './engine/director.js';
 import { mount, targets, slotElement, showPage, pageElement, pageIdOf, styleReady } from './engine/site.js';
 import { nearestEnclosed } from './engine/hittest.js';
 import { newRun, observerFor } from './state.js';
-import { resolve, giveUp, reconcile } from './engine/run.js';
+import { resolve, giveUp, reconcile, claimMark } from './engine/run.js';
 import { initMode } from './ui/mode.js';
 import { initLasso } from './ui/lasso.js';
 import { toast } from './ui/toast.js';
@@ -22,6 +22,7 @@ import { CH2_PAGES } from '../sites/ch2-bep-nha-may/pages.js';
 import { CH3_PAGES } from '../sites/ch3-san-do-cu/pages.js';
 import { PAGE_INDEX as CH4_INDEX } from '../sites/ch4-ho-vang/page.js';
 import { CH5_PAGES } from '../sites/ch5-hoa-ban/pages.js';
+import { CH6_PAGES } from '../sites/ch6-megalink/pages.js';
 
 /* Every page of a chapter, in order. pages[0] is where the player lands. */
 const PAGES = {
@@ -29,7 +30,8 @@ const PAGES = {
   'ch2-bep-nha-may': CH2_PAGES,
   'ch3-san-do-cu': CH3_PAGES,
   'ch4-ho-vang': [CH4_INDEX],
-  'ch5-hoa-ban': CH5_PAGES
+  'ch5-hoa-ban': CH5_PAGES,
+  'ch6-megalink': CH6_PAGES
 };
 
 const FEEDBACK = {
@@ -168,7 +170,8 @@ export function boot() {
         slot,
         rng,
         flavour: chapter.flavour[pick.id],
-        mark: (el) => { el.dataset.anom = pick.id; el.setAttribute('data-catch', ''); return el; },
+        // Không bao giờ ghi đè dấu của dị thường khác — xem claimMark() trong engine/run.js.
+        mark: (el) => claimMark(el, pick.id),
         observe: observerFor(run)
       });
     }

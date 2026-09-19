@@ -98,6 +98,30 @@ export function styleReady(shadow, timeout = 1500) {
   });
 }
 
+/**
+ * Làm cho một phần tử NHẬN được transform, rồi mới đặt transform lên nó.
+ *
+ * Luật CSS: `transform` KHÔNG áp dụng cho hộp inline không thay thế được. Trình duyệt vẫn
+ * nhận thuộc tính, getComputedStyle vẫn trả về đúng ma trận, animation vẫn chạy — mà trên
+ * màn hình tuyệt đối không có gì nhúc nhích. Không một lỗi nào được báo ra.
+ *
+ * Bắt được ở chương 5: chỗ bám `cta` của trang thông báo là một thẻ <a> trần
+ * ("← Quay lại danh sách thông báo"), và .back a chỉ bỏ gạch chân chứ không đổi display. M03
+ * (phần tử đang thở) nằm lên đó là chết lặng. Cùng cái bẫy ấy giết luôn M01 (trôi theo con
+ * trỏ) và M07 (đổi cỡ khi rê chuột) ở chương 5 và 6 — ba dị thường, một nguyên nhân.
+ *
+ * Vì sao sửa ở đây chứ không ở site.css của từng chương: một dòng `display:inline-block` nằm
+ * trong CSS của trang giả là thứ không ai nhớ ra khi viết chương thứ bảy, và khi quên thì dị
+ * thường không hỏng ồn ào — nó chỉ lặng lẽ không xảy ra, mà bảng BẰNG CHỨNG vẫn đếm nó.
+ * Dị thường tự lo lấy điều kiện mình cần.
+ *
+ * inline-block giữ nguyên dòng chảy chữ quanh nó, nên bố cục không suy suyển.
+ */
+export function transformable(el) {
+  if (el && getComputedStyle(el).display === 'inline') el.style.display = 'inline-block';
+  return el;
+}
+
 /** display:none rather than [hidden], which a site stylesheet can override without meaning to. */
 export function showPage(shadow, pageId) {
   for (const el of shadow.querySelectorAll('[data-page]')) {

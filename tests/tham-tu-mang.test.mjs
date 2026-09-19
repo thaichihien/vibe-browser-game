@@ -354,8 +354,11 @@ import { ANOMALIES, byId } from '../games/tham-tu-mang/js/engine/registry.js';
 /* Mọi dị thường đã dựng. T09, M06, E03, I02 và R04 vào cùng chương 4 — bốn cái đầu vì
    chương đó là chỗ đầu tiên có `map`, có bảy tấm ảnh và có một thanh nav chưa ai dùng hết,
    còn R04 thì spec §6 đã dành sẵn cho ô đặt phòng của nó. */
-const STAGE1_IDS = ['T01','T02','T03','T05','T06','T07','T08','T09','T10','S01','S05','S06','S07',
-  'M01','M03','M06','E01','E02','E03','E04','E05','R01','R02','R03','R04','R05','R06','I01','I02','I03','I04'];
+/* Mọi dị thường đã dựng. I01 (ảnh đến từ năm khác) đã bị RÚT theo yêu cầu của người chơi và
+   I05 (một tấm ảnh dùng hai lần) thế chỗ, để họ IMAGE vẫn đủ bốn thành viên. */
+const STAGE1_IDS = ['T01','T02','T03','T05','T06','T07','T08','T09','T10','S01','S03','S05','S06','S07',
+  'M01','M03','M05','M06','M07','E01','E02','E03','E04','E05','R01','R02','R03','R04','R05','R06',
+  'I02','I03','I04','I05'];
 const FAMILIES = ['TEXT','STYLE','MOTION','ELEMENT','REACTIVE','IMAGE'];
 
 test('the registry holds exactly the anomalies that are built', () => {
@@ -392,7 +395,8 @@ test('every anomaly is eligible for at least one chapter', () => {
 test('every eligible anomaly has a flavour pool in chapter 1', () => {
   for (const a of ANOMALIES) {
     const eligible = CH1.pages.some((p) => a.slots.some((s) => (p.slots[s] || 0) > 0));
-    if (!eligible) continue;
+    // An excluded anomaly is never offered to the chapter, so it needs no words there.
+    if (!eligible || CH1.exclude.includes(a.id)) continue;
     assert.ok(CH1.flavour[a.id], `${a.id} can be placed in Ch1 but has no flavour pool there`);
   }
 });
@@ -721,6 +725,9 @@ const CH4_PAGES = [CH4_INDEX];
 import { CH5 } from '../games/tham-tu-mang/js/chapters/ch5-hoa-ban.js';
 import { CH5_PAGES } from '../games/tham-tu-mang/sites/ch5-hoa-ban/pages.js';
 const CH5_BY_ID = Object.fromEntries(CH5_PAGES.map((p) => [p.id, p]));
+import { CH6 } from '../games/tham-tu-mang/js/chapters/ch6-megalink.js';
+import { CH6_PAGES, CH6_INDEX } from '../games/tham-tu-mang/sites/ch6-megalink/pages.js';
+const CH6_BY_ID = Object.fromEntries(CH6_PAGES.map((p) => [p.id, p]));
 const CH3_BY_ID = Object.fromEntries(CH3_PAGES.map((p) => [p.id, p]));
 import { CH2_PAGES, CH2_INDEX, CH2_POST } from '../games/tham-tu-mang/sites/ch2-bep-nha-may/pages.js';
 const CH2_BY_ID = Object.fromEntries(CH2_PAGES.map((p) => [p.id, p]));
@@ -777,7 +784,7 @@ test('T07 knows every timestamp shape the chapters actually contain', () => {
     month: /Tháng\s+\d{1,2},\s*\d{4}/
   };
   const MARKUP = { [CH1.id]: [PAGE_INDEX], [CH2.id]: CH2_PAGES, [CH3.id]: CH3_PAGES,
-                   [CH4.id]: CH4_PAGES, [CH5.id]: CH5_PAGES };
+                   [CH4.id]: CH4_PAGES, [CH5.id]: CH5_PAGES, [CH6.id]: CH6_PAGES };
   for (const chapter of CHAPTERS) {
     const pool = chapter.flavour.T07;
     if (!pool) continue;
@@ -1008,7 +1015,7 @@ test('no text-rewriting slot ever wraps a navigation link', () => {
   const REWRITERS = new Set(['paragraph', 'notice', 'post-title', 'product-title', 'price',
                              'tile', 'gallery-caption', 'avatar', 'photo', 'hero-title']);
   const ALL = [[CH1.id, [PAGE_INDEX]], [CH2.id, CH2_PAGES], [CH3.id, CH3_PAGES],
-               [CH4.id, CH4_PAGES], [CH5.id, CH5_PAGES]];
+               [CH4.id, CH4_PAGES], [CH5.id, CH5_PAGES], [CH6.id, CH6_PAGES]];
   for (const [chapterId, pages] of ALL) {
     for (const page of pages) {
       // Crude but sufficient: an opening tag that declares a rewriting slot, followed by a
@@ -1472,7 +1479,7 @@ test('the LUMIÈRE copy really does contain stacked Vietnamese diacritics', () =
 import { T09 } from '../games/tham-tu-mang/js/anomalies/text.js';
 import { M06 } from '../games/tham-tu-mang/js/anomalies/motion.js';
 import { E03 } from '../games/tham-tu-mang/js/anomalies/element.js';
-import { I01, I02, I04 } from '../games/tham-tu-mang/js/anomalies/image.js';
+import { I02, I03, I04, I05 } from '../games/tham-tu-mang/js/anomalies/image.js';
 import { R04 } from '../games/tham-tu-mang/js/anomalies/reactive.js';
 
 test('the Hồ Vắng page ships exactly the slots it declares', () => {
@@ -1581,7 +1588,7 @@ test('E03 can only land on a nav that has a link for it to copy', () => {
   /* It clones an existing link so it matches its neighbours exactly. A nav with no <a> would
      leave it marking nothing — placed, counted in BẰNG CHỨNG, and invisible. */
   const MARKUP = { [CH1.id]: [PAGE_INDEX], [CH3.id]: CH3_PAGES, [CH4.id]: CH4_PAGES,
-                   [CH5.id]: CH5_PAGES };
+                   [CH5.id]: CH5_PAGES, [CH6.id]: CH6_PAGES };
   for (const chapter of CHAPTERS) {
     if (!chapter.pages.some((p) => p.slots.nav)) continue;
     assert.ok(chapter.flavour.E03, `${chapter.id} offers a nav but has no E03 pool`);
@@ -1622,14 +1629,14 @@ test('M06 flies inside the frame and takes its time doing it', () => {
   }
 });
 
-test('every slot M06, I01, I02 and I04 can take sits in a figure with an image', () => {
-  /* All four reach the photograph with ctx.slot.closest('figure'). A caption slot outside a
+test('every slot M06, I02, I04 and I05 can take sits in a figure with an image', () => {
+  /* All of them reach the photograph with ctx.slot.closest('figure'). A caption slot outside a
      figure, or a figure with no <img>, means the anomaly attaches to nothing — and it would
      be counted in BẰNG CHỨNG before anyone noticed. */
-  const IMAGE_SLOTS = new Set([...I01.slots, ...I02.slots, ...I04.slots, ...M06.slots]
+  const IMAGE_SLOTS = new Set([...I02.slots, ...I04.slots, ...I05.slots, ...M06.slots]
     .filter((s) => s !== 'avatar'));
   const ALL = [[CH1.id, [PAGE_INDEX]], [CH2.id, CH2_PAGES], [CH3.id, CH3_PAGES],
-               [CH4.id, CH4_PAGES], [CH5.id, CH5_PAGES]];
+               [CH4.id, CH4_PAGES], [CH5.id, CH5_PAGES], [CH6.id, CH6_PAGES]];
   for (const [chapterId, pages] of ALL) {
     for (const page of pages) {
       for (const m of page.html.matchAll(/<figcaption[^>]*data-slot="([^"]+)"/g)) {
@@ -1728,12 +1735,12 @@ test('R03 has a grid to clone from and the honest empty state it replaces', () =
 
   // It clones a real card, so the grid's first child has to carry every part it rewrites.
   const firstCard = html.slice(html.indexOf('data-grid'), html.indexOf('</article>'));
-  for (const hook of ['<img', 'figcaption', 'class="price"', 'class="sub"', 'data-goto']) {
+  for (const hook of ['<img', 'data-row-cap', 'data-row-title', 'data-row-meta', 'data-row-note']) {
     assert.ok(firstCard.includes(hook), `the card R03 clones has no ${hook}`);
   }
 
   for (const entry of CH3.flavour.R03) {
-    for (const key of ['title', 'cap', 'price', 'sub', 'src']) {
+    for (const key of ['title', 'cap', 'meta', 'note', 'src']) {
       assert.ok(entry[key], `R03 pool entry is missing ${key}`);
     }
   }
@@ -1873,4 +1880,354 @@ test('chapter 5 site markup carries no script and no remote stylesheet', () => {
 test('chapter 5 unlocks only after chapter 4 is cleared', () => {
   assert.strictEqual(isUnlocked(CH5.id, (id) => id !== CH4.id && id !== CH5.id), false);
   assert.strictEqual(isUnlocked(CH5.id, (id) => id !== CH5.id), true);
+});
+
+test('the light inside a photograph belongs to Hồ Vắng and nowhere else', () => {
+  /* M06 means something in chapter 4: a lake resort in the Alien register, on a page that has
+     already supplied the ordinary explanation (a reviewer mentions satellites passing over).
+     Spread across every chapter that has a photograph it stops being about that sky and
+     becomes a reused effect. Kept honest by `exclude` rather than by leaving out the pool,
+     because a missing pool would crash `pick()` rather than decline the placement. */
+  for (const chapter of CHAPTERS) {
+    const hasSurface = chapter.pages.some((p) => M06.slots.some((s) => (p.slots[s] || 0) > 0));
+    if (chapter.id === CH4.id) {
+      assert.ok(hasSurface && !chapter.exclude.includes('M06'), 'Ch4 must be able to place M06');
+      assert.ok(chapter.flavour.M06, 'Ch4 has no M06 pool');
+      continue;
+    }
+    if (!hasSurface) continue;
+    assert.ok(chapter.exclude.includes('M06'), `${chapter.id} can still place M06`);
+    assert.ok(!chapter.flavour.M06, `${chapter.id} keeps a dead M06 pool`);
+  }
+  for (const chapter of CHAPTERS) {
+    if (chapter.id === CH4.id) continue;
+    for (const seed of SEEDS.slice(0, 300)) {
+      for (const p of plan(chapter, seed).picks) {
+        assert.notStrictEqual(p.id, 'M06', `${chapter.id} seed ${seed} placed M06`);
+      }
+    }
+  }
+});
+
+/* ── Chapter 6: the finale, and the last two verbs ──────────────────────── */
+
+import { readFileSync } from 'node:fs';
+import { S03 } from '../games/tham-tu-mang/js/anomalies/style.js';
+import { M05 } from '../games/tham-tu-mang/js/anomalies/motion.js';
+
+test('all three MegaLink pages ship exactly the slots they declare', () => {
+  for (const page of CH6.pages) {
+    assert.deepStrictEqual(slotCounts(CH6_BY_ID[page.id].html), page.slots,
+      `chapter 6 page "${page.id}" markup does not match its declaration`);
+  }
+});
+
+test('the finale rolls 8 to 10 with no slack at all, and still places everything', () => {
+  assert.strictEqual(CH6.min, 8);
+  assert.strictEqual(CH6.max, 10);
+  assert.strictEqual(CH6.pages.length, 3);
+
+  /* Five families (no IMAGE) times the director's cap of 2 is a capacity of exactly 10 —
+     the same as the maximum roll. A run of ten must therefore take precisely two from every
+     family, with nowhere to move. This is the assertion that will fail first if the registry
+     ever changes in a way that starves one of those five here. */
+    const families = new Set(ANOMALIES
+    .filter((a) => !CH6.exclude.includes(a.id)
+      && CH6.pages.some((p) => a.slots.some((s) => (p.slots[s] || 0) > 0)))
+    .map((a) => a.family));
+  assert.strictEqual(families.size, 5, `finale has ${families.size} families, needs 5 for a roll of 10`);
+  assert.ok(!families.has('IMAGE'), 'the finale must stay free of the IMAGE family');
+
+  let tens = 0;
+  for (const seed of SEEDS) {
+    const { count, picks } = plan(CH6, seed);
+    assert.ok(count >= 8 && count <= 10, `seed ${seed} rolled ${count}`);
+    assert.strictEqual(picks.length, count, `seed ${seed} promised ${count}, placed ${picks.length}`);
+    const counts = {};
+    for (const p of picks) counts[p.family] = (counts[p.family] || 0) + 1;
+    for (const [family, n] of Object.entries(counts)) {
+      assert.ok(n <= 2, `seed ${seed} took ${n} from ${family}`);
+    }
+    if (count === 10) tens += 1;
+  }
+  assert.ok(tens > 100, `only ${tens} seeds rolled the maximum — the range is not being used`);
+});
+
+test('the finale has nothing to look at', () => {
+  /* Spec §5.6, and it is a tonal decision as much as a realistic one: after five chapters of
+     photographs the last site has no image at all. It is also the only page module in the
+     game that makes no network request. */
+  for (const page of CH6_PAGES) {
+    assert.ok(!/<img/i.test(page.html), `page "${page.id}" grew an image`);
+    assert.ok(!/<figure/i.test(page.html), `page "${page.id}" grew a figure`);
+    assert.ok(!/picsum|randomuser|loremflickr/i.test(page.html), `page "${page.id}" fetches a photo`);
+  }
+  for (const page of CH6.pages) {
+    assert.ok(!page.slots.photo && !page.slots.avatar && !page.slots['gallery-caption'],
+      `page "${page.id}" declares an image slot`);
+  }
+});
+
+test('the revoked-account note is clean content, never an anomaly slot', () => {
+  // T08's ruler, the same job chapter 2's memorial does — and it is on a different page from
+  // the signature it measures, so the player has to have read both.
+  const html = CH6_BY_ID['lich-su'].html;
+  const box = html.slice(html.indexOf('class="notice-box"'), html.indexOf('</aside>'));
+  assert.ok(box.includes('Ghi chú vận hành'), 'the operations note is gone');
+  assert.ok(!box.includes('data-slot'), 'the operations note became an anomaly slot');
+  assert.match(box, /30\/06\/2024/, 'the note no longer says when the account was revoked');
+  for (const entry of CH6.flavour.T08) {
+    assert.ok(box.includes(entry.name), `T08 signs "${entry.name}", a name the note never mentions`);
+  }
+});
+
+test('the 90-day tally closes, so T10 has something to break', () => {
+  const html = CH6_BY_ID['lich-su'].html;
+  const table = html.slice(html.indexOf('class="tally"'), html.indexOf('</table>'));
+  const MINUTES = 129600;
+
+  const rows = [...table.matchAll(/<td data-n[^>]*>(\d+)<\/td><td[^>]*>([\d,]+)%<\/td>/g)]
+    .map((m) => ({ down: Number(m[1]), up: Number(m[2].replace(',', '.')) }));
+  assert.strictEqual(rows.length, 5, `expected five tally rows, parsed ${rows.length}`);
+
+  for (const r of rows) {
+    const derived = Number((100 - (r.down / MINUTES) * 100).toFixed(3));
+    assert.strictEqual(derived, r.up,
+      `${r.down} minutes of ${MINUTES} is ${derived}%, but the row says ${r.up}%`);
+  }
+  const total = Number(table.match(/<td data-sum[^>]*>(\d+)<\/td>/)[1]);
+  assert.strictEqual(rows.reduce((n, r) => n + r.down, 0), total, 'the downtime column does not add up');
+});
+
+test('S03 has a stylesheet rule wherever it can be placed', () => {
+  /* It reveals itself through ::selection, which cannot be set from an inline style. A chapter
+     that offers S03 a slot but no .sel-ghost rule would place an anomaly that is invisible in
+     both states — present, counted, and impossible to find. */
+  const CSS = {
+    [CH1.id]: 'ch1-lumiere', [CH2.id]: 'ch2-bep-nha-may', [CH3.id]: 'ch3-san-do-cu',
+    [CH4.id]: 'ch4-ho-vang', [CH5.id]: 'ch5-hoa-ban', [CH6.id]: 'ch6-megalink'
+  };
+  for (const chapter of CHAPTERS) {
+    const eligible = chapter.pages.some((p) => S03.slots.some((s) => (p.slots[s] || 0) > 0));
+    if (!eligible || chapter.exclude.includes('S03')) continue;
+    assert.ok(chapter.flavour.S03, `${chapter.id} can place S03 but has no pool`);
+    const css = readFileSync(
+      new URL(`../games/tham-tu-mang/sites/${CSS[chapter.id]}/site.css`, import.meta.url), 'utf8');
+    assert.match(css, /\.sel-ghost\s*\{/, `${chapter.id} has no .sel-ghost rule`);
+    assert.match(css, /\.sel-ghost::selection/, `${chapter.id} never reveals the hidden layer`);
+  }
+});
+
+test('M05 lifts the page by a sane amount wherever it is offered', () => {
+  assert.ok(!M05.deferred,
+    'M05 plants its scar at apply time and must be reconciled like any other anomaly');
+  for (const chapter of CHAPTERS) {
+    for (const entry of chapter.flavour.M05 ?? []) {
+      assert.ok(Number.isInteger(entry.lift) && entry.lift >= 24 && entry.lift <= 80,
+        `${chapter.id}: M05 lift ${entry.lift} is outside the range a player would notice but tolerate`);
+    }
+  }
+});
+
+test('every byline in the game carries the name hook T08 rewrites', () => {
+  /* Without [data-who] T08 falls back to signing the block instead of replacing a name — which
+     is correct behaviour, but a slot explicitly called `byline` should always offer the hook. */
+  const ALL = [[CH2.id, CH2_PAGES], [CH4.id, CH4_PAGES], [CH5.id, CH5_PAGES], [CH6.id, CH6_PAGES]];
+  for (const [chapterId, pages] of ALL) {
+    for (const page of pages) {
+      for (const m of page.html.matchAll(/<(\w+)[^>]*\bdata-slot="byline"[^>]*>([\s\S]*?)<\/\1>/g)) {
+        assert.match(m[2], /data-who/, `${chapterId}/${page.id}: a byline has no [data-who]`);
+      }
+    }
+  }
+});
+
+test('the finale offers its search slot only where R03 has a grid', () => {
+  for (const page of CH6.pages) {
+    if (!page.slots.search) continue;
+    assert.strictEqual(page.id, 'index', `page "${page.id}" must not offer a search slot`);
+  }
+  assert.match(CH6_BY_ID.index.html, /data-grid/, 'nothing for R03 to append its find to');
+  assert.match(CH6_BY_ID.index.html, /data-empty/, 'no honest empty state for R03 to suppress');
+  assert.match(CH6_BY_ID.index.html, /data-row-title/, 'the service row has no title hook');
+  assert.match(CH6_BY_ID.index.html, /data-row-meta/, 'the service row has no figure hook');
+  assert.match(CH6_BY_ID.index.html, /data-row-note/, 'the service row has no status hook');
+  // No photographs here, so the pool must not carry one — R03 drops the <img> when it has none.
+  for (const entry of CH6.flavour.R03) {
+    assert.ok(entry.title && entry.meta && entry.note, 'R03 pool entry is incomplete');
+    assert.ok(!entry.src, 'the finale has no imagery; R03 must not introduce one');
+  }
+  assert.match(String(CH6_INDEX.behaviour), /site:filtered/, 'the filter no longer announces its result');
+});
+
+test('chapter 6 site markup carries no script and no remote stylesheet', () => {
+  for (const page of CH6_PAGES) {
+    assert.ok(!/<script/i.test(page.html), `${page.id} carries a script`);
+    assert.ok(!/<link[^>]+href="http/i.test(page.html), `${page.id} loads a remote stylesheet`);
+  }
+});
+
+test('chapter 6 is last, and unlocks only after chapter 5', () => {
+  assert.strictEqual(CHAPTERS[CHAPTERS.length - 1].id, CH6.id);
+  assert.strictEqual(isUnlocked(CH6.id, (id) => id !== CH5.id && id !== CH6.id), false);
+  assert.strictEqual(isUnlocked(CH6.id, (id) => id !== CH6.id), true);
+});
+
+/* ── The mark contract, and the anomalies that reach outside their slot ─── */
+
+import { claimMark } from '../games/tham-tu-mang/js/engine/run.js';
+import { M01, M03, M07 } from '../games/tham-tu-mang/js/anomalies/motion.js';
+import { S06 } from '../games/tham-tu-mang/js/anomalies/style.js';
+
+const fakeEl = () => ({ dataset: {}, attrs: {}, setAttribute(k, v) { this.attrs[k] = v; } });
+
+test('claimMark never overwrites another anomaly, and is idempotent for its own', () => {
+  /* The bug this exists to stop, reproduced on a real machine before the fix:
+       · ch4 seed 13 — I03 ended up with only ONE marked image, so the "two names, one face"
+         pair became distinguishable, which is the exact thing I03 exists to prevent;
+       · ch5 seed 5 — I03 overwrote I04's only element, reconcile() dropped I04 from the run,
+         and the avatar still blurred on screen. Circling it answered ĐÃ GHI RỒI forever: a
+         visible anomaly that could never be captured. */
+  const el = fakeEl();
+  assert.strictEqual(claimMark(el, 'I03'), el, 'a free element is claimed');
+  assert.strictEqual(el.dataset.anom, 'I03');
+  assert.strictEqual(el.attrs['data-catch'], '', 'a claimed element also becomes a hit target');
+
+  assert.strictEqual(claimMark(el, 'I04'), null, 'a taken element is refused');
+  assert.strictEqual(el.dataset.anom, 'I03', 'and the first claim survives untouched');
+
+  assert.strictEqual(claimMark(el, 'I03'), el, 'the same anomaly may mark it again');
+  assert.strictEqual(claimMark(null, 'I03'), null, 'a missing element is refused, not thrown at');
+});
+
+test('every anomaly that marks outside its own slot checks the claim', () => {
+  /* The director guarantees one anomaly per slot ELEMENT, but these reach past their slot to
+     the figure's <img>, so two of them can still land on one element without the director
+     being wrong. Each must cope with a refusal rather than assume it won. */
+  const REACHERS = { I03, I04, I05 };
+  for (const [id, a] of Object.entries(REACHERS)) {
+    const src = String(a.apply);
+    assert.ok(/dataset\.anom|ctx\.mark\(/.test(src), `${id} never consults the existing claim`);
+  }
+  // I04 must bail on refusal rather than carry on unmarked.
+  assert.match(String(I04.apply), /if \(!ctx\.mark\(img\)\) return;/,
+    'I04 must give up when its image is already claimed');
+});
+
+test('the light-in-a-photograph and the hover-resize each stay in their own chapters', () => {
+  const ONLY = { M06: [CH4.id], M07: [CH3.id, CH4.id, CH5.id] };
+  for (const [id, allowed] of Object.entries(ONLY)) {
+    const a = byId(id);
+    for (const chapter of CHAPTERS) {
+      const hasSurface = chapter.pages.some((p) => a.slots.some((s) => (p.slots[s] || 0) > 0));
+      if (allowed.includes(chapter.id)) {
+        assert.ok(hasSurface && !chapter.exclude.includes(id), `${chapter.id} must be able to place ${id}`);
+        assert.ok(chapter.flavour[id], `${chapter.id} has no ${id} pool`);
+        continue;
+      }
+      if (!hasSurface) continue;
+      assert.ok(chapter.exclude.includes(id), `${chapter.id} can still place ${id}`);
+      assert.ok(!chapter.flavour[id], `${chapter.id} keeps a dead ${id} pool`);
+    }
+    for (const chapter of CHAPTERS) {
+      if (allowed.includes(chapter.id)) continue;
+      for (const seed of SEEDS.slice(0, 250)) {
+        for (const p of plan(chapter, seed).picks) {
+          assert.notStrictEqual(p.id, id, `${chapter.id} seed ${seed} placed ${id}`);
+        }
+      }
+    }
+  }
+});
+
+test('M07 steps one notch at a time, in one direction, and stops', () => {
+  for (const chapter of CHAPTERS) {
+    for (const entry of chapter.flavour.M07 ?? []) {
+      assert.ok(entry.step > 0 && entry.step <= 0.1, `M07 step ${entry.step} is not a subtle notch`);
+      assert.ok(Number.isInteger(entry.max) && entry.max >= 2 && entry.max <= 5,
+        `M07 max ${entry.max} is outside the range that stays capturable`);
+      assert.ok(entry.dir === 'up' || entry.dir === 'down', 'M07 needs one fixed direction');
+      // Shrinking must never take the element below half size, or it stops being circleable.
+      if (entry.dir === 'down') {
+        assert.ok(1 - entry.step * entry.max > 0.5,
+          `M07 shrinks to ${(1 - entry.step * entry.max).toFixed(2)} — too small to circle`);
+      }
+    }
+  }
+});
+
+test("M05's scar carries its own sentence, not a copy of the one above it", () => {
+  /* A faded copy of the line you just read is a page painting twice — a BUG, and bugs get
+     ignored. The scar has to say something the site never wrote. */
+  for (const chapter of CHAPTERS) {
+    const pages = { [CH1.id]: [PAGE_INDEX], [CH2.id]: CH2_PAGES, [CH3.id]: CH3_PAGES,
+                    [CH4.id]: CH4_PAGES, [CH5.id]: CH5_PAGES, [CH6.id]: CH6_PAGES }[chapter.id];
+    const html = pages.map((p) => p.html).join('');
+    for (const entry of chapter.flavour.M05 ?? []) {
+      assert.ok(entry.text && entry.text.length > 12, `${chapter.id}: M05 scar has no sentence`);
+      assert.ok(!html.includes(entry.text),
+        `${chapter.id}: the scar repeats text the page already shows — "${entry.text}"`);
+    }
+  }
+});
+
+test('I05 needs two photographs on the page before it can double one', () => {
+  assert.deepStrictEqual(I05.slots, ['photo', 'gallery-caption']);
+  assert.strictEqual(I05.needs.photo, 2);
+  assert.strictEqual(I05.needs['gallery-caption'], 2);
+  for (const seed of SEEDS) {
+    for (const chapter of CHAPTERS) {
+      for (const p of plan(chapter, seed).picks) {
+        if (p.id !== 'I05') continue;
+        const page = chapter.pages.find((pg) => pg.id === p.page);
+        assert.ok((page.slots[p.slot] || 0) >= 2,
+          `${chapter.id} seed ${seed}: I05 on a page with only one ${p.slot}`);
+      }
+    }
+  }
+});
+
+test('the withdrawn photo-from-another-year is gone from every chapter', () => {
+  assert.strictEqual(byId('I01'), null, 'I01 is still in the registry');
+  for (const chapter of CHAPTERS) {
+    assert.ok(!chapter.flavour.I01, `${chapter.id} keeps a dead I01 pool`);
+  }
+});
+
+test('every photograph on every site is something the player can circle', () => {
+  /* Before this, only the <figcaption> was a target: the image itself carried nothing, so the
+     aim ring never lit over a photo and releasing the lasso answered "KHÔNG CÓ GÌ Ở ĐÂY". The
+     player reads that as the game refusing the gesture — reported as "I cannot circle the
+     picture". A photograph is the most suspectable thing on a page; it has to be a claim. */
+  assert.match(imgHtml({ src: picsum({ w: 10, h: 10, id: 1 }), alt: 'x', w: 10, h: 10, tint: '#fff' }),
+    /\sdata-catch[\s>]/, 'imgHtml no longer emits data-catch');
+  const ALL = [[CH1.id, [PAGE_INDEX]], [CH2.id, CH2_PAGES], [CH3.id, CH3_PAGES],
+               [CH4.id, CH4_PAGES], [CH5.id, CH5_PAGES]];
+  for (const [chapterId, pages] of ALL) {
+    for (const page of pages) {
+      for (const [tag] of page.html.matchAll(/<img[^>]*>/g)) {
+        assert.match(tag, /data-catch/, `${chapterId}/${page.id}: an image is not a hit target`);
+      }
+    }
+  }
+});
+
+test('every anomaly that sets a transform first makes its element able to take one', () => {
+  /* CSS: `transform` does not apply to a non-replaced INLINE box. The browser accepts the
+     property, getComputedStyle reports the right matrix, the animation runs — and nothing
+     moves on screen. Nothing is logged.
+
+     Caught in chapter 5 on the notice page's `cta`, a bare <a> ("← Quay lại danh sách thông
+     báo") whose only rule is `text-decoration: none`. M03 sat on it dead silent, and the same
+     trap killed M01 and M07 on chapters 5 and 6 — three anomalies, one cause.
+
+     Guarded here as code shape rather than in each site.css: a `display:inline-block` buried in
+     a fake site's stylesheet is exactly what nobody remembers when writing chapter seven, and
+     forgetting it does not break loudly — the anomaly just never happens while BẰNG CHỨNG goes
+     on counting it. */
+  const USERS = { M01, M03, M07, S06 };
+  for (const [id, a] of Object.entries(USERS)) {
+    const src = String(a.apply);
+    assert.match(src, /transformable\(/, `${id} sets a transform without calling transformable()`);
+  }
 });

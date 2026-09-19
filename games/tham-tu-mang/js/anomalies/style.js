@@ -1,6 +1,7 @@
 /* Họ STYLE. */
 
 import { pick } from '../engine/rng.js';
+import { transformable } from '../engine/site.js';
 
 export const S01 = {
   id: 'S01', family: 'STYLE', label: 'Một chữ sai phông chữ',
@@ -84,6 +85,9 @@ export const S06 = {
     const STEP = entry.step ?? 16;
     const MAX = entry.max ?? 88;
 
+    /* Các slot của S06 hôm nay đều là khối, nhưng cùng cái bẫy inline vẫn rình: một chương
+       sau này khai `notice` lên một thẻ <span> là dị thường tắt ngấm mà không báo gì. */
+    transformable(ctx.slot);
     ctx.slot.style.position = 'relative';
     ctx.slot.style.willChange = 'transform';
 
@@ -116,4 +120,43 @@ export const S06 = {
    luôn luôn là "ừ, chắc vậy". Xem spec §6 STYLE. Nếu khôi phục, nó cần một cái tell thứ hai
    chứ không phải một cái bóng đậm hơn. */
 
-export const STYLE_ANOMALIES = [S01, S05, S06, S07];
+/* ── S03: bôi đen dòng chữ thì hiện ra chữ không có trên trang ─────────
+   Động tác cuối cùng trong trò chơi mà chưa dị thường nào đòi tới: BÔI ĐEN. Không phải nhớ,
+   không phải rê chuột, không phải bấm, không phải cộng — chỉ là kéo chuột qua một dòng tiêu
+   đề, thứ mà rất nhiều người vẫn làm một cách vô thức trong lúc đọc.
+
+   Chữ giấu nằm trong một lớp trong suốt (color: transparent) đặt ngay DƯỚI khối chữ thật,
+   ngoài dòng chảy nên không đẩy gì đi đâu. Nó chỉ hiện ra nhờ quy tắc ::selection của trang:
+   bôi trúng thì glyph có màu, buông ra thì lại biến mất.
+
+   Vì sao đặt ở DƯỚI chứ không chồng lên: chồng lên thì lúc bôi đen sẽ có hai dòng chữ đè lên
+   nhau và không đọc nổi chữ nào. Đặt xuống khoảng trống ngay dưới tiêu đề thì dòng chữ giấu
+   hiện ra ở một chỗ đáng lẽ không có gì cả — và đó mới là câu người chơi cần đọc được.
+
+   §4.1 cho phép dị thường này tồn tại: CHẾ ĐỘ ĐỌC cố ý để việc kéo chuột lại cho trình duyệt,
+   không cướp lấy nó.
+
+   ĐÁNH DẤU CẢ HAI. Thứ người chơi bôi trúng là dòng tiêu đề, thứ họ ĐỌC ĐƯỢC là lớp chữ giấu;
+   khoanh cái nào cũng phải tính. run.found lưu theo ID nên cái còn lại trả về ĐÃ GHI RỒI thay
+   vì trừ máu (xem I03).
+
+   Chương nào mở slot cho nó thì site.css phải có .sel-ghost và .sel-ghost::selection — không
+   đặt được ::selection bằng style inline. */
+export const S03 = {
+  id: 'S03', family: 'STYLE', label: 'Bôi đen dòng chữ thì hiện ra chữ khác',
+  slots: ['hero-title', 'post-title', 'notice'], weight: 3,
+  apply(ctx) {
+    const entry = pick(ctx.rng, ctx.flavour);
+    if (getComputedStyle(ctx.slot).position === 'static') ctx.slot.style.position = 'relative';
+
+    const ghost = document.createElement('span');
+    ghost.className = 'sel-ghost';
+    ghost.textContent = entry;
+    ctx.slot.appendChild(ghost);
+
+    ctx.mark(ghost);
+    ctx.mark(ctx.slot);
+  }
+};
+
+export const STYLE_ANOMALIES = [S01, S03, S05, S06, S07];

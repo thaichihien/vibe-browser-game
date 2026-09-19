@@ -73,7 +73,8 @@ Every URL there must stay **pinned** — a `lock=`, an `/id/`, or a portrait ind
 its captions are written against a known photograph and an unpinned URL silently breaks
 them; every `<img>` carries an `onerror` fallback to a procedural SVG, so the game degrades
 to a stylised site rather than a page of broken-image icons. `img.js` still exports a
-`loremflickr` builder, but **no built chapter uses it** (1–4 are built): loremflickr
+`loremflickr` builder, but **no chapter uses it** (all six are built; chapter 6 has no
+imagery at all): loremflickr
 burns an attribution strip and a licence badge into every frame, so a page of its photos
 reads as scraped stock rather than a brand's own site, and its keywords do not reliably
 return the subject asked for (`portrait,woman` returned a newsstand). Prefer picsum, whose

@@ -3,136 +3,12 @@
 
 import { pick } from '../engine/rng.js';
 
-/** Thêm tham số vào một URL đã ghim mà không làm mất cái ghim. */
-function greyscaled(src) {
-  if (src.includes('loremflickr.com')) {
-    return src.includes('/g/') ? src : src.replace('loremflickr.com/', 'loremflickr.com/g/');
-  }
-  if (src.includes('picsum.photos')) {
-    return src.includes('?') ? `${src}&grayscale` : `${src}?grayscale`;
-  }
-  return src;
-}
-
-export const I01 = {
-  id: 'I01', family: 'IMAGE', label: 'Một tấm ảnh đến từ năm khác', slots: ['photo'], weight: 3,
-  apply(ctx) {
-    const figure = ctx.slot.closest('figure') ?? ctx.slot.parentElement;
-    const img = figure?.querySelector('img');
-    if (!img) return;
-
-    /* Chỉ đen trắng thôi thì KHÔNG đủ lạ — người chơi đọc nó ra là một lựa chọn thiết kế,
-       và họ đúng: rất nhiều trang thật để một tấm ảnh đen trắng giữa một dải ảnh màu.
-
-       Nên tấm ảnh này không chỉ mất màu, nó còn ngả sang màu của một tấm ảnh cũ hơn hẳn:
-       ố vàng, tương phản gắt, hơi tối. Ba tấm bên cạnh chụp tháng trước, còn tấm này trông
-       như được quét lại từ một cuốn album. Cùng một khuôn hình, cùng một chú thích, nhưng
-       sai mất vài chục năm. Cái đó thì không đọc ra là thiết kế được nữa.
-
-       Việc mất màu vẫn do CDN làm (ảnh TỰ NÓ về đen trắng, chịu được soi kỹ); phần ngả màu
-       do CSS, nên nó chồng lên trên chứ không thay thế. */
-    const entry = pick(ctx.rng, ctx.flavour);
-    img.src = greyscaled(img.getAttribute('src'));
-    img.style.filter = entry.filter;
-    ctx.mark(img);
-    if (!entry.rotate) return;
-
-    /* Và xoay hẳn đi. Ảnh ố vàng thôi thì vẫn còn giải thích được là một lựa chọn thiết kế;
-       một bức ảnh phong cảnh nằm nghiêng ba mươi lăm độ — hoặc gần như lộn ngược — thì không.
-
-       XOAY RUỘT ẢNH, KHÔNG XOAY CÁI KHUNG. Bản đầu xoay cả thẻ <img>, nên trên màn hình hiện
-       ra một hình chữ nhật nằm chéo với nền trang lòi ra bốn góc: cái đó đọc ra là TRANG BỊ VỠ
-       chứ không phải là tấm ảnh bị sai, mà trang vỡ thì người chơi bỏ qua. Giờ thì ô ảnh vẫn
-       vuông vắn đúng chỗ của nó, đúng cỡ của nó, và chỉ có tấm ảnh BÊN TRONG là nằm nghiêng.
-       Bố cục không suy suyển một pixel; chỉ có thế giới trong khung hình là sai.
-
-       Cách làm, không cần thêm thẻ nào và không cần overflow:hidden ở đâu cả:
-         · phóng to ảnh lên đúng hệ số k đủ để bản xoay phủ kín ô — thiếu một chút là hở góc;
-         · rồi cắt bằng clip-path một hình bốn cạnh, tính TRONG HỆ TOẠ ĐỘ CHƯA XOAY của ảnh.
-       clip-path cắt trước, transform xoay sau, nên nếu lấy ảnh ngược của ô ảnh qua phép xoay
-       (tức xoay ô đi −góc rồi thu lại 1/k) thì sau khi xoay, phần còn thấy được khớp đúng
-       từng pixel với ô ảnh ban đầu.
-
-       Đo bằng offsetWidth/offsetHeight chứ KHÔNG bằng getBoundingClientRect: rect trả về
-       khung đã-biến-đổi, nên lần đo thứ hai sẽ đo nhầm chính cái transform mình vừa đặt.
-
-       ResizeObserver lo hai việc cùng lúc: đổi cỡ cửa sổ giữa ván, và trường hợp lúc apply()
-       ô ảnh còn 0×0 — ở chương nhiều trang, mọi trang được gắn cùng lúc còn trang chưa mở thì
-       đang display:none, nên đo ngay lúc đó sẽ ra một hệ số vô nghĩa. */
-    /* Trần phóng to. Muốn bản xoay phủ kín ô ảnh thì phải phóng lên, và cái giá đó phụ thuộc
-       tỉ lệ khung: ô vuông thì rẻ, ô dài ngoẵng thì đắt khủng khiếp. Một tấm toàn cảnh 3:1
-       xoay 69° cần phóng 3,16 lần — tức là cắt còn một mẩu nhỏ, mờ nhoè, và người chơi đọc ra
-       là ẢNH HỎNG chứ không phải ảnh bị xoay. Nên góc phải chiều theo khung: nếu góc tác giả
-       viết ra quá đắt, kéo nó dần về phía mốc rẻ gần nhất (0° hoặc 180°) cho tới khi vừa trần.
-       Một đường chân trời nghiêng 17° vẫn sai rành rành; một mẩu ảnh vỡ thì không nói gì cả. */
-    const CEILING = 1.8;
-    const zoomFor = (deg, w, h) => {
-      const rad = deg * Math.PI / 180;
-      const ac = Math.abs(Math.cos(rad));
-      const as = Math.abs(Math.sin(rad));
-      return Math.max((w * ac + h * as) / w, (w * as + h * ac) / h);
-    };
-
-    const angleFor = (w, h) => {
-      const want = entry.rotate;
-      if (zoomFor(want, w, h) <= CEILING) return want;
-      const norm = ((want % 360) + 360) % 360;
-      const anchor = Math.abs(norm - 180) < 90 ? 180 : 0;
-      let deg = anchor;
-      for (let t = 1; t <= 60; t++) {
-        const trial = want + (anchor - want) * (t / 60);
-        if (zoomFor(trial, w, h) <= CEILING) { deg = trial; break; }
-      }
-      /* Nếu kéo mãi mà chỉ còn gần 0° thì thôi không xoay nữa cũng bằng không có dị thường.
-         180° thì LÚC NÀO cũng rẻ — hệ số đúng bằng 1 với mọi khung — nên đó là lối thoát:
-         ảnh lộn ngược hẳn, không mất một pixel nào. */
-      const off = Math.abs(Math.sin(deg * Math.PI / 180));
-      return off < Math.sin(8 * Math.PI / 180) ? 180 : deg;
-    };
-
-    const paint = () => {
-      const w = img.offsetWidth;
-      const h = img.offsetHeight;
-      if (!w || !h) return;
-
-      const deg = angleFor(w, h);
-      const rad = deg * Math.PI / 180;
-      const cs = Math.cos(rad);
-      const sn = Math.sin(rad);
-      const k = zoomFor(deg, w, h);
-
-      // Góc của ô ảnh, đưa ngược về hệ toạ độ của chính thẻ <img> trước khi xoay.
-      const at = (dx, dy) => {
-        const x = w / 2 + (dx * cs + dy * sn) / k;
-        const y = h / 2 + (-dx * sn + dy * cs) / k;
-        return `${x.toFixed(2)}px ${y.toFixed(2)}px`;
-      };
-
-      img.style.transformOrigin = 'center center';
-      img.style.transform = `rotate(${deg.toFixed(2)}deg) scale(${k.toFixed(4)})`;
-      img.style.clipPath =
-        `polygon(${at(-w / 2, -h / 2)}, ${at(w / 2, -h / 2)}, ${at(w / 2, h / 2)}, ${at(-w / 2, h / 2)})`;
-
-      /* clip-path giấu được PIXEL nhưng không thu lại VÙNG CUỘN: trình duyệt vẫn tính khung
-         đã-biến-đổi vào phạm vi cuộn của trang, nên tấm ảnh phóng 1,8 lần làm cả trang cuộn
-         ngang được dù không có gì thò ra để mà nhìn thấy. Một trang tự nhiên cuộn ngang thì
-         đọc ra là trang vỡ, và tệ hơn: thanh cuộn ấy là một cái tell không ai đặt vào đó.
-
-         Cắt ở ngay thẻ <figure>, và cắt TỪ TRONG dị thường chứ không phải trong site.css.
-         Luật "không overflow:hidden ở thẻ cha của data-slot" vẫn còn nguyên giá trị cho S06
-         và E01 — nhưng hai đứa đó không bao giờ bám vào figcaption của ảnh, và mỗi phần tử
-         slot chỉ nhận đúng một dị thường, nên cái figure này chắc chắn không còn ai khác. */
-      const frame = ctx.slot.closest('figure') ?? img.parentElement;
-      if (frame) {
-        frame.style.overflow = 'hidden';
-        frame.style.overflow = 'clip';      // không tạo hộp cuộn; bản cũ không hiểu thì bỏ qua
-      }
-    };
-
-    paint();
-    if (typeof ResizeObserver === 'function') new ResizeObserver(paint).observe(img);
-  }
-};
+/* I01 `ảnh đến từ năm khác` đã bị RÚT theo yêu cầu của người chơi (18/09/2026).
+   Nó làm một tấm ảnh mất màu, ngả vàng rồi xoay ruột ảnh bên trong khung. Cùng với nó, hàm
+   greyscaled() và toàn bộ phần tính clip-path theo góc xoay cũng đi — không còn ai dùng.
+   Chỗ của nó trong họ IMAGE do I05 (một tấm ảnh dùng hai lần) thế chỗ, để họ này vẫn đủ bốn
+   thành viên: sức chứa của mỗi chương tính bằng số họ nhân hai, nên một họ hụt đi là cả
+   khoảng bốc hụt theo. Xem spec §6 IMAGE. */
 
 export const I03 = {
   id: 'I03', family: 'IMAGE', label: 'Hai cái tên, một khuôn mặt', slots: ['avatar'], weight: 3, needs: { avatar: 2 },
@@ -141,10 +17,22 @@ export const I03 = {
     if (all.length < 2) return;
 
     const mine = ctx.slot;
-    const other = [...all].find((el) => el !== mine);
-    const srcImg = other.closest('figure')?.querySelector('img');
     const dstImg = mine.closest('figure')?.querySelector('img');
-    if (!srcImg || !dstImg) return;
+    /* Ảnh của chính mình đã bị dị thường khác chiếm thì bỏ cuộc hẳn: reconcile() loại I03 ra
+       một cách sạch sẽ, còn hơn là dựng một cặp mà chỉ một nửa khoanh được. */
+    if (!dstImg || (dstImg.dataset.anom && dstImg.dataset.anom !== 'I03')) return;
+
+    /* Bạn đồng hành phải là một avatar mà ảnh CHƯA có chủ. Bản đầu lấy bừa cái đầu tiên khác
+       mình, nên khi I04 (ảnh mờ dần) đang ngồi đúng trên tấm đó thì một nửa của cặp mất dấu —
+       và cặp "hai cái tên, một khuôn mặt" lại phân biệt được, đúng thứ I03 sinh ra để chống.
+       Bắt được ở chương 4 hạt 13. */
+    const free = (el) => {
+      const img = el.closest('figure')?.querySelector('img');
+      return img && (!img.dataset.anom || img.dataset.anom === 'I03');
+    };
+    const other = [...all].find((el) => el !== mine && free(el));
+    const srcImg = other?.closest('figure')?.querySelector('img');
+    if (!srcImg) return;
 
     // Hai cái tên, hai độ tuổi, một khuôn mặt.
     dstImg.src = srcImg.getAttribute('src');
@@ -167,7 +55,11 @@ export const I04 = {
   apply(ctx) {
     const img = ctx.slot.closest('figure')?.querySelector('img');
     if (!img) return;
-    ctx.mark(img);
+    /* Ảnh đã có dị thường khác ngồi lên (I03 với sang ảnh hàng xóm, I05 nhân đôi một tấm) thì
+       bỏ cuộc. Cứ làm mờ mà không có dấu thì trên màn hình vẫn thấy ảnh mờ dần, nhưng khoanh
+       vào đó chỉ nhận về "ĐÃ GHI RỒI" và không có gì xảy ra — một dị thường nhìn thấy được mà
+       vĩnh viễn không khoanh được. Bắt được ở chương 5 hạt 5. */
+    if (!ctx.mark(img)) return;
 
     /* Dùng filter của CSS chứ không phải tham số ?blur= của CDN: loremflickr không có tham số
        đó, và đổi src mỗi lần nhìn sẽ khiến ảnh phải tải lại — ngoại tuyến là rơi thẳng về
@@ -224,4 +116,53 @@ export const I02 = {
   }
 };
 
-export const IMAGE_ANOMALIES = [I01, I02, I03, I04];
+/* ── I05: một tấm ảnh được dùng hai lần ────────────────────────────────
+   Hai chú thích khác nhau, tả hai chỗ khác nhau, và bên trên cả hai là ĐÚNG MỘT tấm ảnh.
+
+   Đây là anh em của I03 ở phía ảnh chụp cảnh, và sự giống nhau đó là cố ý — nhưng hai cái nói
+   hai câu khác hẳn. I03 nói: những người trên trang này không phải người thật. I05 nói: cái
+   NƠI này không có thật, hoặc họ chỉ có đúng một tấm ảnh và đã đem dùng cho mọi thứ. Ở chương
+   5 câu ấy nặng nhất — một ngôi trường chỉ có một tấm ảnh, dán cho cả sân trường lẫn lớp học.
+
+   ĐÁNH DẤU CẢ HAI, cùng lý do với I03: sau khi tráo thì không còn cách nào phân biệt bản gốc
+   với bản bị tráo vào, nên nếu chỉ đánh dấu một tấm thì người chơi nhìn ra đúng dị thường,
+   khoanh đúng cái mình nhìn ra, rồi mất một trái tim vì đã chọn nhầm nửa của một cặp không
+   phân biệt được. run.found lưu theo ID nên khoanh nửa nào cũng ghi được một lần, nửa kia
+   trả về ĐÃ GHI RỒI.
+
+   Chỉ nhận những tấm ảnh CHƯA có chủ — xem claimMark() trong engine/run.js. */
+export const I05 = {
+  id: 'I05', family: 'IMAGE', label: 'Một tấm ảnh được dùng hai lần',
+  slots: ['photo', 'gallery-caption'], weight: 3,
+  needs: { photo: 2, 'gallery-caption': 2 },
+  apply(ctx) {
+    const type = ctx.slot.dataset.slot;
+    const all = [...ctx.root.querySelectorAll(`[data-slot="${type}"]`)];
+    if (all.length < 2) return;
+
+    const imgOf = (el) => el.closest('figure')?.querySelector('img') ?? null;
+    const free = (el) => {
+      const img = imgOf(el);
+      return img && (!img.dataset.anom || img.dataset.anom === 'I05');
+    };
+
+    const dstImg = imgOf(ctx.slot);
+    if (!dstImg || (dstImg.dataset.anom && dstImg.dataset.anom !== 'I05')) return;
+
+    /* Bạn đồng hành phải là một tấm KHÁC HẲN về nội dung: nếu hai chỗ vốn đã dùng chung một
+       URL thì hai chú thích đang nói về cùng một tấm ảnh thật, và chẳng có gì sai cả. So bằng
+       src chứ không bằng vị trí. */
+    const mineSrc = dstImg.getAttribute('src');
+    const other = all.find((el) => el !== ctx.slot && free(el)
+      && imgOf(el).getAttribute('src') !== mineSrc);
+    const srcImg = other ? imgOf(other) : null;
+    if (!srcImg) return;
+
+    dstImg.src = srcImg.getAttribute('src');
+    dstImg.setAttribute('alt', srcImg.getAttribute('alt') ?? '');
+    ctx.mark(dstImg);
+    ctx.mark(srcImg);
+  }
+};
+
+export const IMAGE_ANOMALIES = [I02, I03, I04, I05];

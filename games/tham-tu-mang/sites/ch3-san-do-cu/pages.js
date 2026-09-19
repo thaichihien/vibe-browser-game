@@ -152,11 +152,11 @@ const card = (g) => `
     <article class="good" data-title="${g.title.toLowerCase()}" data-cat="${g.cat}" data-price="${g.price}">
       <figure>
         ${photo(g.img, g.cap, 560, 560)}
-        <figcaption data-slot="photo" data-catch>${g.cap}</figcaption>
+        <figcaption data-slot="photo" data-row-cap data-catch>${g.cap}</figcaption>
       </figure>
-      <h3><a href="#" data-goto="${g.key}" data-slot="product-title" data-catch>${g.title}</a></h3>
-      <span class="price" data-slot="price" data-catch>${money(g.price)}</span>
-      <span class="sub" data-catch>${g.cond} · ${g.area}</span>
+      <h3><a href="#" data-goto="${g.key}" data-slot="product-title" data-row-title data-catch>${g.title}</a></h3>
+      <span class="price" data-slot="price" data-row-meta data-catch>${money(g.price)}</span>
+      <span class="sub" data-row-note data-catch>${g.cond} · ${g.area}</span>
     </article>`;
 
 const qaRow = (q, rich) => `

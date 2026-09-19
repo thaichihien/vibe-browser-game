@@ -5,9 +5,10 @@ import { CH2 } from './ch2-bep-nha-may.js';
 import { CH3 } from './ch3-san-do-cu.js';
 import { CH4 } from './ch4-ho-vang.js';
 import { CH5 } from './ch5-hoa-ban.js';
+import { CH6 } from './ch6-megalink.js';
 import { isCleared } from '../storage.js';
 
-export const CHAPTERS = [CH1, CH2, CH3, CH4, CH5];
+export const CHAPTERS = [CH1, CH2, CH3, CH4, CH5, CH6];
 
 export const chapterById = (id) => CHAPTERS.find((c) => c.id === id) ?? null;
 

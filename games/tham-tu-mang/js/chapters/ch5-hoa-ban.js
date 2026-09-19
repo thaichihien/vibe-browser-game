@@ -33,7 +33,11 @@ export const CH5 = {
   max: 9,
   /* R06 mở một tab đi tìm thứ bạn không gõ — một thao tác, tức là một dị thường PHẢN ỨNG.
      Chương này cố ý không có cái nào (spec §6.1). */
-  exclude: ['R06'],
+  /* M06 (đốm sáng đi trong lòng tấm ảnh) chỉ thuộc về chương 4. Ở đó nó có nghĩa: khu nghỉ
+     bên hồ, ngữ vực NGƯỜI LẠ, và cả trang đã dựng sẵn lời giải thích bình thường cho một
+     ánh đèn trên trời. Rải nó ra mọi chương có ảnh thì nó thôi không còn là chuyện của bầu
+     trời Hồ Vắng nữa, chỉ còn là một hiệu ứng dùng lại. */
+  exclude: ['R06', 'M06'],
   force: [],
 
   pages: [
@@ -77,7 +81,7 @@ export const CH5 = {
     T02: [
       {
         before: 'Toàn trường có 442 học sinh, 26 giáo viên và 14 phòng học.',
-        after: 'Toàn trường có 442 học sinh. 26 hội viên tôn thờ và 14 phòng tế. Chúng tôi đã chuẩn bị sẵn sàng cho buổi lễ.'
+        after: 'Toàn trường có 442 học sinh. 26 giáo hội viên và 14 phòng tế. Chúng tôi đã chuẩn bị sẵn sàng cho buổi lễ.'
       },
       {
         before: 'Nhà trường tổ chức họp phụ huynh cuối học kỳ I tại phòng học của từng lớp.',
@@ -110,7 +114,7 @@ export const CH5 = {
        31/02 và 00/00 thì không có; 2027 thì chưa tới mà văn bản đã ban hành; 1998 thì trường
        vừa mới thành lập, chưa thể có thông báo họp phụ huynh cuối kỳ. */
     T07: {
-      date: ['31/02/2026', '00/00/0000', '30/11/2027', '32/13/2026', '10/11/1998']
+      date: ['31/02/2026', '00/00/0000', '30/11/2097', '32/13/2026', '10/11/1968']
     },
 
     /* T08 — chữ ký của người không còn ở đó nữa, đối chiếu với ô "Lịch sử nhà trường":
@@ -171,11 +175,13 @@ export const CH5 = {
       { scale: 1.038, seconds: 2.6 }
     ],
 
-    // M06 — một đốm sáng đi qua bên trong tấm ảnh. Toạ độ là tỉ lệ của chính khung ảnh.
-    M06: [
-      { seconds: 26, from: { x: 0.04, y: 0.80 }, to: { x: 0.94, y: 0.16 } },
-      { seconds: 34, from: { x: 0.96, y: 0.62 }, to: { x: 0.08, y: 0.10 } },
-      { seconds: 21, from: { x: 0.52, y: 0.96 }, to: { x: 0.56, y: 0.04 } }
+
+    /* S03 — bôi đen một dòng thông báo thì dưới nó hiện ra một dòng chưa ai viết lên trang.
+       Vẫn trong luật của chương: không câu nào nói có chuyện gì xảy ra với một học sinh. */
+    S03: [
+      'danh sách thật dài hơn danh sách này',
+      'em thứ 443 chưa được ghi tên vào lớp nào',
+      'bản thông báo này đã gửi đi từ năm ngoái'
     ],
 
     // E01 — cái nút không thuộc về đâu cả, viết bằng đúng giọng biểu mẫu hành chính.
@@ -183,6 +189,24 @@ export const CH5 = {
       { label: 'ĐIỂM DANH LẠI', dialog: 'Đã điểm danh lại. Đủ số lượng hiến tế.' },
       { label: 'BÁO VẮNG', dialog: 'Em đó không có trong danh sách lớp nào.' },
       { label: 'IN DANH SÁCH', dialog: 'Máy in đã in danh sách cho buổi lễ hiến tế.' }
+    ],
+
+    /* M07 — rê chuột qua thì nó nhích một nấc, và không bao giờ trở lại cỡ cũ.
+       Chỉ chương 3, 4 và 5 có nó (xem ghi chú ở anomalies/motion.js): ba chương này đều có
+       thứ để người chơi rê chuột qua một cách tự nhiên trong lúc đọc — thẻ hàng, ô giá, khuôn
+       mặt người đánh giá. `dir` cố định một chiều cho mỗi lần đặt; vừa to vừa nhỏ thì đọc ra
+       là đang dao động, tức là một hiệu ứng giao diện. */
+    M07: [
+      { step: 0.06, max: 4, dir: 'up' },
+      { step: 0.05, max: 4, dir: 'down' },
+      { step: 0.08, max: 3, dir: 'up' }
+    ],
+    /* M05 — trang tự lùi lại một đoạn, để lại một cái vết mang chữ của riêng nó.
+       Vẫn trong luật của chương: không câu nào nói có chuyện gì xảy ra với một học sinh. */
+    M05: [
+      { lift: 40, text: 'Danh sách lớp đã được sửa lại lần thứ tư.' },
+      { lift: 56, text: 'Có một em ngồi ở cuối lớp mà cô không nhớ tên.' },
+      { lift: 32, text: 'Chuông tan học hôm nay reo sớm mười hai phút.' }
     ],
 
     // E03 — thanh menu có thêm một mục, và mục đó đi tới một chỗ trường này không thể có.
@@ -196,7 +220,7 @@ export const CH5 = {
     E04: [
       'Số học sinh đã điểm danh hôm nay cho lễ hiến tế: 443',
       'Bản quyền © 2026 - ngày Ngài trở về với chúng con',
-      'Trang này được cập nhật lần cuối vào một ngày thứ Ba'
+      'Trang này được cập nhật lần cuối trước khi buổi hiến tế diễn ra'
     ],
 
     // E05 — con trỏ sai chỗ.
@@ -206,12 +230,6 @@ export const CH5 = {
       { cursor: 'not-allowed' }
     ],
 
-    // I01 — ảnh mất màu rồi ngả sang màu của mấy chục năm trước, và ruột ảnh xoay hẳn đi.
-    I01: [
-      { filter: 'sepia(0.55) contrast(1.32) brightness(0.88) saturate(1.4)', rotate: 35 },
-      { filter: 'sepia(0.38) contrast(1.45) brightness(0.82)', rotate: 69 },
-      { filter: 'sepia(0.5) contrast(1.28) brightness(0.9) saturate(1.3)', rotate: 176 }
-    ],
 
     /* I02 — ảnh đổi khi bạn quay lại, chú thích thì không. Ba tấm đã được xem tận mắt và
        không tấm nào có mặt một đứa trẻ: một bậc thang dẫn lên vùng sáng, một vùng đất tối
@@ -227,6 +245,10 @@ export const CH5 = {
     I03: [
       { a: { name: 'Trần Thị Bích Liên' }, b: { name: 'Phạm Thu Hà' } }
     ],
+
+    // I05 — hai chú thích khác nhau, một tấm ảnh. Không cần kho chữ: nó tráo ảnh có sẵn
+    // trên trang, còn hai dòng chú thích thì giữ nguyên như tác giả đã viết.
+    I05: [{ note: 'tráo một tấm ảnh thành bản sao của tấm khác trên cùng trang' }],
 
     // I04 — ảnh mờ thêm mỗi lần lọt vào khung nhìn, và không bao giờ trong lại.
     I04: [{ note: 'mờ dần mỗi lần vào khung nhìn' }]

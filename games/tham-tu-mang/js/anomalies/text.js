@@ -208,9 +208,19 @@ export const T08 = {
        [data-when]. Đánh dấu ĐÚNG cái tên chứ không phải cả khối bình luận — thứ người chơi
        nhìn ra là cái tên, nên đó phải là thứ họ khoanh được. */
     const who = ctx.slot.matches('[data-who]') ? ctx.slot : ctx.slot.querySelector('[data-who]');
-    if (!who) {           // không có hợp đồng thì vẫn phải bám được vào đâu đó
-      ctx.slot.textContent = entry.name;
-      ctx.mark(ctx.slot);
+    if (!who) {
+      /* Chỗ bám không có hợp đồng [data-who] — thường là một dòng thông báo, một dòng chữ
+         nhỏ, một câu trong biên bản. KHÔNG ghi đè cả dòng: bản đầu làm thế, và một ô "huỷ
+         đăng ký bất cứ lúc nào" bỗng chỉ còn đúng một cái tên trôi giữa khung thì đọc ra là
+         TRANG VỠ, mà trang vỡ thì người chơi bỏ qua chứ không khoanh.
+
+         Thay vào đó nó KÝ TÊN vào cuối dòng. Một mẩu thông báo kết thúc bằng chữ ký của một
+         người mà chỗ khác trên trang nói đã đi rồi — đó đúng là ví dụ spec §6 T08 viết cho
+         chương 5, và nó không phá mất một chữ nào của trang. */
+      const sign = document.createElement('span');
+      sign.textContent = entry.when ? ` — ${entry.name} (${entry.when})` : ` — ${entry.name}`;
+      ctx.slot.appendChild(sign);
+      ctx.mark(sign);
       return;
     }
 

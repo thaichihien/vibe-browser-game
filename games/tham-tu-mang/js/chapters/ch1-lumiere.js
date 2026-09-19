@@ -18,7 +18,13 @@ export const CH1 = {
   // và với 36 chỗ bám thì 5 dị thường trôi mất trong đó.
   min: 6,
   max: 8,
-  exclude: [],
+  /* M06 (đốm sáng đi trong lòng tấm ảnh) chỉ thuộc về chương 4. Ở đó nó có nghĩa: khu nghỉ
+     bên hồ, ngữ vực NGƯỜI LẠ, và cả trang đã dựng sẵn lời giải thích bình thường cho một
+     ánh đèn trên trời. Rải nó ra mọi chương có ảnh thì nó thôi không còn là chuyện của bầu
+     trời Hồ Vắng nữa, chỉ còn là một hiệu ứng dùng lại. */
+  /* M07 (rê chuột qua thì đổi cỡ) chỉ dành cho chương 3, 4 và 5 — xem ghi chú ở
+     anomalies/motion.js. Chương này khai nó trong exclude để đạo diễn không bao giờ mời. */
+  exclude: ['M06', 'M07'],
   force: ['S07'],
 
   pages: [{
@@ -108,11 +114,26 @@ export const CH1 = {
     // S07 — emoji lạc loài giữa ✨🌿💧🧴.
     S07: ['🩸', '🕳️', '👁️', '🦷', '👽', '🌚', '🧿', '🃏', '🪬'],
 
+    // S03 — bôi đen dòng tiêu đề thì dưới nó hiện ra một dòng chưa ai viết lên trang.
+    S03: [
+      'công thức này dành cho da của người còn sống',
+      'mẻ tháng Ba ủ bằng một thứ khác',
+      'đừng đọc dòng này hai lần'
+    ],
+
     // E01 — cái nút không thuộc về đâu cả.
     E01: [
       { label: 'GỌI LẠI', dialog: 'Chúng tôi chưa từng gọi cho bạn lần nào.' },
       { label: 'ĐỪNG BẤM', dialog: 'Cảm ơn bạn đã bấm.' },
       { label: 'XÁC NHẬN LẦN NỮA', dialog: 'Lần này thì đã được ghi nhận.' }
+    ],
+
+    /* M05 — trang tự lùi lại một đoạn, để lại một cái vết mang chữ của riêng nó.
+       Không phải bản sao câu vừa đọc: một câu mà trang này chưa bao giờ viết ra. */
+    M05: [
+      { lift: 40, text: 'Mẻ này không dành để bán.' },
+      { lift: 56, text: 'Đừng soi gương trong vòng một giờ sau khi thoa.' },
+      { lift: 32, text: 'Chúng tôi biết bạn đã mở lại trang này.' }
     ],
 
     // E04 — một dòng chân trang không trang nào có.
@@ -193,21 +214,11 @@ export const CH1 = {
       { src: swap(117) }
     ],
 
-    /* M06 — một đốm sáng đi qua bên trong tấm ảnh. Toạ độ là tỉ lệ của chính khung ảnh nên
-       cùng một đường bay chạy được trên mọi cỡ ảnh. */
-    M06: [
-      { seconds: 26, from: { x: 0.04, y: 0.80 }, to: { x: 0.94, y: 0.16 } },
-      { seconds: 34, from: { x: 0.96, y: 0.62 }, to: { x: 0.08, y: 0.10 } },
-      { seconds: 21, from: { x: 0.52, y: 0.96 }, to: { x: 0.56, y: 0.04 } }
-    ],
 
-    // I01 / I03 / I04 — ảnh mất màu, hai cái tên chung một khuôn mặt, và ảnh mờ dần.
-    // I01 — CDN trả ảnh đen trắng, rồi CSS đẩy nó thành một tấm ảnh của mấy chục năm trước.
-    I01: [
-      { filter: 'sepia(0.55) contrast(1.32) brightness(0.88) saturate(1.4)', rotate: 35 },
-      { filter: 'sepia(0.38) contrast(1.45) brightness(0.82)', rotate: 69 },
-      { filter: 'sepia(0.5) contrast(1.28) brightness(0.9) saturate(1.3)', rotate: 176 }
-    ],
+    // I05 — hai chú thích khác nhau, một tấm ảnh. Không cần kho chữ: nó tráo ảnh có sẵn
+    // trên trang, còn hai dòng chú thích thì giữ nguyên như tác giả đã viết.
+    I05: [{ note: 'tráo một tấm ảnh thành bản sao của tấm khác trên cùng trang' }],
+
     I04: [{ note: 'mờ dần mỗi lần vào khung nhìn' }],
     I03: [
       { a: { name: 'Ngọc Anh', age: 28 }, b: { name: 'Thu Hà', age: 41 } },

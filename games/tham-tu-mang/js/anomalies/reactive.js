@@ -310,20 +310,26 @@ export const R03 = {
       /* Vẫn là một liên kết, vẫn gạch chân, vẫn đổi con trỏ — chỉ là không đi đâu cả.
          Gỡ hẳn thẻ <a> đi thì nhìn đã thấy nó khác chín món kia, mà cái khác biệt ấy phải
          chỉ lộ ra khi người chơi BẤM. */
-      const link = card.querySelector('[data-goto]') ?? card.querySelector('a');
+      const link = card.querySelector('[data-row-title]') ?? card.querySelector('a');
       if (link) {
         link.removeAttribute('data-goto');
-        link.setAttribute('href', '#');
+        if (link.tagName === 'A') link.setAttribute('href', '#');
         link.textContent = entry.title;
       }
+      /* Mọi phần còn lại đều TUỲ CHỌN, và tìm bằng data-* chứ không bằng tên class: một thẻ
+         hàng trên sàn đồ cũ có ảnh, có chú thích, có giá; một dòng dịch vụ trên bảng trạng
+         thái thì không có ảnh nào cả. Dị thường dùng chung không được biết CSS của riêng
+         chương nào — nó chỉ biết ba cái móc, và bỏ qua cái nào trang không có. */
       const img = card.querySelector('img');
-      if (img) { img.setAttribute('src', entry.src); img.setAttribute('alt', entry.cap); }
-      const cap = card.querySelector('figcaption');
-      if (cap) cap.textContent = entry.cap;
-      const price = card.querySelector('.price');
-      if (price) price.textContent = entry.price;
-      const sub = card.querySelector('.sub');
-      if (sub) sub.textContent = entry.sub;
+      if (img && entry.src) { img.setAttribute('src', entry.src); img.setAttribute('alt', entry.cap ?? ''); }
+      else if (img && !entry.src) img.remove();
+      const cap = card.querySelector('[data-row-cap]');
+      if (cap && entry.cap) cap.textContent = entry.cap;
+      else if (cap) cap.remove();
+      const meta = card.querySelector('[data-row-meta]');
+      if (meta && entry.meta) meta.textContent = entry.meta;
+      const note = card.querySelector('[data-row-note]');
+      if (note && entry.note) note.textContent = entry.note;
 
       grid.appendChild(card);
       ctx.mark(card);

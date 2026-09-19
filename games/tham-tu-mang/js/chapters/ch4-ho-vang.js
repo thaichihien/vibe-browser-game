@@ -193,11 +193,35 @@ export const CH4 = {
       { seconds: 21, from: { x: 0.52, y: 0.96 }, to: { x: 0.56, y: 0.04 } }
     ],
 
+    // S03 — bôi đen dòng chữ thì dưới nó hiện ra một dòng chưa ai viết lên trang.
+    S03: [
+      'chúng tôi không đếm khách bằng người',
+      'còn một tầng nữa ở dưới mặt hồ',
+      'bạn là người thứ hai đọc dòng này hôm nay'
+    ],
+
     // E01 — cái nút không thuộc về đâu cả.
     E01: [
       { label: 'XIN CHÀO', dialog: 'Lời chào từ vũ trụ' },
       { label: 'GIAO TIẾP', dialog: 'Chúng tôi sẵn sàng thay thế loài của bạn ở trái đất' },
       { label: 'ĐỪNG RA HỒ', dialog: 'Cảm ơn quý khách đã ra hồ.' }
+    ],
+
+    /* M07 — rê chuột qua thì nó nhích một nấc, và không bao giờ trở lại cỡ cũ.
+       Chỉ chương 3, 4 và 5 có nó (xem ghi chú ở anomalies/motion.js): ba chương này đều có
+       thứ để người chơi rê chuột qua một cách tự nhiên trong lúc đọc — thẻ hàng, ô giá, khuôn
+       mặt người đánh giá. `dir` cố định một chiều cho mỗi lần đặt; vừa to vừa nhỏ thì đọc ra
+       là đang dao động, tức là một hiệu ứng giao diện. */
+    M07: [
+      { step: 0.06, max: 4, dir: 'up' },
+      { step: 0.05, max: 4, dir: 'down' },
+      { step: 0.08, max: 3, dir: 'up' }
+    ],
+    /* M05 — trang tự lùi lại một đoạn, để lại một cái vết mang chữ của riêng nó. */
+    M05: [
+      { lift: 40, text: 'Có thêm một người trong đoàn của bạn.' },
+      { lift: 56, text: 'Hồ sâu hơn con số chúng tôi đã ghi.' },
+      { lift: 32, text: 'Đừng ra mép nước sau khi trời tối.' }
     ],
 
     // E02 — một ô nhập không có lý do gì để tồn tại trong phiếu đặt phòng.
@@ -248,12 +272,6 @@ export const CH4 = {
       { q: 'UFO', label: 'KHÔNG CÓ AI MẤT TÍCH' }
     ],
 
-    // I01 — ảnh mất màu rồi ngả sang màu của mấy chục năm trước, và treo lệch hẳn đi.
-    I01: [
-      { filter: 'sepia(0.55) contrast(1.32) brightness(0.88) saturate(1.4)', rotate: 35 },
-      { filter: 'sepia(0.38) contrast(1.45) brightness(0.82)', rotate: 69 },
-      { filter: 'sepia(0.5) contrast(1.28) brightness(0.9) saturate(1.3)', rotate: 176 }
-    ],
 
     /* I02 — ảnh đổi khi bạn quay lại, chú thích thì không. Ba tấm dưới đây đã được xem tận
        mắt: một đường ống dẫn tới vùng sáng, một vùng đất tối dưới mặt trời chói, và một bờ
@@ -270,6 +288,10 @@ export const CH4 = {
     I03: [
       { a: { name: 'Trần Mỹ Duyên' }, b: { name: 'Phạm Ngọc Hà' } }
     ],
+
+    // I05 — hai chú thích khác nhau, một tấm ảnh. Không cần kho chữ: nó tráo ảnh có sẵn
+    // trên trang, còn hai dòng chú thích thì giữ nguyên như tác giả đã viết.
+    I05: [{ note: 'tráo một tấm ảnh thành bản sao của tấm khác trên cùng trang' }],
 
     // I04 — ảnh mờ thêm mỗi lần lọt vào khung nhìn, và không bao giờ trong lại.
     I04: [{ note: 'mờ dần mỗi lần vào khung nhìn' }]

@@ -77,6 +77,33 @@ Two markup hooks carry the whole contract:
 
 An element can carry both.
 
+**One element, one anomaly — enforced, not assumed.** The director already guarantees that no
+two anomalies share a *slot element*, but several deliberately reach past their own slot: `I03`
+marks the neighbouring avatar's image, `I04` walks from a `figcaption` to the `<img>` beside it,
+`I05` marks both halves of a doubled photograph. Two anomalies could therefore land on one
+element with the director being perfectly correct.
+
+`ctx.mark()` used to assign `el.dataset.anom` outright, so the second write silently erased the
+first. Two failures were caught on a real machine before it was fixed:
+
+- **ch4 seed 13** — `I03` ended up with only one marked image, so the "two names, one face" pair
+  became distinguishable again: exactly what `I03` exists to prevent.
+- **ch5 seed 5** — `I03` overwrote `I04`'s only element, `reconcile()` dropped `I04` from the
+  run, and the avatar still visibly blurred. Circling it answered ĐÃ GHI RỒI forever — a visible
+  anomaly that could never be captured.
+
+`claimMark()` (in `engine/run.js`, DOM-free and unit-tested) now refuses to overwrite and returns
+`null`. Every anomaly that reaches outside its slot has to cope: `I03` and `I05` look for an
+unclaimed partner, `I04` gives up so `reconcile()` can drop it cleanly. Giving up is always
+better than leaving evidence that cannot be reached.
+
+**Every `<img>` carries `data-catch`.** Only the `figcaption` used to be a target, so a clean
+photograph was not one: the aim ring never lit over it and releasing the lasso answered
+*"KHÔNG CÓ GÌ Ở ĐÂY"*. Players read that as the game refusing the gesture, and reported it as not
+being able to circle the picture. A photograph is the most suspectable thing on a page, so it has
+to be a claim that costs a heart like any other — and when an anomaly takes the `<img>` itself,
+that same element scores instead.
+
 **A slot must never WRAP a navigation link.** `T01`, `T02`, `T03`, `T06`, `S01` and `S05` all
 assign to their slot's `textContent`, so a slot placed on a `<h3>` around a card's
 `<a data-goto>` destroys that link and makes the item unreachable — `T06` did exactly this to
@@ -375,7 +402,7 @@ clearing chapter N unlocks N+1. Each clear stores a rank.
 | 3 | **SănĐồCũ.vn** — chợ đồ cũ | 11 | 5–6 | thương mại điện tử | Monster |
 | 4 | **Hồ Vắng** — khu du lịch sinh thái | 1 | 7–9 | trang đặt phòng | Alien |
 | 5 | **Tiểu học Hoa Ban** — trang thông báo | 5 | 7–9 | trang cơ quan | Giọng cơ quan |
-| 6 | **MegaLink** — trạng thái hệ thống | 1 | 7–8 | dashboard kỹ thuật | Thứ trong đường truyền |
+| 6 | **MegaLink** — trạng thái hệ thống | 3 | 8–10 | dashboard kỹ thuật | Thứ trong đường truyền |
 
 **Rank** per chapter, stored in `localStorage`:
 
@@ -727,27 +754,79 @@ set became a real decision rather than an arbitrary number: the collection is mo
 faces, and a Sơn La primary school whose principal is a blonde stranger makes the player
 distrust the whole page — in the wrong place, because that is not an anomaly anybody planted.
 
-### 5.6 Chapter 6 — MegaLink — Trạng thái hệ thống
+### 5.6 Chapter 6 — MegaLink — Trạng thái hệ thống · BUILT
 
-Single page: a status dashboard. Eight service tiles (`Hoạt động bình thường`, green), a
-90-day uptime bar per service, an incident history list, a live latency number that updates
-every two seconds, a subscribe box.
+**Three pages, not one.** `index` (the dashboard: status banner, a live latency figure, eight
+service rows with 90-day uptime bars, recent incidents, a subscribe box), `lich-su` (the full
+incident history and a 90-day tally table), `su-co-4471` (one incident with its timeline).
+Roll **8–10** — the widest in the game.
 
-Slots: `nav` (có ô tìm kiếm), `tile` ×8, `uptime-bar` ×8, `incident` ×5, `latency`,
-`paragraph` ×2, `subscribe`, `footer`.
+A status page really is one page; that is the genre. But it has never been *only* one page:
+clicking an incident opens its full timeline, and there is always a history listing beside it.
+More to the point, the chapter's two sharpest anomalies only bite on that timeline — `T07`
+("bắt đầu 03:12 · khắc phục 03:04", an incident closed before it opened) and `T08` (an update
+signed by an engineer whose account the history page says was revoked in 2024). Folded onto the
+dashboard, both lose the surface that makes them mean anything.
 
-Imagery: **none.** A status dashboard has no photographs, so `photo` and `avatar` are absent
-and the whole IMAGE family is ineligible here — the finale is pure text, colour and motion.
-That is a deliberate tonal choice as much as a realistic one: after five chapters of looking
-at pictures, the last site has nothing to look at.
+**No image at all**, which is §5.6's tonal decision kept intact: after five chapters of
+photographs the last site has nothing to look at, only text, colour and motion. It is also the
+only page module in the game that makes no network request, and a test enforces it.
 
-The finale, and the only chapter where the page is *already* moving on its own — the latency
-number ticks, tiles pulse on refresh. Genuine motion as camouflage for the MOTION family,
-which is why it rolls 7–8. Home of `R05 huy-dang-ky-khong-huy`.
+**The page is already moving on its own.** The latency figure ticks every two seconds inside a
+narrow band. That is genuine camouflage for the MOTION family: in the first five chapters
+anything that moves is suspect, here it is not. The honest ticker stands down the moment an
+anomaly takes that element — otherwise `T03` writes its sentence and the ticker overwrites it
+two seconds later, and the pair read as a broken page rather than as a number leaving the set
+of numbers.
+
+Slots as built, per page:
+
+| | `index` | `lich-su` | `su-co-4471` |
+|---|---|---|---|
+| `nav` | 1 | 1 | 1 |
+| `search` | 1 | — | — |
+| `hero-title` | 1 | — | — |
+| `notice` | 2 | — | 5 |
+| `tile` | 9 | — | — |
+| `incident` | 2 | 5 | — |
+| `date` | 3 | 5 | 1 |
+| `hours` | — | — | 1 |
+| `paragraph` | 3 | 2 | 2 |
+| `byline` | — | — | 2 |
+| `table` | — | 1 | — |
+| `subscribe` | 1 | — | — |
+| `cta` | — | — | 1 |
+| `footer` | 1 | 1 | 1 |
+
+`uptime-bar` and `latency` from the sketch are gone, for the reason §5.5 records: a declared
+slot type no anomaly can use is a region that can only ever cost a heart. The latency figure
+is a **`tile`** — and it is the best home `T03` has ever had, because a number that is already
+jittering hides a number that is quietly descending. The 90-day bars are **clean content with
+no slot**: they carry no text, so every text anomaly would be invisible on them.
+
+`incident` is declared only where the row contains a real `dd/mm/yyyy`, so `T07` always finds
+a stamp to corrupt. The timeline's bare `03:12` marks are deliberately *not* slots — `T07`'s
+pool is keyed by the shape of the stamp, and a bare clock reading matches neither `time` nor
+`date`, so an anomaly placed there would silently attach to nothing. The timeline's four
+sentences are `notice` slots instead, which also gives `T06` its decay window.
+
+**This is the tightest chapter in the game, and the number is worth stating.** Five families
+(no IMAGE) against the director's cap of two each is a capacity of exactly **10** — identical
+to the maximum roll. A run of ten must take precisely two from every family with nowhere to
+move. It holds across 5000 seeds, and it is the reason `M05` was built here: without it MOTION
+would have had exactly `M01` and `M03` in this chapter, flush against the cap with no
+alternative if either could not be placed.
+
+Home of `R05 huy-dang-ky-khong-huy` and of `R03` in its second chapter — the search returns
+*"Điểm giám sát 5 (không công bố) · 100,00% · Chưa từng được bật, chưa từng được tắt"*, a
+service with a full 90-day uptime bar that no contract lists. Making that work meant giving
+`R03` a portable markup contract (`data-row-title` / `data-row-meta` / `data-row-note` /
+`data-row-cap`) instead of chapter 3's CSS class names; it now drops the `<img>` entirely on a
+site that has none.
 
 ---
 
-## 6. The anomaly library — 36 designed, 31 built
+## 6. The anomaly library — 37 designed, 34 built
 
 Six families. `slots` lists what the anomaly can attach to; the director only offers it to a
 chapter that has one. The flavour lines below are the authored pools, not placeholders.
@@ -760,9 +839,19 @@ library stayed at **34** — STYLE dropped to 6, REACTIVE rose to 6.
 Chapter 4 moved it twice more. `T04` had already been **withdrawn** at the player's request,
 taking TEXT to 7; building chapter 4 added `T09 toa-do-troi` (TEXT back to 8) and
 `M06 anh-sang-di-qua-anh` (MOTION to 6). Chapter 5 then added `T10 bang-so-khong-cong-lai-duoc`
-(TEXT to 9), so **36 are designed and 31 are built**. All three new ones exist because their
-chapter was the first site with a surface for them: chapter 4 is the only one with a `map` and
-carries more photographs than any other, and chapter 5 is the only one with a `table`.
+(TEXT to 9). The finale then built two that had been designed from the start and never had a
+home: `S03 chu-chon-duoc-nhieu-hon` and `M05 cuon-nguoc-mot-chut`. **36 are designed and 33 are
+built**; the three still unbuilt are `S02`, `M02` and `M04`.
+
+Two later changes on play (18/09/2026): `I01 anh-mat-mau` was **withdrawn** at the player's
+request and `I05 mot-tam-anh-dung-hai-lan` took its place — deliberately one-for-one, because a
+family's size is what sets a chapter's capacity (§6.1). `M07 doi-co-khi-re-chuot` was added for
+chapters 3–5, taking MOTION to 5.
+
+Each new one exists because its chapter was the first site with a surface for it: chapter 4 is
+the only one with a `map` and carries more photographs than any other, chapter 5 is the only
+one with a `table`, and the finale needed `M05` for a reason that is arithmetic rather than
+taste — see §5.6.
 
 ### TEXT — 9 (T04 withdrawn; T09, T10 added)
 
@@ -966,11 +1055,27 @@ the word is an ordinary one; that is the point. *"Chúng tôi rất **mong** đ�
 A section desaturates as it scrolls into view (`filter: saturate()` driven by scroll position)
 and does not recover on the way back. The page loses colour behind you.
 
-**S03 · `chu-chon-duoc-nhieu-hon`** — slots: `hero-title`, `post-title`, `notice`
-Selecting the text reveals more text than is rendered — an absolutely-positioned layer at
-`opacity: 0` that `::selection` makes visible. Drag-selecting a headline shows words
-underneath it. Found only by players who select text while they read, which is possible only
-because CHẾ ĐỘ ĐỌC leaves dragging to the browser (§4.1).
+**S03 · `chu-chon-duoc-nhieu-hon`** — slots: `hero-title`, `post-title`, `notice` · Ch1, Ch2,
+Ch4, Ch5, Ch6 · BUILT
+The last verb in the game that no anomaly had asked for: **selecting**. Not remembering, not
+hovering, not clicking, not adding up — just dragging the cursor across a line, which plenty of
+people do without thinking while they read. Possible only because CHẾ ĐỘ ĐỌC deliberately
+leaves dragging to the browser (§4.1).
+
+The hidden line lives in a transparent layer (`color: transparent`) positioned **below** the
+block, out of flow so it pushes nothing. It surfaces only through the page's own `::selection`
+rule: selected, the glyphs take a colour; released, they are gone again.
+
+**Below the block, not over it.** Overlaid, a selection renders two texts on top of each other
+and neither is readable. Dropped into the empty space under the line, the hidden sentence
+appears exactly where there should be nothing — and being readable is the entire point.
+
+It marks **both** the block and the hidden layer: what the player drags across is the heading,
+what they *read* is the ghost, and either has to score. A chapter offering it a slot must carry
+`.sel-ghost` and `.sel-ghost::selection` in its stylesheet — `::selection` cannot be set from an
+inline style — and there is a test tying the two together, because an anomaly that is invisible
+in both states is present, counted, and impossible to find.
+- Ch6: selecting an incident update reveals *"không còn ai đọc trang này ngoài bạn"*.
 
 **S04 · `bong-do-sai-huong`** — ~~slots: `tile`, `avatar`, `cta`, `product-title`~~
 **WITHDRAWN after the chapter 1 playtest (2026-09-10).** Every shadow on the page falls one
@@ -1014,7 +1119,7 @@ The site's emoji vocabulary breaks. Among ✨🌿💧🧴 one bullet is 🩸 or 
 size, same alignment, styled identically. The most legible anomaly in the library, which is
 why Ch1's first run forces it.
 
-### MOTION — 6
+### MOTION — 7
 
 **M01 · `phan-tu-theo-con-tro`** — slots: `avatar`, `tile`, `cta`
 An element drifts a few pixels toward the cursor, lagging heavily, capped at about 6px of
@@ -1026,6 +1131,17 @@ rotating deck on the honest site first, purely so one anomaly could run it backw
 A rotating element advances forward N times, then once goes *backwards* to a slide that was
 never in the deck, then resumes as if nothing happened. Roughly a 20s cycle.
 
+**A trap that cost three MOTION anomalies at once.** `transform` does not apply to a
+non-replaced **inline** box. The property is accepted, `getComputedStyle` reports the right
+matrix, the animation runs — and nothing moves. Nothing is logged. Chapter 5's notice page
+offers `cta` on a bare `<a>` ("← Quay lại danh sách thông báo") styled only with
+`text-decoration: none`, and `M03` sat there silent; `M01` and `M07` died the same way on
+chapters 5 and 6. `transformable()` in `engine/site.js` promotes an inline slot to
+`inline-block` before any transform is set, and `M01`, `M03`, `M07` and `S06` all call it. It
+lives in the engine rather than in each `site.css` because a forgotten `display` rule does not
+fail loudly — the anomaly simply never happens while BẰNG CHỨNG keeps counting it. A test
+asserts every transform-setting anomaly calls it.
+
 **M03 · `nhip-tho`** — slots: `tile`, `avatar`, `cta`, `map`
 A block scales between 1.000 and 1.012 on a 4s ease-in-out. Sub-perceptual until stared at.
 Breathing.
@@ -1033,6 +1149,31 @@ Breathing.
 **M04 · `bong-tre-nhip`** — slots: `cta`, `tile` · not built
 The element animates on one period, its shadow on a slightly longer one, so the shadow arrives
 late — the thing casting it is not quite the thing you can see.
+
+**M07 · `doi-co-khi-re-chuot`** — slots: `cta`, `avatar`, `price`, `tile` · Ch3, Ch4, Ch5 · BUILT
+Move the cursor onto it and it steps one notch larger — or one notch smaller. Move away and back
+and it steps again. It never returns to the size it was.
+
+What separates it from the rest of MOTION: everything else here moves on its own while the
+player watches. This one only moves when it is **touched**, which turns an act that had no
+consequences — running the cursor over a page while reading — into one that leaves a mark.
+Players usually find it the worst possible way: by returning to something they already looked at
+and finding it no longer the size they remember, with no way to be sure whether the page changed
+or they did.
+
+**Discrete jumps, not a smooth transition.** A soft scale on hover is something real sites do all
+the time and reads as ordinary UI polish. A *jump* to a new size, which then stays, is not.
+
+**One fixed direction per placement.** Growing and shrinking by turns reads as oscillation, i.e.
+an effect; one direction reads as something dragging it. There is a hard cap on the number of
+steps — uncapped, enough hovers would either bury its neighbours or shrink it past the point of
+being circleable, and an anomaly that cannot be captured does not make a run hard, it makes it
+unwinnable. `transform-origin` sits at the left edge rather than the centre, so a line of text
+keeps its starting point and only its size changes.
+
+Restricted to chapters 3–5 by `exclude`, the same way `M06` is restricted to chapter 4: those
+three are the ones with things a reader's cursor naturally crosses — a listing card, a price, a
+reviewer's face.
 
 **M06 · `anh-sang-di-qua-anh`** — slots: `photo`, `gallery-caption` · Ch4 · BUILT
 A small point of light crosses the inside of a photograph, taking 20–35 seconds to do it, and
@@ -1051,11 +1192,38 @@ Its flight path is built **the first time the photograph enters the viewport**, 
 `apply()`. In a multi-page chapter every page is mounted at once and the ones not on screen are
 `display: none`, so measuring at apply time returns a 0×0 box and the light never moves.
 
-**M05 · `cuon-nguoc-mot-chut`** — slots: any section-level slot
-Once per run, scrolling down past this element makes the page scroll back up about 40px on its
-own, once. Because a one-shot event cannot be circled after the fact, it leaves a permanent
-tell: a ghost duplicate of the element, offset upward at 8% opacity — a scroll scar. The scar
-is the capturable element.
+**M05 · `cuon-nguoc-mot-chut`** — slots: `paragraph`, `notice`, `tile`, `incident` · BUILT
+The only anomaly in the library that touches the **viewport** rather than the page. Scrolling
+down past the element, the page lifts back about 40px on its own — once, and never again.
+
+A one-shot event cannot be circled: by the time the player works out what happened, it is over.
+So it leaves a **scar** — a faint duplicate of the block, sitting offset above the real one like
+a stuck frame. The scar is what gets captured, and it stays for the rest of the run.
+
+**The scar carries its own sentence.** It used to be a straight clone, i.e. a faded copy of the
+line the player had just read — which reads as the page painting twice, a *bug*, and bugs get
+ignored. Now it is the same font, the same size and the same place, saying something the site
+never wrote: *"Có thêm một người trong đoàn của bạn."* The scar is not a residue of the block. It
+is what was underneath it. A test asserts no scar line appears anywhere in its chapter's markup.
+
+**Opacity is a trade between two failures.** The sketch said 8%; on a light page that is
+effectively invisible, and an anomaly nobody can find does not make a run hard, it makes it
+unwinnable. 14% still reads as a ghost and can still be found.
+
+**The scar is planted at `apply()` time, not when the player arrives.** Built inside the
+IntersectionObserver it was absent when `reconcile()` ran — one tick after the apply loop,
+before anything had scrolled — so it was dropped from *every* run and the anomaly never appeared
+once. But a scar that is visible from the start is a giveaway, so it waits at
+`visibility: hidden`: `reconcile()` only asks whether a `[data-anom]` element exists, while
+`targets()` filters on `checkVisibility()`, so it is counted without being a phantom hit target
+(the same trap the collapsed `<details>` in chapter 1 sprang once).
+
+**It arms on the player's first scroll.** Firing on the first intersection meant that whenever
+the slot happened to be above the fold it jumped the moment the page opened — which reads as a
+page still loading, not as a page stepping backwards. Arming re-observes rather than just
+setting a flag, because an IntersectionObserver only calls back when the intersection *changes*:
+an element already on screen would otherwise never report again. A 5s fallback arms it anyway,
+since an anomaly that never appears cannot be captured.
 
 ### ELEMENT — 5
 
@@ -1251,48 +1419,30 @@ Only possible because the photographs are real and their URLs are parameterised.
 would need a second hand-made asset if the art were static files, and none of them are possible
 with emoji at all.
 
-**I01 · `anh-mat-mau`** — slots: `photo` · BUILT
-One photograph in a set arrives without colour — served `?grayscale`, not filtered in CSS, so it
-survives inspection — then aged with sepia and hard contrast until it reads as a photograph from
-another decade, **and rotated**: 35°, 69° or 176°.
+**I01 · `anh-mat-mau`** — ~~slots: `photo`~~
+**WITHDRAWN at the player's request (18/09/2026).** It drained a photograph's colour, aged it
+with sepia and hard contrast, then rotated the picture inside its frame. Removed from the
+registry along with `greyscaled()` and the whole angle/`clip-path` fitting routine, which
+nothing else used. `I05` replaces it **one for one**: a family's member count is what sets each
+chapter's capacity at the director's cap of two per family (§6.1), so dropping IMAGE to three
+would have narrowed every chapter's roll.
 
-Greyscale alone was still explicable as a design choice, and so was the ageing. A landscape lying
-on its side, or very nearly upside down, is not.
+**I05 · `mot-tam-anh-dung-hai-lan`** — slots: `photo`, `gallery-caption` (page must have ≥2) ·
+Ch1–Ch5 · BUILT
+Two different captions, describing two different places, and above both of them exactly **one**
+photograph.
 
-**It rotates the picture inside the frame, not the frame.** The first version transformed the
-whole `<img>`, so the page showed a rectangle sitting at an angle with the background showing
-through at four corners — which reads as *the page is broken*, not *the photograph is wrong*, and
-a broken page gets skipped rather than circled. The image box now keeps its exact position and
-size and nothing in the layout moves a pixel; only the world inside the frame is at an angle.
+It is the landscape-side sibling of `I03`, and the resemblance is deliberate — but the two say
+different sentences. `I03` says *the people on this site are not people*. `I05` says *this place
+is not real*, or *they only ever had one photograph and used it for everything*. In chapter 5
+that lands hardest: a school with a single picture, captioned once as the stairwell and once as
+the art room.
 
-The mechanism needs no extra element and no `overflow: hidden` anywhere: scale the image up by
-the factor `k` its angle needs to cover the box, then `clip-path` a quadrilateral computed **in
-the image's own un-rotated coordinates**. `clip-path` is applied before the transform, so
-clipping the pre-image of the frame under the rotation (rotate by −θ, shrink by 1/k) lands, after
-the transform, exactly on the original rectangle.
-
-**The angle bends to the frame's aspect ratio.** `k` is cheap for a square box and brutal for a
-long one — a 3:1 panorama at 69° needs a 3.16× enlargement, i.e. a small blurred fragment that
-reads as a broken image. So an unaffordable angle is walked toward whichever of 0° or 180° is
-nearer until it comes under a **1.8× ceiling**; a horizon tilted 16° is still unmistakably wrong.
-If that walk would flatten the tilt to nothing, it snaps to 180° instead, which costs exactly
-`k = 1` at any aspect ratio. Source images are requested large enough to survive the ceiling.
-
-`clip-path` hides the pixels but does **not** shrink the scroll area: the browser still counts the
-transformed box, so a 1.8× enlargement made the whole page scrollable sideways with nothing
-visible out there to explain it — a page that scrolls horizontally on its own reads as broken, and
-that scrollbar is a tell nobody placed. The anomaly therefore sets `overflow: clip` on its own
-`<figure>`, from inside `apply()` rather than in the site stylesheet: the "no `overflow: hidden` on
-a slot's ancestors" rule still matters for `S06` and `E01`, but neither ever attaches to an image
-caption, and one slot element only ever carries one anomaly.
-
-Geometry is measured with `offsetWidth`/`offsetHeight`, never `getBoundingClientRect` — the rect
-reports the *transformed* box, so a second measurement would measure the transform this code just
-applied. A `ResizeObserver` repaints on window resize and, just as importantly, covers the case
-where the box was 0×0 at `apply()` time: in a multi-page chapter every page is mounted at once and
-the ones not on screen are `display: none`.
-- Ch4: six gallery photographs of a lake across a year, and one of them is grey, brown, and lying
-  on its side.
+It marks **both** images, for `I03`'s reason exactly: after the swap there is no way at all to
+tell the original from the copy, so marking only one would take a heart off a player who circled
+the right thing. It also takes only images that are **unclaimed**, and it never pairs two
+captions that already shared a source — that would be two captions honestly describing one
+photograph, which is not wrong.
 
 **I02 · `anh-doi-khi-quay-lai`** — slots: `photo` · all four built chapters · BUILT
 The image's `src` swaps to a different pinned photograph when it leaves and re-enters the
@@ -1316,22 +1466,28 @@ and never resets. Looking at it is what does it.
 
 ### 6.1 Coverage check
 
-**31 built anomalies across six families, 36 designed.** The four built chapters below are
+**34 built anomalies across six families, 37 designed.** All six chapters are built; the
+columns below are all measurements now, none are projections. The four built chapters below are
 counted from the code — the registry matched against each chapter's declared slots, and
 re-checked by the test suite — so those columns are measurements, not estimates. Ch5 and Ch6
 are still projections against their sketched inventories.
 
-| Family (built) | Ch1 | Ch2 | Ch3 | Ch4 | Ch5 | Ch6* |
+| Family (built) | Ch1 | Ch2 | Ch3 | Ch4 | Ch5 | Ch6 |
 |---|---|---|---|---|---|---|
-| TEXT (9) | 5 | 6 | 7 | 8 | 8 | 5 |
-| STYLE (4) | 4 | 3 | 4 | 4 | 4 | 3 |
-| MOTION (3) | 3 | 3 | 3 | 3 | 3 | 2 |
+| TEXT (9) | 5 | 6 | 7 | 8 | 8 | 7 |
+| STYLE (5) | 5 | 4 | 4 | 5 | 5 | 4 |
+| MOTION (5) | 3 | 3 | 4 | 5 | 4 | 3 |
 | ELEMENT (5) | 5 | 4 | 5 | 5 | 4 | 5 |
 | REACTIVE (6) | 2 | 1 | 3 | 2 | **0** | 3 |
-| IMAGE (4) | 4 | 4 | 4 | 4 | 4 | 0 |
-| **eligible** | **23** | **21** | **26** | **26** | **23** | 18* |
-| roll | 6–8 | 6–8 | 5–6 | 7–9 | 7–9 | 7–8* |
-| families available | 6 | 6 | 6 | 6 | **5** | 5 |
+| IMAGE (4) | 4 | 4 | 4 | 4 | 4 | **0** |
+| **eligible** | **24** | **22** | **27** | **29** | **25** | **22** |
+| roll | 6–8 | 6–8 | 5–6 | 7–9 | 7–9 | 8–10 |
+| families available | 6 | 6 | 6 | 6 | **5** | **5** |
+| capacity at ≤2/family | 12 | 12 | 12 | 12 | 10 | **10** |
+
+`M06` is Ch4-only and `M07` is Ch3–Ch5 only, both by `exclude`, which is why the MOTION row is
+not flat. Both are restricted for the same reason: an anomaly built for one site's register stops
+meaning anything once it turns up everywhere.
 
 Ch4's TEXT reaches all eight — it is the only chapter carrying every timestamp shape, a
 `comment`, a `notice` list and the game's only `map`. Ch2 stays lowest because a personal blog
@@ -1343,10 +1499,18 @@ be wrong without a line of their markup changing. That is the runtime-mutation a
 (§3.1) paying out exactly as intended — one anomaly written once, six sites richer.
 
 Every chapter clears the director's "≥3 families, ≤2 per family" rule at its maximum roll.
-**Ch5 is now the tightest in the game**: five families give a capacity of 10 against a roll of
-9, so a run of nine has to use every family and fill four of them to the cap. It holds — 3000
-seeds place everything they roll, break no family cap, and leave no page clean — but it is the
-chapter where any future change to the registry will fail first, and the suite checks it.
+**Ch6 is the tightest in the game, with zero slack**: five families give a capacity of exactly
+10 against a maximum roll of 10, so a run of ten must take precisely two from every family. Ch5
+is next, at 10 against 9. Both hold — 5000 seeds each place everything they roll, break no
+family cap, and leave no page clean — but they are where any future change to the registry will
+fail first, and the suite checks both.
+
+**`M06 anh-sang-di-qua-anh` is restricted to Ch4 by name**, not by the absence of a pool. In
+chapter 4 it means something: a lake resort in the Alien register, on a page that has already
+supplied the ordinary explanation for a light in the sky. Spread across every chapter with a
+photograph it stops being about that sky and becomes a reused effect. The other four chapters
+carry it in `exclude`; leaving the pool out instead would crash `pick()` rather than decline the
+placement.
 
 **Adding photographs resolved the Chapter 5 problem.** Before the IMAGE family, Ch5 had four
 families against a maximum roll of 8, filling every family to its cap with zero slack — the
@@ -1360,8 +1524,9 @@ Two deliberate absences remain, both of them characterisation rather than oversi
   no input, nothing to submit. `R06` fits its `nav` and `cta`, so the chapter carries `R06` in
   `exclude`; a test asserts both that and the absence of any `<form>` or `<input>` in its markup,
   so the characterisation cannot rot into an accident.
-- **Ch6 has no IMAGE anomaly** and no `photo` or `avatar` slots at all. A status dashboard has
-  no photographs, so the finale is pure text, colour and motion.
+- **Ch6 has no IMAGE anomaly** and no `photo` or `avatar` slots at all — built that way, with a
+  test asserting its markup contains no `<img>`, no `<figure>` and no CDN host. A status
+  dashboard has no photographs, so the finale is pure text, colour and motion.
 - **Ch2 has no `nav` slot,** so `E03` and `S07` never appear there; a personal blog with a
   single-line header is the reason, and its deep `comment` inventory more than covers the loss.
 
@@ -1382,15 +1547,15 @@ games/tham-tu-mang/
       rng.js                 mulberry32 + helpers (pick, shuffle, range)   ← DOM-free
       hittest.js             point-in-polygon, centroid, nearest-target,
                              stroke bounds, budget-ring clamp             ← DOM-free
-      registry.js            imports all 31 built anomalies, exports ANOMALIES ← DOM-free
+      registry.js            imports all 33 built anomalies, exports ANOMALIES ← DOM-free
       img.js                 pinned CDN url builders + SVG fallback markup ← DOM-free
       director.js            roll count, filter, pick, assign to pages     ← DOM-free
       run.js                 capture resolution, hearts, win/loss
       site.js                shadow root, page mount/swap, slot indexing
     anomalies/
       text.js                T01–T03, T05–T10   (T04 withdrawn)
-      style.js               S01, S05–S07       (S02–S04 not built)
-      motion.js              M01, M03, M06      (M02, M04, M05 not built)
+      style.js               S01, S03, S05–S07  (S02, S04 not built)
+      motion.js              M01, M03, M05, M06 (M02, M04 not built)
       element.js             E01–E05
       reactive.js            R01–R06
       image.js               I01–I04
@@ -1415,7 +1580,7 @@ games/tham-tu-mang/
     ch3-san-do-cu/    pages.js  (14 trang)                      site.css
     ch4-ho-vang/      page.js                                   site.css
     ch5-hoa-ban/      pages.js  (5 trang)                       site.css
-    ch6-megalink/     page.js                                   site.css
+    ch6-megalink/     pages.js  (3 trang)                       site.css
 
 tests/tham-tu-mang.test.mjs   imports the DOM-free engine modules directly
 ```

@@ -27,7 +27,11 @@ export const CH3 = {
   briefing: 'Một sàn rao vặt đồ đã qua sử dụng.',
   min: 5,
   max: 6,
-  exclude: [],
+  /* M06 (đốm sáng đi trong lòng tấm ảnh) chỉ thuộc về chương 4. Ở đó nó có nghĩa: khu nghỉ
+     bên hồ, ngữ vực NGƯỜI LẠ, và cả trang đã dựng sẵn lời giải thích bình thường cho một
+     ánh đèn trên trời. Rải nó ra mọi chương có ảnh thì nó thôi không còn là chuyện của bầu
+     trời Hồ Vắng nữa, chỉ còn là một hiệu ứng dùng lại. */
+  exclude: ['M06'],
   force: [],
 
   pages: [
@@ -155,6 +159,23 @@ export const CH3 = {
       { label: 'ĐỪNG MUA', dialog: 'Đã ghi nhận. Đơn hàng vẫn được tạo.' }
     ],
 
+    /* M07 — rê chuột qua thì nó nhích một nấc, và không bao giờ trở lại cỡ cũ.
+       Chỉ chương 3, 4 và 5 có nó (xem ghi chú ở anomalies/motion.js): ba chương này đều có
+       thứ để người chơi rê chuột qua một cách tự nhiên trong lúc đọc — thẻ hàng, ô giá, khuôn
+       mặt người đánh giá. `dir` cố định một chiều cho mỗi lần đặt; vừa to vừa nhỏ thì đọc ra
+       là đang dao động, tức là một hiệu ứng giao diện. */
+    M07: [
+      { step: 0.06, max: 4, dir: 'up' },
+      { step: 0.05, max: 4, dir: 'down' },
+      { step: 0.08, max: 3, dir: 'up' }
+    ],
+    /* M05 — trang tự lùi lại một đoạn, để lại một cái vết mang chữ của riêng nó. */
+    M05: [
+      { lift: 40, text: 'Món này đã về đây ba lần rồi.' },
+      { lift: 56, text: 'Người chủ trước vẫn chưa giao nó đi.' },
+      { lift: 32, text: 'Đừng nhận hàng sau mười giờ đêm.' }
+    ],
+
     // E02 — một ô nhập không có lý do gì để tồn tại trong biểu mẫu giao hàng.
     E02: [
       'Tên người chủ của món hàng này',
@@ -213,22 +234,22 @@ export const CH3 = {
       {
         title: 'Món bạn vừa tìm. Đã có người giữ chỗ.',
         cap: 'Ảnh người bán tự chụp, không rõ ngày',
-        price: 'Không bán',
-        sub: 'Chưa từng được rao · không rõ khu vực',
+        meta: 'Không bán',
+        note: 'Chưa từng được rao · không rõ khu vực',
         src: swap(104)
       },
       {
         title: 'Không rõ tên món — người bán để trống',
         cap: 'Người bán không viết gì dưới ảnh này',
-        price: '0₫',
-        sub: 'Đăng lúc 03:00 · không rõ khu vực',
+        meta: '0₫',
+        note: 'Đăng lúc 03:00 · không rõ khu vực',
         src: swap(145)
       },
       {
         title: 'Thứ này không thuộc loại hàng nào',
         cap: 'Chụp trong một căn phòng không có trong tin đăng',
-        price: '0₫',
-        sub: 'Không ai rao · không ai gỡ xuống',
+        meta: '0₫',
+        note: 'Không ai rao · không ai gỡ xuống',
         src: swap(26)
       }
     ],
@@ -256,21 +277,12 @@ export const CH3 = {
       { src: swap(151) }
     ],
 
-    /* M06 — một đốm sáng đi qua bên trong tấm ảnh. Toạ độ là tỉ lệ của chính khung ảnh nên
-       cùng một đường bay chạy được trên mọi cỡ ảnh. */
-    M06: [
-      { seconds: 26, from: { x: 0.04, y: 0.80 }, to: { x: 0.94, y: 0.16 } },
-      { seconds: 34, from: { x: 0.96, y: 0.62 }, to: { x: 0.08, y: 0.10 } },
-      { seconds: 21, from: { x: 0.52, y: 0.96 }, to: { x: 0.56, y: 0.04 } }
-    ],
 
-    // I01 / I03 / I04 — ảnh của năm khác, hai cái tên chung một khuôn mặt, ảnh mờ dần.
-    I01: [
-      { filter: 'sepia(0.55) contrast(1.32) brightness(0.88) saturate(1.4)', rotate: 35 },
-      { filter: 'sepia(0.38) contrast(1.45) brightness(0.82)', rotate: 69 },
-      { filter: 'sepia(0.5) contrast(1.28) brightness(0.9) saturate(1.3)', rotate: 176 }
-    ],
     I03: [{ a: { name: 'Hồng Nhung' }, b: { name: 'Lê Vĩnh' } }],
+    // I05 — hai chú thích khác nhau, một tấm ảnh. Không cần kho chữ: nó tráo ảnh có sẵn
+    // trên trang, còn hai dòng chú thích thì giữ nguyên như tác giả đã viết.
+    I05: [{ note: 'tráo một tấm ảnh thành bản sao của tấm khác trên cùng trang' }],
+
     I04: [{ note: 'mờ dần mỗi lần vào khung nhìn' }]
   }
 };

@@ -85,6 +85,15 @@ export function imgHtml({ src, alt, w, h, tint, cls = '' }) {
   if (!isPinned(src)) throw new Error(`imgHtml(): src must be pinned — got ${src}`);
   const fb = fallbackSvg({ w, h, tint, seed: (w + h) % 97 });
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  /* MỌI tấm ảnh đều mang data-catch, tức là đều khoanh được.
+     Trước đây chỉ có <figcaption> là chỗ bám, còn thẻ <img> thì không mang gì cả — nên một
+     tấm ảnh sạch KHÔNG PHẢI là mục tiêu: rê bút quanh nó thì vòng ngắm không sáng, và thả
+     tay ra chỉ nhận về "KHÔNG CÓ GÌ Ở ĐÂY". Người chơi đọc ra là trò chơi không nhận thao
+     tác của mình — chính xác là "không khoanh được tấm ảnh này".
+     Mà ảnh thì đúng là thứ đáng nghi bậc nhất trên trang: nó phải là một lời khai có giá,
+     khoanh trúng nội dung bình thường thì mất một trái tim như mọi thứ khác. Khi một dị
+     thường bám vào chính thẻ <img> (I02, I03, I04, I05, M06) thì mark() ghi đè data-anom lên
+     trên, và lúc đó khoanh vào nó lại tính điểm. */
   return `<img class="${esc(cls)}" src="${esc(src)}" alt="${esc(alt)}" width="${w}" height="${h}" ` +
-         `loading="lazy" onerror="this.onerror=null;this.src='${fb}'">`;
+         `loading="lazy" data-catch onerror="this.onerror=null;this.src='${fb}'">`;
 }
