@@ -40,6 +40,21 @@ export function createHud({ onRestart, onSoundToggle }) {
     }
   }
 
+  function toast(text, type = 'info') {
+    document.querySelectorAll('.toast').forEach(t => t.remove());
+    clearTimeout(toastTimer);
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = text;
+    document.body.appendChild(el);
+    toastTimer = setTimeout(() => {
+      el.classList.add('out');
+      setTimeout(() => el.remove(), 300);
+    }, 1800);
+  }
+
+  function setPortraits(map) { portraits = map; }
+
   /** Show the animal a side is moving (framed portrait, name, strength pips), or a prompt. */
   function setCurrent(player, piece) {
     const box = $(`${player}Current`);
