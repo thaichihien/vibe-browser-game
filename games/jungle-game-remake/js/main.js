@@ -52,6 +52,8 @@ hud.setPortraits(makePortraits(pixel));
 
 const animator = createAnimator({ scene, camera, world, views, particles, sound: Sound, hud, camRig });
 
+pixel.setScaleOverride(VIEW.pixel ?? null);
+
 function resize() {
   const r = stage.getBoundingClientRect();
   const s = pixel.resize(r.width, r.height);
