@@ -102,7 +102,7 @@ body {
   }
 }
 
-/* The animal being moved: framed portrait, name, an 8-pip strength bar. */
+/* The animal being moved: its emoji face in a team frame, name, an 8-pip strength bar. */
 .current { display: flex; align-items: center; gap: 10px; min-height: 68px; margin-top: 8px; }
 .portrait {
   display: grid; place-items: center; width: 64px; height: 64px; flex: none;
@@ -110,7 +110,7 @@ body {
   box-shadow: 0 0 0 2px var(--ink), 0 0 0 5px var(--team), 0 0 0 7px var(--ink);
   margin: 7px;
 }
-.portrait img { width: 60px; height: 60px; image-rendering: pixelated; }
+.portrait .face { font-size: 40px; line-height: 1; }
 .portrait.empty { font-size: 26px; font-weight: 900; color: #b9b7ad; box-shadow: 0 0 0 2px #b9b7ad; }
 .current b { display: block; font-size: 18px; font-weight: 900; }
 .current .hint { font-size: 13px; font-weight: 800; opacity: .7; }
@@ -163,7 +163,7 @@ body {
   .side-body { padding: 6px 8px 8px; }
   .current { min-height: 0; margin-top: 4px; gap: 6px; }
   .portrait { width: 40px; height: 40px; margin: 6px; }
-  .portrait img { width: 36px; height: 36px; }
+  .portrait .face { font-size: 24px; }
   .current b { font-size: 14px; }
   .pips i { width: 6px; height: 6px; }
 }

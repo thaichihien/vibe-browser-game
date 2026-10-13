@@ -3,7 +3,7 @@
    snap to the low-res pixel grid so moving pieces step in whole pixels, like sprites. A view
    whose `busy` flag is set belongs to an animation sequence (anim.js), and idle leaves it alone. */
 import * as THREE from 'three';
-import { ANIMALS, terrain } from './rules.js';
+import { terrain } from './rules.js';
 import { C, TEAM } from './palette.js';
 import { buildAnimal, buildArrow } from './models.js';
 import { cellToWorld } from './layout.js';
@@ -202,33 +202,4 @@ export function createViews({ scene, camera, world, getPixel }) {
     setActive(player) { activePlayer = player; },
     hitboxes: () => [...views.values()].map(v => v.hit),
   };
-}
-
-/** Portraits for the side panels: each animal rendered through the same pixel pipeline. */
-export function makePortraits(pixel) {
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(C.cream);
-  scene.add(new THREE.HemisphereLight(C.white, C.water2, 1.6));
-  const sun = new THREE.DirectionalLight(0xfff4d6, 2.2);
-  sun.position.set(8, 14, 3);
-  scene.add(sun);
-  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 80);
-  const out = {};
-  for (const team of ['red', 'blue']) {
-    for (const type of Object.keys(ANIMALS)) {
-      const a = buildAnimal(type, team);
-      a.model.rotation.y = Math.PI / 4;           // three-quarter view toward the camera
-      scene.add(a.root);
-      const half = 0.3 + a.height * 0.45;
-      Object.assign(cam, { left: -half, right: half, top: half, bottom: -half });
-      cam.updateProjectionMatrix();
-      cam.position.set(20, 20 + a.height / 2, 20);
-      cam.lookAt(0, a.height / 2, 0);
-      cam.updateMatrixWorld();
-      out[`${type}:${team}`] = pixel.snapshot(scene, cam, 40, 40);
-      scene.remove(a.root);
-      a.mat.dispose();
-    }
-  }
-  return out;
 }

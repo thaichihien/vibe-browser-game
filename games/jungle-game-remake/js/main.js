@@ -7,7 +7,7 @@ import { buildWorld, createCamera, fitCamera, aimCamera, VIEW, WATER_Y } from '.
 import { createDebugPanel } from './debug.js';
 import { addBoardProps } from './board-props.js';
 import { buildScenery } from './scenery.js';
-import { createViews, makePortraits } from './views.js';
+import { createViews } from './views.js';
 import { createAnimator } from './anim.js';
 import { updateTweens, createParticles, shakeOffset } from './fx.js';
 import { createGame, terrain, inBounds } from './rules.js';
@@ -48,7 +48,6 @@ const hud = createHud({
 });
 hud.setSound(Sound.muted);
 hud.setTurn('red');
-hud.setPortraits(makePortraits(pixel));
 
 const animator = createAnimator({ scene, camera, world, views, particles, sound: Sound, hud, camRig });
 
