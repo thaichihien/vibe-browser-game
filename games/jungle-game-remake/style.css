@@ -66,9 +66,10 @@ body {
   background: var(--cream); border: 3px solid var(--ink);
   box-shadow: 0 4px 0 var(--ink); clip-path: var(--step);
 }
-/* The iso board is a diamond: its empty corners are top-left and bottom-right. */
-.side.red { left: 14px; top: 14px; }
-.side.blue { right: 14px; bottom: 14px; }
+/* The iso board is a diamond running bottom-right → top-left: its empty corners are
+   top-right (beside red's home) and bottom-left (beside blue's). */
+.side.red { right: 14px; top: 14px; }
+.side.blue { left: 14px; bottom: 14px; }
 .side h2 { margin: 0 0 6px; font-size: 18px; }
 .side h3 { margin: 8px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
 .side.red h2 { color: var(--red-d); }
@@ -122,8 +123,8 @@ body {
   .title h1 { font-size: 20px; }
   .btn { font-size: 12px; padding: 5px 8px; }
   .side { width: auto; max-width: 46%; padding: 6px 8px; }
-  .side.red { left: 8px; top: 8px; }
-  .side.blue { right: 8px; bottom: 8px; }
+  .side.red { right: 8px; top: 8px; }
+  .side.blue { left: 8px; bottom: 8px; }
   .side h2 { font-size: 14px; }
   .side h3 { display: none; }
   .captured { min-height: 0; }

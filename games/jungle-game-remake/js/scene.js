@@ -11,24 +11,27 @@ const V = 8;                          // terrain voxels per tile
 export const WATER_Y = -0.3;          // river surface
 export const SWIM_Y = -0.42;          // a swimming rat's feet: body half under the surface
 export const SEA_Y = -1.0;
-export const CAMERA_BASE = new THREE.Vector3(20, 20, 20);   // true isometric: yaw 45°, pitch 35.264°
+// True isometric (pitch 35.264°) from the −x/+z side: rows run from the bottom-right (blue's home,
+// row 8) to the top-left (red's home, row 0).
+export const CAMERA_BASE = new THREE.Vector3(-20, 20, 20);
 
 // Island outline, rows r = −2…10 × cols c = −2…8. '.' = board square; digits = ring tile
 // height (0 low, 1 level with the board, 2 raised); ' ' = open sea. Raised tiles stay on the
-// far (top/left) sides so nothing tall stands between the camera and the board.
+// far (top) sides — high columns and low rows — so nothing tall stands between the camera and
+// the board.
 const ISLAND = [
-  '  2222221  ',
-  ' 222222211 ',
-  '22.......10',
-  '22.......10',
-  '21.......10',
-  '22.......10',
-  '21.......10',
-  '22.......10',
-  '21.......10',
-  '22.......10',
-  '21.......10',
-  ' 111111110 ',
+  '  1222222  ',
+  ' 112222222 ',
+  '01.......22',
+  '01.......22',
+  '01.......12',
+  '01.......22',
+  '01.......12',
+  '01.......22',
+  '01.......12',
+  '01.......22',
+  '01.......12',
+  ' 011111111 ',
   '  0000000  ',
 ];
 const RING_H = { 0: 8, 1: 12, 2: 16 };
@@ -247,7 +250,7 @@ const SUN = 2.2, SKY = 1.6;
 function addLights(scene) {
   scene.add(new THREE.HemisphereLight(C.white, C.water2, SKY));
   const sun = new THREE.DirectionalLight(0xfff4d6, SUN);
-  sun.position.set(8, 14, 3);        // lights the camera-facing +x sides, shades the +z sides
+  sun.position.set(-8, 14, 3);       // lights the camera-facing −x sides, shades the +z sides
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
   Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 40 });
