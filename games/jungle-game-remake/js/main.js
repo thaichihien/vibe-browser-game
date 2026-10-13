@@ -2,7 +2,7 @@
    once in rules.js; anim.js replays the event list while input is locked. */
 import * as THREE from 'three';
 import { shared } from './mesh.js';
-import { createPixelRenderer } from './pixel.js';
+import { createPixelRenderer } from './renderer.js';
 import { buildWorld, createCamera, fitCamera, aimCamera, VIEW, WATER_Y } from './scene.js';
 import { createDebugPanel } from './debug.js';
 import { addBoardProps } from './board-props.js';
