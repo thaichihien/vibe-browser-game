@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cờ Thú: Rừng Xanh</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="title">
+      <span class="logo">🦁</span>
+      <h1>CỜ THÚ <small>Rừng Xanh</small></h1>
+    </div>
+    <div class="status red" id="turnStatus"><span class="dot"></span><span id="turnText">Lượt: ĐỎ</span></div>
+    <div class="controls">
+      <button class="btn" id="soundBtn">🔊 Âm: BẬT</button>
+      <button class="btn" id="toggleRules">📖 Luật chơi</button>
+      <button class="btn primary" id="restartBtn">🔄 Chơi lại</button>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <canvas id="view" aria-label="Bàn cờ thú"></canvas>
+    <aside class="side red">
+      <h2>🔴 ĐỎ</h2>
+      <div class="turn-badge" id="redTurn">ĐANG ĐI</div>
+      <h3>Quân đã mất</h3>
+      <div class="captured" id="redCaptured"></div>
+    </aside>
+    <aside class="side blue">
+      <h2>🔵 XANH</h2>
+      <div class="turn-badge idle" id="blueTurn">CHỜ</div>
+      <h3>Quân đã mất</h3>
+      <div class="captured" id="blueCaptured"></div>
+    </aside>
+  </main>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="card">
+    <div class="overlay-emoji" id="overEmoji">🏆</div>
+    <h2 id="overTitle">Chiến thắng!</h2>
+    <p id="overReason"></p>
+    <button class="btn primary" id="playAgainBtn">🔄 Chơi lại</button>
+  </div>
+</div>
+
+<div class="overlay" id="rulesModal">
+  <div class="card rules">
+    <button class="close" id="rulesClose" aria-label="Đóng">✕</button>
+    <h3>📜 Luật Cờ Thú</h3>
+    <ul>
+      <li>Mỗi lượt chỉ được đi một quân.</li>
+      <li>Quân mạnh ăn quân yếu theo thứ tự: Voi🐘 → Sư tử🦁 → Hổ🐯 → Báo🐆 → Sói🐺 → Chó🐶 → Mèo🐱 → Chuột🐭.</li>
+      <li>Chuột có thể ăn Voi (khi cả hai ở trên cạn).</li>
+      <li><b>Chuột biết bơi:</b> có thể xuống sông. Thú trên cạn và thú dưới nước không ăn được nhau — chỉ Chuột dưới nước mới ăn được Chuột dưới nước.</li>
+      <li>Không được vào hang của chính mình.</li>
+      <li>Hổ nhảy dọc qua sông, Báo nhảy ngang qua sông, Sư tử nhảy cả dọc và ngang.</li>
+      <li>Nếu có Chuột trong đường sông thì không được nhảy.</li>
+      <li>Quân dính bẫy của đối phương bị mất sức, có thể bị bất kỳ quân nào ăn.</li>
+      <li>Vào hang đối phương là thắng ngay.</li>
+    </ul>
+    <button class="btn primary" id="rulesOk">Đã hiểu 👍</button>
+  </div>
+</div>
+
+<div class="overlay show" id="bootCard" hidden>
+  <div class="card">
+    <div class="overlay-emoji">🌿</div>
+    <h2>Không mở được bàn cờ</h2>
+    <p id="bootReason"></p>
+    <button class="btn primary" onclick="location.reload()">🔄 Thử lại</button>
+  </div>
+</div>
+
+<script>
+  // Boot guard. Three.js comes from a CDN and ES modules do not load over file://; either way
+  // the player should see why, not an empty page.
+  window.__bootFail = function (kind) {
+    var card = document.getElementById('bootCard');
+    if (!card.hidden) return;                       // first failure wins
+    var why = {
+      cdn: 'Không tải được bộ máy 3D (Three.js) — kiểm tra kết nối mạng rồi tải lại trang.',
+      webgl: 'Trình duyệt này không hỗ trợ WebGL nên không vẽ được bàn cờ 3D.',
+      file: 'Trò chơi cần chạy qua máy chủ web (ví dụ: npx http-server) — mở trực tiếp file sẽ không tải được.'
+    };
+    document.getElementById('bootReason').textContent = why[kind] || why.cdn;
+    card.hidden = false;
+  };
+  if (location.protocol === 'file:') window.__bootFail('file');
+</script>
+<script type="module">
+  if (location.protocol !== 'file:') {
+    import('./js/main.js').catch(function (err) {
+      console.error(err);
+      window.__bootFail('cdn');
+    });
+  }
+</script>
+</body>
+</html>
