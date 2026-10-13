@@ -164,28 +164,29 @@ void main() {
   vWorld = w.xyz;
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
-// Water: everything is computed on the 1/8-tile voxel grid so it reads as pixel art.
-// Distances come from a shore-distance texture in tiles (`uCap` = its range):
-//   · shallows lighten toward land, slow drifting patches mottle the open water;
-//   · thin caustic light-lines wander across it;
-//   · land (island, or a pool's walls) casts a darker shadow on the side away from the sun;
-//   · a wobbly foam line hugs the shore and broken wave rings roll outward and fade;
-//   · now and then a single pixel glints.
+// Water, after reference/sea01.png: saturated azure-to-cyan bands, long diagonal wave streaks,
+// and a lacy dithered foam band on the shore. Every pixel picks one exact band colour (no blends,
+// which the palette snap would turn to mud); the pattern is computed on the 1/8-tile voxel grid.
+//   level 0 foam · 1 light · 2 cyan · 3 azure · 4 blue · 5 deep
+// Shore distance `d` (tiles) comes from a chamfer distance texture with range `uCap`.
 const WATER_FRAG = /* glsl */`
 uniform float uTime;
 uniform sampler2D uMask;
 uniform vec4 uBounds;
 uniform float uCap;
-uniform vec2 uSunOffset;
-uniform vec3 uDeep;
-uniform vec3 uShallow;
-uniform vec3 uLight;
+uniform float uOpen;          // 1 = the open sea (darkens away from the island), 0 = river pools
+uniform float uShift;         // nudges every band lighter (< 0) or darker (> 0)
+uniform vec2 uWaveDir;
 uniform vec3 uFoam;
-uniform vec3 uDark;
+uniform vec3 uLight;
+uniform vec3 uCyan;
+uniform vec3 uAzure;
+uniform vec3 uBlue;
+uniform vec3 uDeep;
 varying vec3 vWorld;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p) {
+float vnoise(vec2 p) {
   vec2 i = floor(p), f = fract(p);
   f = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
@@ -195,46 +196,51 @@ float shoreAt(vec2 q) { return texture2D(uMask, (q - uBounds.xy) / uBounds.zw).r
 
 void main() {
   vec2 cell = floor(vWorld.xz * 8.0);
-  vec2 q = (cell + 0.5) / 8.0;                       // centre of this water pixel's voxel
-  float d = shoreAt(q);                               // tiles to the nearest land
+  vec2 q = (cell + 0.5) / 8.0;
+  float d = shoreAt(q);
 
-  // depth: shallows near land, then mottled open water
-  vec3 col = mix(uDeep, uShallow, smoothstep(1.4, 0.15, d));
-  float patchN = noise(q * 0.45 + vec2(uTime * 0.03, -uTime * 0.02));
-  if (patchN > 0.68) col = mix(col, uDark, 0.45);
-  else if (patchN < 0.3) col = mix(col, uShallow, 0.45);
+  // depth bands: cyan shallows → azure → blue, darker still out in the open sea
+  float level = d < 0.6 ? 2.0 + d / 0.6 : 3.0 + smoothstep(0.6, 2.2, d);
+  level += uOpen * smoothstep(5.5, 10.0, length(q));
+  level += (vnoise(q * 0.3 + vec2(uTime * 0.02, -uTime * 0.015)) - 0.5) * 0.9 * smoothstep(0.4, 1.4, d);
+  level += uShift;
 
-  // caustic light-lines: where either of two warped waves crosses zero
-  vec2 w = q * 1.7;
-  float c1 = abs(sin(w.x + 1.2 * sin(w.y * 1.3 + uTime * 0.7) + uTime * 0.4));
-  float c2 = abs(sin(w.y * 1.1 + 1.3 * sin(w.x * 0.9 - uTime * 0.6) - uTime * 0.35));
-  if (min(c1, c2) < 0.07) col = mix(col, uLight, 0.8);
+  // wave streaks: noise stretched along the wave direction, drifting with it
+  vec2 perp = vec2(-uWaveDir.y, uWaveDir.x);
+  float along = dot(q, uWaveDir), across = dot(q, perp);
+  float wobble = 0.5 * sin(along * 0.8 + uTime * 0.5);
+  float s1 = vnoise(vec2(along * 0.8 - uTime * 0.22, across * 5.5 + wobble));
+  float s2 = vnoise(vec2(along * 1.5 - uTime * 0.35, across * 9.0 + wobble + 4.3));
+  if (s1 > 0.72) level -= 1.0;
+  else if (s1 < 0.22) level += 0.7;
+  if (s2 > 0.84) level -= 1.0;
 
-  // land shadow on the side away from the sun
-  if (d > 0.02 && shoreAt(q + uSunOffset) < 0.05) col = mix(col, uDark, 0.55);
+  // swells rolling in toward the shore, broken up
+  float ph = fract(uTime * 0.16);
+  if (abs(d - (1.0 - ph * 0.75)) < 0.05 && vnoise(q * 3.0 + uTime * 0.2) > 0.42) level -= 1.0;
 
-  // foam: a wobbly line on the shore, broken wave rings rolling out
-  float n = noise(q * 2.2 + uTime * 0.3);
-  float shore = 0.12 + 0.04 * sin(uTime * 2.0 + (q.x + q.y) * 2.5) + (n - 0.5) * 0.08;
-  if (d < shore) {
+  vec3 col = level < 1.5 ? uLight : level < 2.5 ? uCyan : level < 3.5 ? uAzure : level < 4.5 ? uBlue : uDeep;
+
+  // shore: a solid wobbling foam line, then lacy dithered bubbles thinning out
+  float edge = 0.09 + 0.04 * sin(uTime * 1.8 + (q.x - q.y) * 3.0);
+  if (d < edge) {
     col = uFoam;
-  } else {
-    for (int i = 0; i < 2; i++) {
-      float ph = fract(uTime * 0.2 + float(i) * 0.5);
-      float ring = 0.2 + ph * 0.55;
-      if (abs(d - ring) < 0.05 && n > 0.3 + ph * 0.5) col = mix(col, uFoam, 0.85 - ph * 0.5);
-    }
+  } else if (d < 0.6) {
+    float k = 1.0 - (d - edge) / (0.6 - edge);
+    float fn = vnoise(q * 7.0 + vec2(uTime * 0.35, -uTime * 0.25));
+    if (fn < k * 0.6) col = uFoam;
+    else if (fn < k * 0.95 && mod(cell.x + cell.y, 2.0) < 0.5) col = uLight;
   }
 
-  // glints out in open water
-  if (d > 0.4 && hash(cell + floor(uTime * 2.0)) > 0.9975) col = uFoam;
+  // a few white glints on the streak crests out in open water
+  if (d > 0.8 && s1 > 0.7 && hash(cell + floor(uTime * 1.5)) > 0.985) col = uFoam;
 
   gl_FragColor = vec4(col, 1.0);
 }`;
 
 /**
  * Distance-to-land texture: 0 on solid texels, rising to 1 at `cap` texels away. A two-pass
- * chamfer (3–4) gives round distances, so foam rings follow the coast instead of squaring off.
+ * chamfer (3–4) gives round distances, so foam follows the coast in curves.
  */
 function distanceMask(w, h, solid, cap) {
   const INF = 1e9;
@@ -260,24 +266,23 @@ function distanceMask(w, h, solid, cap) {
   return tex;
 }
 
-// Where a water point looks to see whether land blocks the sun: toward the sun, by roughly the
-// height of the island over the sun's slope.
-const SUN_DIR = new THREE.Vector3(-8, 14, 3);
-const sunOffset = reach => new THREE.Vector2(SUN_DIR.x, SUN_DIR.z).normalize().multiplyScalar(reach);
+// Waves run along world +x, tilted a little: on screen that is the long up-right diagonal of sea01.
+const WAVE_DIR = new THREE.Vector2(1, 0.4).normalize();
+const SEA_BANDS = [C.sea0, C.sea1, C.sea2, C.sea3, C.sea4, C.sea5];
 
-function waterMaterial(mask, bounds, capTiles, reach, [deep, shallow, light, foam, dark]) {
+function waterMaterial(mask, bounds, { cap, open, shift }) {
+  const [foam, light, cyan, azure, blue, deep] = SEA_BANDS.map(c => new THREE.Color(c));
   return new THREE.ShaderMaterial({
     uniforms: {
       uTime: shared.uTime,
       uMask: { value: mask },
       uBounds: { value: new THREE.Vector4(...bounds) },
-      uCap: { value: capTiles },
-      uSunOffset: { value: sunOffset(reach) },
-      uDeep: { value: new THREE.Color(deep) },
-      uShallow: { value: new THREE.Color(shallow) },
-      uLight: { value: new THREE.Color(light) },
-      uFoam: { value: new THREE.Color(foam) },
-      uDark: { value: new THREE.Color(dark) },
+      uCap: { value: cap },
+      uOpen: { value: open },
+      uShift: { value: shift },
+      uWaveDir: { value: WAVE_DIR },
+      uFoam: { value: foam }, uLight: { value: light }, uCyan: { value: cyan },
+      uAzure: { value: azure }, uBlue: { value: blue }, uDeep: { value: deep },
     },
     vertexShader: WATER_VERT,
     fragmentShader: WATER_FRAG,
@@ -285,11 +290,10 @@ function waterMaterial(mask, bounds, capTiles, reach, [deep, shallow, light, foa
 }
 
 function buildPool(cx) {
-  // 2 × 3 squares; a one-texel solid border stands in for the walls (foam, wall shadow)
+  // 2 × 3 squares; a one-texel solid border stands in for the walls the foam laps against
   const W = 2 * V + 2, H = 3 * V + 2;
   const mask = distanceMask(W, H, (x, y) => x === 0 || y === 0 || x === W - 1 || y === H - 1, V);
-  const mat = waterMaterial(mask, [cx - 1 - 1 / V, -1.5 - 1 / V, W / V, H / V], 1, 0.25,
-    [C.water3, C.water2, C.water1, C.water0, C.water4]);
+  const mat = waterMaterial(mask, [cx - 1 - 1 / V, -1.5 - 1 / V, W / V, H / V], { cap: 1, open: 0, shift: -0.4 });
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 3), mat);
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.set(cx, WATER_Y, 0);
@@ -302,8 +306,7 @@ function buildSea() {
     const wx = minX + (x + 0.5) / V, wz = minZ + (y + 0.5) / V;
     return !!tileKind(Math.floor(wz + 4.5), Math.floor(wx + 3.5));
   }, 3 * V);
-  const mat = waterMaterial(mask, [minX, minZ, 17, 19], 3, 0.55,
-    [C.water4, C.water2, C.water1, C.white, C.water5]);
+  const mat = waterMaterial(mask, [minX, minZ, 17, 19], { cap: 3, open: 1, shift: 0 });
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), mat);
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.y = SEA_Y;
@@ -315,7 +318,7 @@ const SUN = 2.2, SKY = 1.6;
 function addLights(scene) {
   scene.add(new THREE.HemisphereLight(C.white, C.water2, SKY));
   const sun = new THREE.DirectionalLight(0xfff4d6, SUN);
-  sun.position.copy(SUN_DIR);       // lights the camera-facing −x sides, shades the +z sides
+  sun.position.set(-8, 14, 3);       // lights the camera-facing −x sides, shades the +z sides
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
   Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 40 });
@@ -359,7 +362,7 @@ export function fitCamera(cam, w, h, view = VIEW) {
 }
 
 export function buildWorld(scene) {
-  scene.background = new THREE.Color(C.water2);
+  scene.background = new THREE.Color(C.sea5);
   addLights(scene);
   scene.add(buildIsland(), buildSea(), buildPool(-1.5), buildPool(1.5), buildTufts());
 

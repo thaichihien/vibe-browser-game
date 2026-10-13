@@ -9,6 +9,8 @@ export const C = {
   // water
   water0: 0xe6fbf6, water1: 0xbff3ea, water2: 0x8fe6dd, water3: 0x5fd3c9, water4: 0x3fb3b0,
   water5: 0x2f8f93,
+  // sea, after reference/sea01.png: foam → light cyan → cyan → azure → blue → deep
+  sea0: 0xf2fdff, sea1: 0x8fe9f4, sea2: 0x3fcde6, sea3: 0x22a8e3, sea4: 0x1a86d2, sea5: 0x1767b6,
   // earth
   sand: 0xf1d6a0, earth1: 0xd9955a, earth2: 0xa8673a, earth3: 0x7a4a2c, earth4: 0x5a3a24,
   earth5: 0x3b2618,
