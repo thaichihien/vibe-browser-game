@@ -117,7 +117,10 @@ Only this game is unit-tested, and the mechanism is worth understanding before e
 `games/jungle-game-remake/` keeps its rules in the DOM-free module `js/rules.js`, a 1:1 port of
 `games/jungle-game.html`. `tests/jungle-remake-parity.test.mjs` lifts the original's rule
 functions out of the HTML and compares move generation on thousands of random positions, so a
-rule change in either file must be mirrored in the other, or that test fails. Its camera
+rule change in either file must be mirrored in the other, or that test fails. The AI
+(`js/ai.js`, run in `js/ai-worker.js`) has its own compact move generator for speed;
+`tests/jungle-remake-ai.test.mjs` holds it to `rules.js` the same way, so it is a third place a
+rule change must land. The remake's camera
 (yaw, pitch, zoom, pan, pixel scale) is the `VIEW` object in `js/scene.js`; open the game with
 `?debug` for a live panel that edits it and prints the values to paste back as defaults.
 

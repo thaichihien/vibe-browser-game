@@ -38,6 +38,20 @@ body {
 .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
 .btn.primary { background: var(--lime); }
 
+/* Audio menu under the 🔊 button: music and effects volume, and a mute-all switch. */
+.audio { position: relative; }
+.audio-panel {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 6; width: 220px;
+  display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; font-weight: 800; font-size: 14px;
+  background: var(--cream); border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); clip-path: var(--step);
+}
+.audio-panel[hidden] { display: none; }
+.audio-panel label { display: flex; justify-content: space-between; }
+.audio-panel output { font-variant-numeric: tabular-nums; opacity: .7; }
+.audio-panel input[type="range"] { width: 100%; margin: 0 0 6px; accent-color: var(--lime-d); cursor: pointer; }
+.audio-panel.muted input, .audio-panel.muted label { opacity: .4; }
+.audio-panel .btn { margin-top: 2px; }
+
 .stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 #view {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
@@ -144,6 +158,18 @@ body {
 .card h2 { margin: 6px 0; font-size: 28px; }
 .card h2.win-red { color: var(--red-d); }
 .card h2.win-blue { color: var(--blue-d); }
+/* Start screen: pick 2 players or one of the three AI levels; the last pick is highlighted. */
+.card.start { width: 380px; }
+.start-sub { margin: 0 0 14px; font-weight: 800; opacity: .7; }
+.choice {
+  display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 100%;
+  margin-top: 10px; padding: 10px 12px; text-align: left; font-size: 17px;
+}
+div.choice { background: var(--paper); box-shadow: 0 0 0 3px var(--ink); clip-path: var(--step); font-weight: 800; }
+.choice small { display: block; margin-top: 2px; font-size: 12px; font-weight: 700; opacity: .7; }
+.levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.card.start .btn[aria-pressed="true"] { background: var(--lime); }
+.start-note { margin: 14px 0 0; font-size: 13px; font-weight: 700; opacity: .75; }
 .card.rules { text-align: left; max-height: calc(100vh - 40px); overflow: auto; }
 .card.rules ul { padding-left: 20px; line-height: 1.5; }
 .card .close {
@@ -154,6 +180,9 @@ body {
 @media (max-width: 760px), (max-height: 520px) {
   .controls { top: 8px; right: 8px; gap: 6px; }
   .btn.icon { width: 34px; height: 34px; font-size: 16px; }
+  .card.start { padding: 16px 18px; }
+  .card.start .overlay-emoji { font-size: 40px; }
+  .card.start h2 { font-size: 22px; }
   .side { width: 172px; }
   .side.red { left: 11px; top: 11px; }
   .side.blue { right: 11px; bottom: 11px; }

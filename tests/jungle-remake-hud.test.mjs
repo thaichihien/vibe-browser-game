@@ -24,8 +24,8 @@ globalThis.document = {
 const { createHud } = await import('../games/jungle-game-remake/js/hud.js');
 
 test('createHud returns its whole API, and each call works on a stub DOM', () => {
-  const hud = createHud({ onRestart() {}, onSoundToggle() {} });
-  for (const name of ['setTurn', 'setCounts', 'toast', 'setCurrent', 'showWin', 'hideWin', 'setSound']) {
+  const hud = createHud({ onRestart() {}, onPlayAgain() {}, onSoundToggle() {}, onMusicVolume() {}, onSfxVolume() {}, onModeButton() {}, onStart() {} });
+  for (const name of ['setTurn', 'setCounts', 'toast', 'setCurrent', 'showWin', 'hideWin', 'setSound', 'setVolumes', 'setMode', 'showStart', 'hideStart']) {
     assert.equal(typeof hud[name], 'function', `${name} missing`);
   }
   hud.setTurn('blue');
@@ -37,7 +37,30 @@ test('createHud returns its whole API, and each call works on a stub DOM', () =>
   assert.ok(created.some(el => el.textContent === '🦁'), 'selected animal shows its emoji face');
   hud.setCurrent('blue', null);
   hud.setSound(true);
+  assert.equal(elements.get('muteBtn').textContent, '🔊 Bật tiếng');
+  hud.setVolumes(0.35, 1);
+  assert.equal(elements.get('musicVol').value, '35');
+  assert.equal(elements.get('musicVolVal').textContent, '35%');
+  assert.equal(elements.get('sfxVolVal').textContent, '100%');
   assert.equal(elements.get('soundBtn').textContent, '🔇');
   hud.showWin('red', 'reason');
   hud.hideWin();
+  hud.setMode('hard', 'red');
+  assert.equal(elements.get('modeBtn').textContent, '🤖');
+  assert.equal(elements.get('redCrest').textContent, '🤖');
+  assert.equal(elements.get('blueCrest').textContent, '🐾');
+  hud.setTurn('red');
+  assert.ok(created.some(el => el.textContent === 'Máy đang nghĩ…'), 'the AI side says it is thinking on its turn');
+  hud.showWin('red', 'reason');
+  assert.equal(elements.get('overTitle').textContent, '🤖 Máy thắng rồi!');
+  hud.showWin('blue', 'reason');
+  assert.equal(elements.get('overTitle').textContent, '🏆 Bạn đã thắng máy!');
+  hud.showStart('hard', false);
+  assert.equal(elements.get('startClose').hidden, true, 'the boot start screen cannot be dismissed');
+  hud.showStart('hard', true);
+  assert.equal(elements.get('startClose').hidden, false);
+  hud.hideStart();
+  hud.setMode('pvp', 'red');
+  assert.equal(elements.get('modeBtn').textContent, '👥');
+  assert.equal(elements.get('redCrest').textContent, '🐾');
 });
