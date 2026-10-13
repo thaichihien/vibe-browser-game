@@ -13,11 +13,12 @@ export const SWIM_Y = -0.42;          // a swimming rat's feet: body half under 
 export const SEA_Y = -1.0;
 /**
  * The camera view. Yaw −45° looks from the −x/+z side, so rows run from the bottom-right (blue's
- * home, row 8) to the top-left (red's home, row 0); pitch 35.264° is true isometric. The debug
+ * home, row 8) to the top-left (red's home, row 0). Pitch 51.5° (steeper than true iso, 35.264°)
+ * keeps tall pieces from hiding the squares behind them; chosen by playtest. The debug
  * panel (?debug) edits these live; `zoom` multiplies the framed size and `panX`/`panZ` slide the
  * view across the ground.
  */
-export const VIEW = { yaw: -45, pitch: 35.264, zoom: 1, panX: 0, panZ: 0 };
+export const VIEW = { yaw: -45, pitch: 51.5, zoom: 1.27, panX: 0, panZ: 0 };
 const CAMERA_DISTANCE = 34.64;
 
 // Island outline, rows r = −2…10 × cols c = −2…8. '.' = board square; digits = ring tile
