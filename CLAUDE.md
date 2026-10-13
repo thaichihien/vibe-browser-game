@@ -63,9 +63,11 @@ A single-file SPA styled as "ARCADE.SYS" (neon/cyberpunk). Its shape matters mor
 ### Games — `games/*.html`
 
 One file per game: inline `<style>`, markup, inline `<script>`, emoji for all art. No image,
-audio or font assets, and no network requests — with **four exceptions**:
+audio or font assets, and no network requests — with **five exceptions**:
 `games/magic-shooter.html` loads Three.js from a CDN (test its CDN-failure fallback when
-touching it), `games/grid-storm/` ships ~17 MB of background music in `music/*.mp3`,
+touching it), `games/jungle-game-remake/` (a folder game) loads Three.js 0.160.0 from jsDelivr
+through an import map, and its boot guard shows a fallback card when the CDN, WebGL or
+`file://` gets in the way (test that card when touching it), `games/grid-storm/` ships ~17 MB of background music in `music/*.mp3`,
 `games/farmer-dream.html` ships ~16 MB in `games/music/farmer-dream/`, and
 `games/tham-tu-mang/` **hotlinks photographs** from `picsum.photos` and `randomuser.me`
 instead of bundling them — the first exception for images rather than audio or a library.
@@ -112,6 +114,13 @@ Only this game is unit-tested, and the mechanism is worth understanding before e
   the engine DOM-free.
 - `tests/syntax.test.mjs` parses the whole `<script>` body, so UI-only edits still have a gate.
 
+`games/jungle-game-remake/` keeps its rules in the DOM-free module `js/rules.js`, a 1:1 port of
+`games/jungle-game.html`. `tests/jungle-remake-parity.test.mjs` lifts the original's rule
+functions out of the HTML and compares move generation on thousands of random positions, so a
+rule change in either file must be mirrored in the other, or that test fails. Its camera
+(yaw, pitch, zoom, pan, pixel scale) is the `VIEW` object in `js/scene.js`; open the game with
+`?debug` for a live panel that edits it and prints the values to paste back as defaults.
+
 ### Docs — `docs/superpowers/`
 
 `specs/YYYY-MM-DD-<game>-design.md` then `plans/YYYY-MM-DD-<game>.md` (checkbox task lists)
@@ -127,7 +136,7 @@ appears in the hub. Shipping one means all three of:
 
 1. **`games/<slug>.html`** — the game itself, self-contained per "Games — `games/*.html`" above.
    A game big enough to warrant it may instead be a **folder**, `games/<slug>/` with its own
-   `index.html`, `style.css` and ES modules — `games/last-quarter/` is the only one so far.
+   `index.html`, `style.css` and ES modules — `games/last-quarter/`, `games/tham-tu-mang/` and `games/jungle-game-remake/` are examples.
    The tradeoff is that ES modules do not load over `file://`, so a folder game must be opened
    through a server; GitHub Pages is unaffected. Everything else still applies: vanilla JS, no
    build step, no dependencies, emoji for all art, no network requests.
