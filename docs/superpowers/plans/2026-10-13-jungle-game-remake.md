@@ -42,6 +42,8 @@
 - Models are built with `box` and `ellipsoid` operations on a `VoxelGrid` instead of layered character maps. That is less text for the same voxels, and the proportions become tunable numbers in `SPECIES`.
 - Scenery props live in their own `props.js` and `scenery.js` instead of `models.js` and `scene.js`, so the milestone-4 task adds files instead of editing earlier ones.
 
+- **User change after playtest 2:** play runs bottom-right → top-left. The camera sits at (−20, 20, 20), the island ring and scenery are mirrored (c → 6 − c, x → −x), the sun moves to (−8, 14, 3), the HUD panels move to the top-right and bottom-left, and the screen-axis vectors in views.js and main.js are read off the camera instead of hard-coded.
+
 ## File map
 
 ```
@@ -3728,9 +3730,10 @@ async function restart() {
 }
 
 // ---------- frame loop ----------
-const right = new THREE.Vector3(1, 0, -1).normalize();
-const up = new THREE.Vector3(-1, 2, -1).normalize();          // camera up at true iso
-const forward = new THREE.Vector3(-1, -1, -1).normalize();
+// the camera never rotates, only moves, so its axes are fixed
+const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
 
 function placeCamera(dt) {
   const { ppu } = getPixel();
@@ -4022,7 +4025,7 @@ Create `games/jungle-game-remake/js/scenery.js`:
 ```js
 /* Places the scenery props on the island ring and animates the ambient life: torch flames,
    butterflies over the grass, fish shadows circling in the sea. Tall props sit on the far
-   (top/left) sides and the near sides get only low ones, so nothing hides the board. */
+   (top) sides — high columns, low rows — and the near sides get only low ones, so nothing hides the board. */
 import * as THREE from 'three';
 import { C } from './palette.js';
 import { ringTop, SEA_Y, WATER_Y } from './scene.js';
@@ -4043,17 +4046,17 @@ export function buildScenery(scene) {
   };
 
   // [row, col, seed, size] — all on the far ring
-  for (const [r, c, seed, size] of [[-2, 0, 1, 1.15], [-2, 5, 2, 1], [-1, -1, 3, 1.1], [2, -2, 4, 1.2],
-    [5, -2, 5, 1], [8, -2, 6, 1.1], [-2, 2, 7, 0.85]]) {
+  for (const [r, c, seed, size] of [[-2, 6, 1, 1.15], [-2, 1, 2, 1], [-1, 7, 3, 1.1], [2, 8, 4, 1.2],
+    [5, 8, 5, 1], [8, 8, 6, 1.1], [-2, 4, 7, 0.85]]) {
     place(buildTree(seed, size), r, c, { rot: seed });
   }
-  [[-1, 0], [-1, 6], [3, -1], [7, -1], [3, 7], [6, 7], [9, 0]]
+  [[-1, 6], [-1, 0], [3, 7], [7, 7], [3, -1], [6, -1], [9, 6]]
     .forEach(([r, c], i) => place(buildBush(i + 1), r, c, { rot: i }));
-  [[1, 7, 1, 1], [9, 6, 2, 0.8], [5, -1, 3, 1.2], [-2, 6, 4, 0.9], [10, 3, 5, 0.7]]
+  [[1, -1, 1, 1], [9, 0, 2, 0.8], [5, 7, 3, 1.2], [-2, 0, 4, 0.9], [10, 3, 5, 0.7]]
     .forEach(([r, c, seed, size]) => place(buildRock(seed, size), r, c, { rot: seed }));
-  [[1, -1], [8, 7], [10, 1]].forEach(([r, c], i) => place(buildMushrooms(i + 1), r, c, { rot: i * 2 }));
-  place(buildLog(), 6, -1, { rot: 0.3 });
-  [[0, -1], [2, 7], [4, 7], [9, 1], [9, 5], [10, 4], [4, -1], [-1, 1], [-1, 5], [7, 7], [10, 6]]
+  [[1, 7], [8, -1], [10, 5]].forEach(([r, c], i) => place(buildMushrooms(i + 1), r, c, { rot: i * 2 }));
+  place(buildLog(), 6, 7, { rot: -0.3 });
+  [[0, 7], [2, -1], [4, -1], [9, 5], [9, 1], [10, 2], [4, 7], [-1, 5], [-1, 1], [7, -1], [10, 0]]
     .forEach(([r, c], i) => place(buildFlowers(i + 1), r, c));
 
   // torches beside each den, nudged toward the board
@@ -4065,29 +4068,30 @@ export function buildScenery(scene) {
   }
 
   const dock = buildDock();
-  dock.position.set(5.4, -0.56, 2);
+  dock.position.set(-5.4, -0.56, 2);
+  dock.rotation.y = Math.PI;            // reach out over the sea on the −x side
   scene.add(dock);
 
-  for (const [x, z, seed] of [[-6.3, -3, 1], [-6, 2.6, 2], [-2.5, -7.3, 3], [1.5, -7.4, 4], [6.4, -5.5, 5]]) {
+  for (const [x, z, seed] of [[6.3, -3, 1], [6, 2.6, 2], [2.5, -7.3, 3], [-1.5, -7.4, 4], [-6.4, -5.5, 5]]) {
     const b = buildBamboo(seed);
     b.position.set(x, SEA_Y, z);
     scene.add(b);
   }
-  for (const [x, z, flower] of [[-2.15, -1.1, true], [-0.8, 1.15, false], [2.2, 0.4, false], [0.85, -1.2, true]]) {
+  for (const [x, z, flower] of [[2.15, -1.1, true], [0.8, 1.15, false], [-2.2, 0.4, false], [-0.85, -1.2, true]]) {
     const l = buildLily(1, flower);
     l.position.set(x, WATER_Y + 0.005, z);
     l.rotation.y = x * 2;
     scene.add(l);
   }
 
-  const flies = [[-1, 1, C.flowerPink], [9, 3, C.flowerYellow], [4, 7, C.white], [3, -1, C.flowerViolet]]
+  const flies = [[-1, 5, C.flowerPink], [9, 3, C.flowerYellow], [4, -1, C.white], [3, 7, C.flowerViolet]]
     .map(([r, c, color], i) => {
       const b = buildButterfly(color);
       scene.add(b.group);
       return { ...b, base: tileAt(r, c), seed: i * 2.3 };
     });
 
-  const fish = [[-7, -2, 1.2, 0.5], [6.8, 1.5, 1, -0.6], [-1.5, 8.2, 1.4, 0.4], [7.2, -6, 0.9, 0.7], [-6.5, 7, 1.1, -0.45]]
+  const fish = [[7, -2, 1.2, 0.5], [-6.8, 1.5, 1, -0.6], [1.5, 8.2, 1.4, 0.4], [-7.2, -6, 0.9, 0.7], [6.5, 7, 1.1, -0.45]]
     .map(([x, z, r, speed], i) => {
       const mesh = buildFish();
       scene.add(mesh);
