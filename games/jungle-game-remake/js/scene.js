@@ -164,44 +164,94 @@ void main() {
   vWorld = w.xyz;
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
+// Water: everything is computed on the 1/8-tile voxel grid so it reads as pixel art.
+// Distances come from a shore-distance texture in tiles (`uCap` = its range):
+//   · shallows lighten toward land, slow drifting patches mottle the open water;
+//   · thin caustic light-lines wander across it;
+//   · land (island, or a pool's walls) casts a darker shadow on the side away from the sun;
+//   · a wobbly foam line hugs the shore and broken wave rings roll outward and fade;
+//   · now and then a single pixel glints.
 const WATER_FRAG = /* glsl */`
 uniform float uTime;
 uniform sampler2D uMask;
 uniform vec4 uBounds;
+uniform float uCap;
+uniform vec2 uSunOffset;
 uniform vec3 uDeep;
 uniform vec3 uShallow;
 uniform vec3 uLight;
 uniform vec3 uFoam;
+uniform vec3 uDark;
 varying vec3 vWorld;
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float shoreAt(vec2 q) { return texture2D(uMask, (q - uBounds.xy) / uBounds.zw).r * uCap; }
+
 void main() {
-  vec2 q = floor(vWorld.xz * 8.0) / 8.0;                 // lock the pattern to the voxel grid
-  float dist = texture2D(uMask, (q - uBounds.xy) / uBounds.zw).r;
-  vec3 col = mix(uShallow, uDeep, smoothstep(0.15, 0.7, dist));
-  float w = sin(q.x * 2.3 + uTime * 0.8) + sin(q.y * 1.9 - uTime * 1.1)
-          + 0.6 * sin((q.x - q.y) * 4.1 + uTime * 1.6);
-  if (w > 1.75) col = uLight;
-  float foam = 0.13 + 0.05 * sin(uTime * 2.2 + (q.x + q.y) * 3.0);
-  if (dist < foam) col = uFoam;
+  vec2 cell = floor(vWorld.xz * 8.0);
+  vec2 q = (cell + 0.5) / 8.0;                       // centre of this water pixel's voxel
+  float d = shoreAt(q);                               // tiles to the nearest land
+
+  // depth: shallows near land, then mottled open water
+  vec3 col = mix(uDeep, uShallow, smoothstep(1.4, 0.15, d));
+  float patchN = noise(q * 0.45 + vec2(uTime * 0.03, -uTime * 0.02));
+  if (patchN > 0.68) col = mix(col, uDark, 0.45);
+  else if (patchN < 0.3) col = mix(col, uShallow, 0.45);
+
+  // caustic light-lines: where either of two warped waves crosses zero
+  vec2 w = q * 1.7;
+  float c1 = abs(sin(w.x + 1.2 * sin(w.y * 1.3 + uTime * 0.7) + uTime * 0.4));
+  float c2 = abs(sin(w.y * 1.1 + 1.3 * sin(w.x * 0.9 - uTime * 0.6) - uTime * 0.35));
+  if (min(c1, c2) < 0.07) col = mix(col, uLight, 0.8);
+
+  // land shadow on the side away from the sun
+  if (d > 0.02 && shoreAt(q + uSunOffset) < 0.05) col = mix(col, uDark, 0.55);
+
+  // foam: a wobbly line on the shore, broken wave rings rolling out
+  float n = noise(q * 2.2 + uTime * 0.3);
+  float shore = 0.12 + 0.04 * sin(uTime * 2.0 + (q.x + q.y) * 2.5) + (n - 0.5) * 0.08;
+  if (d < shore) {
+    col = uFoam;
+  } else {
+    for (int i = 0; i < 2; i++) {
+      float ph = fract(uTime * 0.2 + float(i) * 0.5);
+      float ring = 0.2 + ph * 0.55;
+      if (abs(d - ring) < 0.05 && n > 0.3 + ph * 0.5) col = mix(col, uFoam, 0.85 - ph * 0.5);
+    }
+  }
+
+  // glints out in open water
+  if (d > 0.4 && hash(cell + floor(uTime * 2.0)) > 0.9975) col = uFoam;
+
   gl_FragColor = vec4(col, 1.0);
 }`;
 
-/** Distance-to-shore texture: 0 on solid texels, rising to 1 at `cap` texels away. */
-function distanceMask(w, h, solid, cap = 8) {
-  const d = new Float32Array(w * h).fill(cap);
-  const queue = [];
-  for (let i = 0; i < w * h; i++) if (solid(i % w, (i / w) | 0)) { d[i] = 0; queue.push(i); }
-  for (let qi = 0; qi < queue.length; qi++) {
-    const i = queue[qi], x = i % w, y = (i / w) | 0;
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nx = x + dx, ny = y + dy;
-      if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-      const j = ny * w + nx;
-      if (d[j] > d[i] + 1) { d[j] = d[i] + 1; queue.push(j); }
-    }
+/**
+ * Distance-to-land texture: 0 on solid texels, rising to 1 at `cap` texels away. A two-pass
+ * chamfer (3–4) gives round distances, so foam rings follow the coast instead of squaring off.
+ */
+function distanceMask(w, h, solid, cap) {
+  const INF = 1e9;
+  const d = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) d[i] = solid(i % w, (i / w) | 0) ? 0 : INF;
+  const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? INF : d[y * w + x]);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x;
+    d[i] = Math.min(d[i], at(x - 1, y) + 3, at(x, y - 1) + 3, at(x - 1, y - 1) + 4, at(x + 1, y - 1) + 4);
+  }
+  for (let y = h - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) {
+    const i = y * w + x;
+    d[i] = Math.min(d[i], at(x + 1, y) + 3, at(x, y + 1) + 3, at(x + 1, y + 1) + 4, at(x - 1, y + 1) + 4);
   }
   const data = new Uint8Array(w * h * 4);
   for (let i = 0; i < w * h; i++) {
-    const v = Math.round(Math.min(1, d[i] / cap) * 255);
+    const v = Math.round(Math.min(1, d[i] / 3 / cap) * 255);
     data.set([v, v, v, 255], i * 4);
   }
   const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat);
@@ -210,16 +260,24 @@ function distanceMask(w, h, solid, cap = 8) {
   return tex;
 }
 
-function waterMaterial(mask, bounds, [deep, shallow, light, foam]) {
+// Where a water point looks to see whether land blocks the sun: toward the sun, by roughly the
+// height of the island over the sun's slope.
+const SUN_DIR = new THREE.Vector3(-8, 14, 3);
+const sunOffset = reach => new THREE.Vector2(SUN_DIR.x, SUN_DIR.z).normalize().multiplyScalar(reach);
+
+function waterMaterial(mask, bounds, capTiles, reach, [deep, shallow, light, foam, dark]) {
   return new THREE.ShaderMaterial({
     uniforms: {
       uTime: shared.uTime,
       uMask: { value: mask },
       uBounds: { value: new THREE.Vector4(...bounds) },
+      uCap: { value: capTiles },
+      uSunOffset: { value: sunOffset(reach) },
       uDeep: { value: new THREE.Color(deep) },
       uShallow: { value: new THREE.Color(shallow) },
       uLight: { value: new THREE.Color(light) },
       uFoam: { value: new THREE.Color(foam) },
+      uDark: { value: new THREE.Color(dark) },
     },
     vertexShader: WATER_VERT,
     fragmentShader: WATER_FRAG,
@@ -227,11 +285,11 @@ function waterMaterial(mask, bounds, [deep, shallow, light, foam]) {
 }
 
 function buildPool(cx) {
-  // 2 × 3 squares; a one-texel solid border makes the foam hug the walls
+  // 2 × 3 squares; a one-texel solid border stands in for the walls (foam, wall shadow)
   const W = 2 * V + 2, H = 3 * V + 2;
-  const mask = distanceMask(W, H, (x, y) => x === 0 || y === 0 || x === W - 1 || y === H - 1);
-  const mat = waterMaterial(mask, [cx - 1 - 1 / V, -1.5 - 1 / V, W / V, H / V],
-    [C.water3, C.water2, C.water1, C.water0]);
+  const mask = distanceMask(W, H, (x, y) => x === 0 || y === 0 || x === W - 1 || y === H - 1, V);
+  const mat = waterMaterial(mask, [cx - 1 - 1 / V, -1.5 - 1 / V, W / V, H / V], 1, 0.25,
+    [C.water3, C.water2, C.water1, C.water0, C.water4]);
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 3), mat);
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.set(cx, WATER_Y, 0);
@@ -243,8 +301,9 @@ function buildSea() {
   const mask = distanceMask(W, H, (x, y) => {
     const wx = minX + (x + 0.5) / V, wz = minZ + (y + 0.5) / V;
     return !!tileKind(Math.floor(wz + 4.5), Math.floor(wx + 3.5));
-  });
-  const mat = waterMaterial(mask, [minX, minZ, 17, 19], [C.water4, C.water3, C.water2, C.water0]);
+  }, 3 * V);
+  const mat = waterMaterial(mask, [minX, minZ, 17, 19], 3, 0.55,
+    [C.water4, C.water2, C.water1, C.white, C.water5]);
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), mat);
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.y = SEA_Y;
@@ -256,7 +315,7 @@ const SUN = 2.2, SKY = 1.6;
 function addLights(scene) {
   scene.add(new THREE.HemisphereLight(C.white, C.water2, SKY));
   const sun = new THREE.DirectionalLight(0xfff4d6, SUN);
-  sun.position.set(-8, 14, 3);       // lights the camera-facing −x sides, shades the +z sides
+  sun.position.copy(SUN_DIR);       // lights the camera-facing −x sides, shades the +z sides
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
   Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 40 });

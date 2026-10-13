@@ -6,6 +6,7 @@ import { createPixelRenderer } from './pixel.js';
 import { buildWorld, createCamera, fitCamera, aimCamera, VIEW, WATER_Y } from './scene.js';
 import { createDebugPanel } from './debug.js';
 import { addBoardProps } from './board-props.js';
+import { buildScenery } from './scenery.js';
 import { createViews, makePortraits } from './views.js';
 import { createAnimator } from './anim.js';
 import { updateTweens, createParticles, shakeOffset } from './fx.js';
@@ -29,6 +30,7 @@ const scene = new THREE.Scene();
 const camera = createCamera();
 const world = buildWorld(scene);
 addBoardProps(world);
+const scenery = buildScenery(scene);
 const particles = createParticles(scene);
 const camRig = { offset: new THREE.Vector3(), zoom: 1 };
 
@@ -192,6 +194,7 @@ function frame(now) {
   placeCamera(dt);
   views.update(dt, t);
   animator.update(t);
+  scenery.update(dt, t);
   pixel.render(scene, camera);
   requestAnimationFrame(frame);
 }
