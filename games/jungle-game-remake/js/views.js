@@ -67,7 +67,7 @@ export function createViews({ scene, camera, world, getPixel }) {
   const ringGeo = new THREE.RingGeometry(0.33, 0.43, 20);
   const hitGeo = new THREE.BoxGeometry(0.8, 1, 0.8);
   const hitMat = new THREE.MeshBasicMaterial();
-  const starGeo = new THREE.BoxGeometry(0.06, 0.06, 0.06);
+  const starGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
   const starMat = new THREE.MeshBasicMaterial({ color: C.gold });
   const arrow = buildArrow();
   // Ground directions that move a point straight right / straight up on screen, and the pitch
@@ -152,7 +152,7 @@ export function createViews({ scene, camera, world, getPixel }) {
       for (let i = 0; i < 3; i++) {
         const m = new THREE.Mesh(starGeo, starMat);
         const a = (i * Math.PI * 2) / 3;
-        m.position.set(Math.cos(a) * 0.18, 0, Math.sin(a) * 0.18);
+        m.position.set(Math.cos(a) * 0.28, 0, Math.sin(a) * 0.28);
         v.stars.add(m);
       }
       v.root.add(v.stars);
@@ -212,7 +212,7 @@ export function createViews({ scene, camera, world, getPixel }) {
       v.badge.quaternion.copy(camera.quaternion);
       if (v.stars) {
         v.stars.rotation.y = t * 3;
-        v.stars.position.y = v.height + 0.02 + v.model.position.y;
+        v.stars.position.y = v.height + 0.06 + v.model.position.y;
       }
     }
     const sv = views.get(selectedId);
@@ -233,7 +233,7 @@ export function createViews({ scene, camera, world, getPixel }) {
   };
 }
 
-/** Portraits for the captured trays: each animal rendered through the same pixel pipeline. */
+/** Portraits for the side panels: each animal rendered through the same pixel pipeline. */
 export function makePortraits(pixel) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(C.cream);

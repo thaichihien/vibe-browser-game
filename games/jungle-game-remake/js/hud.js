@@ -5,6 +5,7 @@ import { ANIMALS, SIDE_NAME } from './rules.js';
 export function createHud({ onRestart, onSoundToggle }) {
   const $ = id => document.getElementById(id);
   let portraits = {};
+  let turn = 'red';
   let toastTimer = 0;
 
   $('restartBtn').addEventListener('click', onRestart);
@@ -20,6 +21,7 @@ export function createHud({ onRestart, onSoundToggle }) {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeRules(); });
 
   function setTurn(player) {
+    turn = player;
     const isRed = player === 'red';
     $('turnStatus').className = `status ${isRed ? 'red' : 'blue'}`;
     $('turnText').textContent = `Lượt: ${SIDE_NAME[player]}`;
@@ -27,6 +29,8 @@ export function createHud({ onRestart, onSoundToggle }) {
       $(id).textContent = mine ? 'ĐANG ĐI' : 'CHỜ';
       $(id).classList.toggle('idle', !mine);
     }
+    setCurrent('red', null);
+    setCurrent('blue', null);
   }
 
   function toast(text, type = 'info') {
@@ -44,32 +48,28 @@ export function createHud({ onRestart, onSoundToggle }) {
 
   function setPortraits(map) { portraits = map; }
 
-  /** Add the lost piece to its side's tray; if `from` (viewport px) is given, fly it there. */
-  function addCaptured(piece, from) {
-    const tray = piece.player === 'red' ? $('redCaptured') : $('blueCaptured');
+  /** Show the animal a side is moving (portrait, name, strength), or a prompt when none. */
+  function setCurrent(player, piece) {
+    const box = $(player === 'red' ? 'redCurrent' : 'blueCurrent');
+    box.innerHTML = '';
+    if (!piece) {
+      const hint = document.createElement('span');
+      hint.className = 'hint';
+      hint.textContent = player === turn ? 'Chọn một quân' : '';
+      box.appendChild(hint);
+      return;
+    }
     const img = document.createElement('img');
     img.src = portraits[`${piece.type}:${piece.player}`] || '';
     img.alt = ANIMALS[piece.type].name;
-    img.title = ANIMALS[piece.type].name;
-    tray.appendChild(img);
-    if (!from || !img.animate) return;
-    const to = img.getBoundingClientRect();
-    const fly = img.cloneNode();
-    fly.className = 'cap-fly';
-    fly.style.left = `${to.left}px`;
-    fly.style.top = `${to.top}px`;
-    document.body.appendChild(fly);
-    img.style.visibility = 'hidden';
-    fly.animate([
-      { transform: `translate(${from.x - to.left - 20}px, ${from.y - to.top - 20}px) scale(1.6)` },
-      { transform: 'translate(0, 0) scale(1)' },
-    ], { duration: 700, easing: 'cubic-bezier(.3,.7,.3,1)' }).onfinish = () => {
-      fly.remove();
-      img.style.visibility = '';
-    };
+    const text = document.createElement('div');
+    const name = document.createElement('b');
+    name.textContent = ANIMALS[piece.type].name;
+    const rank = document.createElement('small');
+    rank.textContent = `Sức mạnh ${ANIMALS[piece.type].rank}/8`;
+    text.append(name, rank);
+    box.append(img, text);
   }
-
-  function clearCaptured() { $('redCaptured').innerHTML = ''; $('blueCaptured').innerHTML = ''; }
 
   function showWin(player, reason) {
     const isRed = player === 'red';
@@ -84,5 +84,5 @@ export function createHud({ onRestart, onSoundToggle }) {
 
   function setSound(muted) { $('soundBtn').textContent = muted ? '🔇 Âm: TẮT' : '🔊 Âm: BẬT'; }
 
-  return { setTurn, toast, setPortraits, addCaptured, clearCaptured, showWin, hideWin, setSound };
+  return { setTurn, toast, setPortraits, setCurrent, showWin, hideWin, setSound };
 }

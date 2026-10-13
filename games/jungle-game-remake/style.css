@@ -79,12 +79,15 @@ body {
   background: var(--lime-d); border: 2px solid var(--ink);
 }
 .turn-badge.idle { background: #b9b7ad; opacity: .7; }
-.captured { display: flex; flex-wrap: wrap; gap: 4px; min-height: 44px; }
-.captured img, .cap-fly {
-  width: 40px; height: 40px; image-rendering: pixelated; background: var(--paper);
-  border: 2px solid var(--ink);
+/* The animal the side is moving: portrait, name, strength. */
+.current { display: flex; align-items: center; gap: 10px; min-height: 64px; margin-top: 8px; }
+.current img {
+  width: 60px; height: 60px; image-rendering: pixelated; background: var(--paper);
+  border: 2px solid var(--ink); flex: none;
 }
-.cap-fly { position: fixed; z-index: 60; pointer-events: none; }
+.current b { display: block; font-size: 18px; }
+.current small { font-size: 12px; font-weight: 700; color: var(--lime-d); }
+.current .hint { font-size: 13px; font-weight: 700; opacity: .65; }
 
 .toast {
   position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 70;
@@ -127,6 +130,7 @@ body {
   .side.blue { left: 8px; bottom: 8px; }
   .side h2 { font-size: 14px; }
   .side h3 { display: none; }
-  .captured { min-height: 0; }
-  .captured img { width: 28px; height: 28px; }
+  .current { min-height: 0; margin-top: 4px; gap: 6px; }
+  .current img { width: 36px; height: 36px; }
+  .current b { font-size: 14px; }
 }
