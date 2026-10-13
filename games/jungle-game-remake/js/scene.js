@@ -11,9 +11,14 @@ const V = 8;                          // terrain voxels per tile
 export const WATER_Y = -0.3;          // river surface
 export const SWIM_Y = -0.42;          // a swimming rat's feet: body half under the surface
 export const SEA_Y = -1.0;
-// True isometric (pitch 35.264°) from the −x/+z side: rows run from the bottom-right (blue's home,
-// row 8) to the top-left (red's home, row 0).
-export const CAMERA_BASE = new THREE.Vector3(-20, 20, 20);
+/**
+ * The camera view. Yaw −45° looks from the −x/+z side, so rows run from the bottom-right (blue's
+ * home, row 8) to the top-left (red's home, row 0); pitch 35.264° is true isometric. The debug
+ * panel (?debug) edits these live; `zoom` multiplies the framed size and `panX`/`panZ` slide the
+ * view across the ground.
+ */
+export const VIEW = { yaw: -45, pitch: 35.264, zoom: 1, panX: 0, panZ: 0 };
+const CAMERA_DISTANCE = 34.64;
 
 // Island outline, rows r = −2…10 × cols c = −2…8. '.' = board square; digits = ring tile
 // height (0 low, 1 level with the board, 2 raised); ' ' = open sea. Raised tiles stay on the
@@ -259,26 +264,36 @@ function addLights(scene) {
   scene.add(sun, sun.target);
 }
 
+/** Point the camera along VIEW; its resting position is kept in cam.userData.base. */
+export function aimCamera(cam, view = VIEW) {
+  const yaw = THREE.MathUtils.degToRad(view.yaw), pitch = THREE.MathUtils.degToRad(view.pitch);
+  const target = new THREE.Vector3(view.panX, 0, view.panZ);
+  const dir = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+  cam.position.copy(target).addScaledVector(dir, CAMERA_DISTANCE);
+  cam.lookAt(target);
+  cam.updateMatrixWorld();
+  cam.userData.base = cam.position.clone();
+}
+
 export function createCamera() {
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 80);
-  cam.position.copy(CAMERA_BASE);
-  cam.lookAt(0, 0, 0);
-  cam.updateMatrixWorld();
+  aimCamera(cam);
   return cam;
 }
 
-const fitRef = createCamera();
 /** Frame the board plus a strip of island, with headroom for tall pieces at the back. */
-export function fitCamera(cam, w, h) {
+export function fitCamera(cam, w, h, view = VIEW) {
   let hx = 0, hy = 0;
   const v = new THREE.Vector3();
+  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
   for (const x of [-4.6, 4.6]) for (const y of [-0.5, 1.6]) for (const z of [-5.6, 5.6]) {
-    v.set(x, y, z).applyMatrix4(fitRef.matrixWorldInverse);
-    hx = Math.max(hx, Math.abs(v.x));
-    hy = Math.max(hy, Math.abs(v.y));
+    v.set(x, y, z);                       // measured from the board centre, so panning moves the view
+    hx = Math.max(hx, Math.abs(v.dot(right)));
+    hy = Math.max(hy, Math.abs(v.dot(up)));
   }
   const aspect = w / h;
-  const half = Math.max(hy, hx / aspect) * 1.04;
+  const half = Math.max(hy, hx / aspect) * 1.04 / view.zoom;
   Object.assign(cam, { left: -half * aspect, right: half * aspect, top: half, bottom: -half });
   cam.updateProjectionMatrix();
 }

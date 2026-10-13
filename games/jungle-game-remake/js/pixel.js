@@ -101,6 +101,7 @@ export function createPixelRenderer(canvas) {
   const quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
   const size = { w: 1, h: 1, scale: 2 };
+  let scaleOverride = null;               // debug panel: force a pixel scale
 
   function setTargets(w, h) {
     renderer.setSize(w, h, false);
@@ -110,7 +111,7 @@ export function createPixelRenderer(canvas) {
   }
 
   function resize(cssW, cssH) {
-    size.scale = pickScale(cssW, cssH);
+    size.scale = scaleOverride ?? pickScale(cssW, cssH);
     Object.assign(size, lowRes(cssW, cssH, size.scale));
     setTargets(size.w, size.h);
     canvas.style.width = `${size.w * size.scale}px`;
@@ -147,5 +148,6 @@ export function createPixelRenderer(canvas) {
     return url;
   }
 
-  return { renderer, size, resize, render, snapshot };
+  const setScaleOverride = s => { scaleOverride = s; };
+  return { renderer, size, resize, render, snapshot, setScaleOverride };
 }
