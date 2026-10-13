@@ -105,6 +105,7 @@ async function doMove(piece, row, col) {
   busy = true;
   const events = game.applyMove(piece, row, col);
   await animator.play(events);
+  hud.setCounts(game.pieces);
   busy = false;
   if (pendingRestart) { pendingRestart = false; restart(); }
 }
@@ -147,6 +148,7 @@ async function restart() {
   game.restart();
   hud.hideWin();
   hud.setTurn('red');
+  hud.setCounts(game.pieces);
   hud.toast('Bàn cờ đã được đặt lại 🌿', 'info');
   await animator.spawnAll(game.pieces);
   busy = false;

@@ -1,36 +1,13 @@
-/* Piece views: one voxel animal per piece, plus its team ring and rank badge. Idle life comes
+/* Piece views: one voxel animal per piece, plus its team ring. Idle life comes
    from breathing, a look-around, the tail, blinks and an occasional species flourish. Positions
    snap to the low-res pixel grid so moving pieces step in whole pixels, like sprites. A view
    whose `busy` flag is set belongs to an animation sequence (anim.js), and idle leaves it alone. */
 import * as THREE from 'three';
 import { ANIMALS, terrain } from './rules.js';
-import { C, TEAM, hexCss } from './palette.js';
+import { C, TEAM } from './palette.js';
 import { buildAnimal, buildArrow } from './models.js';
 import { cellToWorld } from './layout.js';
 
-
-const DIGITS = {
-  1: ['010', '110', '010', '010', '111'], 2: ['111', '001', '111', '100', '111'],
-  3: ['111', '001', '111', '001', '111'], 4: ['101', '101', '111', '001', '001'],
-  5: ['111', '100', '111', '001', '111'], 6: ['111', '100', '111', '101', '111'],
-  7: ['111', '001', '010', '010', '010'], 8: ['111', '101', '111', '101', '111'],
-};
-
-function makeBadge(rank, team) {
-  const cv = document.createElement('canvas');
-  cv.width = cv.height = 9;
-  const g = cv.getContext('2d');
-  g.fillStyle = hexCss(C.ink); g.fillRect(0, 0, 9, 9);
-  g.fillStyle = hexCss(TEAM[team].main); g.fillRect(1, 1, 7, 7);
-  g.fillStyle = hexCss(C.white);
-  DIGITS[rank].forEach((row, y) => [...row].forEach((ch, x) => { if (ch === '1') g.fillRect(3 + x, 2 + y, 1, 1); }));
-  const tex = new THREE.CanvasTexture(cv);
-  tex.minFilter = tex.magFilter = THREE.NearestFilter;
-  tex.generateMipmaps = false;
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), new THREE.MeshBasicMaterial({ map: tex }));
-  mesh.castShadow = false;
-  return mesh;
-}
 
 const stretch = (v, k) => {
   const s = Math.sin(k * Math.PI);
@@ -99,16 +76,15 @@ export function createViews({ scene, camera, world, getPixel }) {
     const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: TEAM[piece.player].main }));
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.015;
-    const badge = makeBadge(ANIMALS[piece.type].rank, piece.player);
     const hit = new THREE.Mesh(hitGeo, hitMat);
     hit.visible = false;
     hit.scale.y = a.height;
     hit.position.y = a.height / 2;
     hit.userData.pieceId = piece.id;
-    a.root.add(ring, badge, hit);
+    a.root.add(ring, hit);
     scene.add(a.root);
     const v = {
-      ...a, ring, badge, hit, piece,
+      ...a, ring, hit, piece,
       pos: cellPos(piece.row, piece.col), air: 0, busy: false,
       seed: Math.random() * 100, blinkT: 1 + Math.random() * 4,
       nextFlourish: 3 + Math.random() * 6, flourish: null, weakened: false, stars: null,
@@ -122,9 +98,6 @@ export function createViews({ scene, camera, world, getPixel }) {
     scene.remove(v.root);
     v.mat.dispose();
     v.ring.material.dispose();
-    v.badge.material.map.dispose();
-    v.badge.material.dispose();
-    v.badge.geometry.dispose();
     views.delete(v.piece.id);
   }
   const clear = () => [...views.values()].forEach(remove);
@@ -208,8 +181,6 @@ export function createViews({ scene, camera, world, getPixel }) {
       v.ring.scale.setScalar(sel ? 1 + Math.sin(t * 8) * 0.08 : 1);
       v.ring.material.color.setHex(active ? TEAM[v.piece.player].main : TEAM[v.piece.player].dark);
       snap(v, ppu);
-      v.badge.position.y = v.height + 0.2 + v.model.position.y;
-      v.badge.quaternion.copy(camera.quaternion);
       if (v.stars) {
         v.stars.rotation.y = t * 3;
         v.stars.position.y = v.height + 0.06 + v.model.position.y;
