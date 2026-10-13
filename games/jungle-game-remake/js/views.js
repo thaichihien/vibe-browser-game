@@ -8,8 +8,6 @@ import { C, TEAM, hexCss } from './palette.js';
 import { buildAnimal, buildArrow } from './models.js';
 import { cellToWorld } from './layout.js';
 
-const PITCH = Math.atan(1 / Math.SQRT2);               // true-iso pitch, 35.264°
-const COS_P = Math.cos(PITCH), SIN_P = Math.sin(PITCH);
 
 const DIGITS = {
   1: ['010', '110', '010', '010', '111'], 2: ['111', '001', '111', '100', '111'],
@@ -72,11 +70,19 @@ export function createViews({ scene, camera, world, getPixel }) {
   const starGeo = new THREE.BoxGeometry(0.06, 0.06, 0.06);
   const starMat = new THREE.MeshBasicMaterial({ color: C.gold });
   const arrow = buildArrow();
-  // Ground directions that move a point straight right / straight up on screen, read off the
-  // camera so snapping follows whichever diagonal the view is set on.
-  const SCREEN_RIGHT = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).setY(0).normalize();
-  const SCREEN_UP = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).setY(0).normalize();
-  arrow.rotation.y = Math.atan2(-SCREEN_UP.x, -SCREEN_UP.z);   // face the camera
+  // Ground directions that move a point straight right / straight up on screen, and the pitch
+  // factors, read off the camera each frame so the debug panel can turn the view.
+  const SCREEN_RIGHT = new THREE.Vector3(), SCREEN_UP = new THREE.Vector3();
+  let SIN_P = 0.577, COS_P = 0.816;
+  function readCamera() {
+    SCREEN_RIGHT.set(1, 0, 0).applyQuaternion(camera.quaternion).setY(0).normalize();
+    const f = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    SIN_P = Math.max(0.05, -f.y);
+    COS_P = Math.sqrt(1 - SIN_P * SIN_P);
+    SCREEN_UP.copy(f).setY(0).normalize();
+    arrow.rotation.y = Math.atan2(-SCREEN_UP.x, -SCREEN_UP.z);   // face the camera
+  }
+  readCamera();
   arrow.visible = false;
   scene.add(arrow);
   const tmp = new THREE.Vector3();
@@ -168,6 +174,7 @@ export function createViews({ scene, camera, world, getPixel }) {
 
   function update(dt, t) {
     const { ppu } = getPixel();
+    readCamera();
     for (const v of views.values()) {
       const R = v.rig, s = v.seed;
       const active = v.piece.player === activePlayer;
