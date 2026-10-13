@@ -111,3 +111,20 @@ test('resolvePick prefers the river square the water-level ray lands on', () => 
   assert.deepEqual(resolvePick(null, water, true), water);
   assert.equal(resolvePick(null, null, false), null);
 });
+
+import { execFileSync } from 'node:child_process';
+import { readdirSync, readFileSync } from 'node:fs';
+
+// `node --check file.js` exits 0 even on a syntax error when the file has no package.json type
+// (Node 22's module-syntax detection), so the source goes through stdin as an explicit module.
+test('every remake module parses', () => {
+  const dir = new URL('../games/jungle-game-remake/js/', import.meta.url);
+  const files = readdirSync(dir).filter(f => f.endsWith('.js'));
+  assert.ok(files.length >= 6, `only ${files.length} modules found`);
+  for (const f of files) {
+    assert.doesNotThrow(
+      () => execFileSync(process.execPath, ['--input-type=module', '--check'],
+        { input: readFileSync(new URL(f, dir)), stdio: ['pipe', 'pipe', 'pipe'] }),
+      `${f} does not parse`);
+  }
+});
