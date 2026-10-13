@@ -56,10 +56,10 @@ body {
   transition: transform .25s steps(4), filter .25s, opacity .25s;
 }
 .side.blue { --team: var(--blue); --team-d: var(--blue-d); }
-/* The iso board is a diamond running bottom-right → top-left: its empty corners are
-   top-right (beside red's home) and bottom-left (beside blue's). */
-.side.red { right: 17px; top: 72px; transform-origin: top right; }      /* below the icon buttons */
-.side.blue { left: 17px; bottom: 17px; transform-origin: bottom left; }
+/* Each card sits at its own end of the board: red's home is the top-left end of the diagonal,
+   blue's the bottom-right. The icon buttons keep the top-right corner. */
+.side.red { left: 17px; top: 17px; transform-origin: top left; }
+.side.blue { right: 17px; bottom: 17px; transform-origin: bottom right; }
 
 .side-head {
   display: flex; align-items: center; gap: 8px; padding: 6px 10px;
@@ -155,8 +155,8 @@ body {
   .controls { top: 8px; right: 8px; gap: 6px; }
   .btn.icon { width: 34px; height: 34px; font-size: 16px; }
   .side { width: 172px; }
-  .side.red { right: 11px; top: 54px; }
-  .side.blue { left: 11px; bottom: 11px; }
+  .side.red { left: 11px; top: 11px; }
+  .side.blue { right: 11px; bottom: 11px; }
   .side-head { padding: 4px 8px; gap: 6px; }
   .side-head h2 { font-size: 16px; letter-spacing: 2px; }
   .crest { width: 22px; height: 22px; font-size: 12px; }
