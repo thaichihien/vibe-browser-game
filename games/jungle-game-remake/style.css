@@ -24,28 +24,11 @@ body {
   font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
   overflow: hidden;
 }
-.app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+.app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }   /* the stage is the whole screen */
 
-.bar {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 8px 16px; background: var(--lime); border-bottom: 4px solid var(--ink);
-  flex-wrap: wrap;
-}
-.title { display: flex; align-items: center; gap: 10px; }
-.logo { font-size: 32px; }
-.title h1 { margin: 0; font-size: 26px; letter-spacing: 3px; font-weight: 900; }
-.title small { font-size: 14px; letter-spacing: 1px; color: var(--lime-d); -webkit-text-stroke: 0; }
-
-.status {
-  display: flex; align-items: center; gap: 8px; padding: 6px 14px; font-weight: 800;
-  color: var(--cream); border: 3px solid var(--ink); clip-path: var(--step);
-}
-.status.red { background: var(--red); }
-.status.blue { background: var(--blue); }
-.status .dot { width: 10px; height: 10px; background: var(--cream); animation: blink 1s steps(2) infinite; }
-@keyframes blink { 50% { opacity: .2; } }
-
-.controls { display: flex; gap: 8px; flex-wrap: wrap; }
+/* Sound / rules / restart as small icon buttons in the top-right corner. */
+.controls { position: absolute; top: 12px; right: 12px; z-index: 5; display: flex; gap: 8px; }
+.btn.icon { width: 42px; height: 42px; padding: 0; font-size: 20px; line-height: 1; }
 .btn {
   font: inherit; font-weight: 800; font-size: 14px; cursor: pointer;
   padding: 7px 12px; color: var(--ink); background: var(--cream);
@@ -68,7 +51,7 @@ body {
 }
 /* The iso board is a diamond running bottom-right → top-left: its empty corners are
    top-right (beside red's home) and bottom-left (beside blue's). */
-.side.red { right: 14px; top: 14px; }
+.side.red { right: 14px; top: 68px; }       /* below the icon buttons */
 .side.blue { left: 14px; bottom: 14px; }
 .side h2 { margin: 0 0 6px; font-size: 18px; }
 .side h3 { margin: 8px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
@@ -90,7 +73,7 @@ body {
 .current .hint { font-size: 13px; font-weight: 700; opacity: .65; }
 
 .toast {
-  position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 70;
+  position: fixed; left: 50%; top: 14px; transform: translateX(-50%); z-index: 70;
   padding: 10px 18px; font-weight: 800; background: var(--cream);
   border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); clip-path: var(--step);
   transition: opacity .3s, transform .3s;
@@ -122,11 +105,10 @@ body {
 }
 
 @media (max-width: 760px), (max-height: 520px) {
-  .bar { padding: 6px 10px; }
-  .title h1 { font-size: 20px; }
-  .btn { font-size: 12px; padding: 5px 8px; }
+  .controls { top: 8px; right: 8px; gap: 6px; }
+  .btn.icon { width: 34px; height: 34px; font-size: 16px; }
   .side { width: auto; max-width: 46%; padding: 6px 8px; }
-  .side.red { right: 8px; top: 8px; }
+  .side.red { right: 8px; top: 52px; }
   .side.blue { left: 8px; bottom: 8px; }
   .side h2 { font-size: 14px; }
   .side h3 { display: none; }
