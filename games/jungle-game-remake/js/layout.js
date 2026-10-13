@@ -18,10 +18,13 @@ export const worldToCell = (x, z) => ({ row: Math.round(z + 4) + 0, col: Math.ro
 
 /**
  * A click ray is intersected twice: with the board plane (y = 0) and with the river surface.
- * River squares sit lower, so the y = 0 hit lands on the square behind; when the water-level hit
- * is a river square, it wins.
+ * If the y = 0 hit is a solid square, the ray struck that tile's top first and it wins — even
+ * when the water-level hit, further along the ray, is a river square (the camera-facing banks).
+ * Only when the y = 0 hit is over the river cut did the ray fall through to the water, and then
+ * the water-level hit names the river square actually clicked.
  */
-export function resolvePick(groundCell, waterCell, waterCellIsWater) {
+export function resolvePick(groundCell, groundIsWater, waterCell, waterCellIsWater) {
+  if (groundCell && !groundIsWater) return groundCell;
   if (waterCell && waterCellIsWater) return waterCell;
   return groundCell ?? null;
 }
