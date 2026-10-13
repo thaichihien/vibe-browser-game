@@ -13,21 +13,28 @@ const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const rand = (a, b) => a + Math.random() * (b - a);
 
 function markerGeometry(kind) {
-  // 16 × 16 voxel frame on one square: corner brackets + centre dot for a move, a full frame and
-  // claw marks for a capture, plain corner brackets for the hover cursor
+  // 16 × 16 voxel frame on one square. Moves and captures get a two-voxel frame — dark ink
+  // outside, white (move) or red (capture) inside — so it reads on light grass; a move adds an
+  // ink-ringed centre dot, a capture ink claw marks. The hover cursor is white corner brackets.
   const g = new VoxelGrid();
-  const col = kind === 'capture' ? C.red : kind === 'hover' ? C.white : C.lime1;
-  const edge = (i, j) => g.set(i, 0, j, col);
-  for (let i = 1; i <= 14; i++) {
-    const bracket = i <= 4 || i >= 11;
-    if (kind === 'capture' || bracket) { edge(i, 1); edge(i, 14); edge(1, i); edge(14, i); }
+  const ring = (lo, hi, col, brackets) => {
+    for (let i = lo; i <= hi; i++) {
+      if (brackets && i > lo + 3 && i < hi - 3) continue;
+      g.set(i, 0, lo, col); g.set(i, 0, hi, col); g.set(lo, 0, i, col); g.set(hi, 0, i, col);
+    }
+  };
+  if (kind === 'hover') {
+    ring(1, 14, C.white, true);
+  } else {
+    ring(1, 14, C.ink);
+    ring(2, 13, kind === 'capture' ? C.red : C.white);
   }
-  if (kind === 'move') g.box(7, 0, 7, 8, 0, 8, col);
-  if (kind === 'capture') for (const o of [-3, 0, 3]) for (let s = 0; s < 6; s++) g.set(5 + s + o, 0, 10 - s, C.redDark);
+  if (kind === 'move') { g.box(6, 0, 6, 9, 0, 9, C.ink); g.box(7, 0, 7, 8, 0, 8, C.white); }
+  if (kind === 'capture') for (const o of [-3, 0, 3]) for (let s = 0; s < 6; s++) g.set(5 + s + o, 0, 10 - s, C.ink);
   return geometryFrom(g, 1 / 16, [8, 0, 8], { jitter: 0 });
 }
 
-export function createAnimator({ scene, camera, world, views, particles, sound, hud, camRig, toScreen }) {
+export function createAnimator({ scene, camera, world, views, particles, sound, hud, camRig }) {
   const markerMat = new THREE.MeshBasicMaterial({ vertexColors: true });
   const geos = { move: markerGeometry('move'), capture: markerGeometry('capture'), hover: markerGeometry('hover') };
   const markers = [];
@@ -284,7 +291,6 @@ export function createAnimator({ scene, camera, world, views, particles, sound, 
     if (cap.heavy) { startShake('heavy'); sound.rumble('heavy'); }
     if (cap.ratElephant) smoke(to);
     hud.toast(cap.message, 'success');
-    hud.addCaptured(cap.victim, toScreen(victim.pos));
 
     const away = new THREE.Vector3(to.x - from.x, 0, to.z - from.z).normalize();
     knockAndShatter(victim, away);          // runs alongside the attacker's landing
@@ -303,7 +309,49 @@ export function createAnimator({ scene, camera, world, views, particles, sound, 
     wait(450).then(() => tween(300, k => trap.setClosed(1 - k), ease.inOut));
   }
 
+  /** The den the winner walked into shakes, crumbles into falling stone and is gone. */
+  async function collapseDen(den, at) {
+    const parts = den.group.children;
+    parts.forEach(p => { p.userData.home ??= { y: p.position.y }; });
+    startShake('heavy');
+    sound.rumble('heavy');
+    await tween(320, (e, k) => { den.group.position.x = Math.sin(k * 60) * 0.025; }, ease.linear);
+    den.group.position.x = 0;
+    for (let i = 0; i < 46; i++) {
+      const a = rand(0, Math.PI * 2), s = rand(0.4, 1.6);
+      particles.spawn({
+        pos: new THREE.Vector3(at.x + rand(-0.5, 0.5), rand(0.2, 1.1), at.z + rand(-0.3, 0.3)),
+        vel: new THREE.Vector3(Math.cos(a) * s, rand(0.5, 2.2), Math.sin(a) * s),
+        color: pick([C.stone1, C.stone2, C.stone2, C.stone3, C.lime4]),
+        size: rand(0.06, 0.12), life: rand(1.4, 2), gravity: 9, floor: 0, spin: rand(-8, 8), tail: 0.4,
+      });
+    }
+    dust(at, 26, [C.stone1, C.stone2, C.sand]);
+    await tween(520, e => parts.forEach((p, i) => {
+      p.position.y = p.userData.home.y - 0.9 * e;
+      p.rotation.z = (i % 2 ? 1 : -1) * 0.5 * e;
+      p.scale.y = Math.max(0.05, 1 - 0.9 * e);
+    }), ease.in);
+    den.group.visible = false;
+    dust(at, 14, [C.stone1, C.stone2, C.sand]);
+  }
+
+  function restoreDens() {
+    for (const den of world.dens.values()) {
+      den.group.visible = true;
+      den.group.position.x = 0;
+      for (const p of den.group.children) {
+        if (p.userData.home) p.position.y = p.userData.home.y;
+        p.rotation.z = 0;
+        p.scale.y = 1;
+      }
+    }
+  }
+
   async function playWin(e, v) {
+    if (terrain[e.piece.row][e.piece.col] === 'den') {
+      await collapseDen(world.dens.get(`${e.piece.row},${e.piece.col}`), v.pos);
+    }
     const base = v.model.rotation.y;
     for (let i = 0; i < 2; i++) {
       await tween(380, (x, k) => {
@@ -376,6 +424,7 @@ export function createAnimator({ scene, camera, world, views, particles, sound, 
     camRig.zoom = 1;
     views.setActive('red');
     for (const trap of world.traps.values()) trap.setClosed(0);
+    restoreDens();
   }
 
   function update(t) {

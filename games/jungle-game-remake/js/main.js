@@ -48,13 +48,7 @@ hud.setSound(Sound.muted);
 hud.setTurn('red');
 hud.setPortraits(makePortraits(pixel));
 
-function toScreen(pos) {
-  const v = pos.clone().project(camera);
-  const r = canvas.getBoundingClientRect();
-  return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };
-}
-
-const animator = createAnimator({ scene, camera, world, views, particles, sound: Sound, hud, camRig, toScreen });
+const animator = createAnimator({ scene, camera, world, views, particles, sound: Sound, hud, camRig });
 
 function resize() {
   const r = stage.getBoundingClientRect();
@@ -93,6 +87,7 @@ function cellFromEvent(e) {
 // ---------- input: the original handlePieceClick / handleCellClick semantics ----------
 function select(piece) {
   selected = piece;
+  hud.setCurrent(game.currentPlayer, piece);
   views.setSelected(piece ? piece.id : null);
   if (piece) animator.showMoves(game.getValidMoves(piece));
   else animator.clearMoves();
@@ -145,7 +140,6 @@ async function restart() {
   animator.reset();
   game.restart();
   hud.hideWin();
-  hud.clearCaptured();
   hud.setTurn('red');
   hud.toast('Bàn cờ đã được đặt lại 🌿', 'info');
   await animator.spawnAll(game.pieces);
