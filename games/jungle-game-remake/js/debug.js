@@ -12,7 +12,7 @@ const FIELDS = [
 export function createDebugPanel({ view, onChange }) {
   if (!new URLSearchParams(location.search).has('debug')) return;
   const defaults = { ...view };
-  let scale = null;
+  let scale = view.pixel ?? null;
 
   const panel = document.createElement('div');
   panel.style.cssText = 'position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:90;' +
@@ -36,7 +36,8 @@ export function createDebugPanel({ view, onChange }) {
   scaleRow.style.cssText = 'display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:center';
   scaleRow.innerHTML = '<span>Pixel</span><select><option value="">auto</option><option>2</option><option>3</option><option>4</option><option>5</option></select>';
   const select = scaleRow.querySelector('select');
-  select.addEventListener('change', () => { scale = select.value ? Number(select.value) : null; update(); });
+  select.value = scale ? String(scale) : '';
+  select.addEventListener('change', () => { scale = select.value ? Number(select.value) : null; view.pixel = scale; update(); });
   panel.appendChild(scaleRow);
 
   const readout = document.createElement('code');
@@ -55,8 +56,8 @@ export function createDebugPanel({ view, onChange }) {
   resetBtn.addEventListener('click', () => {
     Object.assign(view, defaults);
     for (const { input, f } of Object.values(inputs)) input.value = view[f.key];
-    select.value = '';
-    scale = null;
+    scale = view.pixel ?? null;
+    select.value = scale ? String(scale) : '';
     update();
   });
   panel.appendChild(buttons);
