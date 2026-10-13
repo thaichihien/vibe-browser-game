@@ -53,20 +53,30 @@ export function createAnimator({ scene, camera, world, views, particles, sound, 
       const p = views.cellPos(m.row, m.col);
       mesh.position.set(p.x, world.surfaceY(m.row, m.col) + 0.012, p.z);
       mesh.userData.capture = !!m.capture;
+      Object.assign(mesh.userData, { row: m.row, col: m.col, baseY: mesh.position.y });
       scene.add(mesh);
       markers.push(mesh);
     }
+    if (lifted) liftMarkers(lifted, true);              // shown while a square is already lifted
   }
   function clearMoves() { markers.splice(0).forEach(m => scene.remove(m)); }
 
+  // A marker on the hovered square must rise with its tile, or the lifted top swallows it.
+  function liftMarkers(cell, on) {
+    for (const m of markers) {
+      if (m.userData.row === cell.row && m.userData.col === cell.col) m.position.y = m.userData.baseY + (on ? 1 / 16 : 0);
+    }
+  }
+
   function setHover(cell, game) {
-    if (lifted) { world.liftTile(lifted.row, lifted.col, false); lifted = null; }
+    if (lifted) { world.liftTile(lifted.row, lifted.col, false); liftMarkers(lifted, false); lifted = null; }
     cursor.visible = !!cell;
     if (!cell) return;
     const p = views.cellPos(cell.row, cell.col);
     cursor.position.set(p.x, world.surfaceY(cell.row, cell.col) + 0.02, p.z);
     if (terrain[cell.row][cell.col] !== 'water' && !game.pieceAt(cell.row, cell.col)) {
       world.liftTile(cell.row, cell.col, true);
+      liftMarkers(cell, true);
       cursor.position.y += 1 / 16;
       lifted = cell;
     }

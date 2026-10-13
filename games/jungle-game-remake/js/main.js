@@ -84,8 +84,10 @@ function cellFromEvent(e) {
     const p = game.pieces.find(q => q.id === hits[0].object.userData.pieceId);
     if (p) return { row: p.row, col: p.col };
   }
+  const ground = cellAt(groundPlane);
   const water = cellAt(waterPlane);
-  return resolvePick(cellAt(groundPlane), water, !!water && terrain[water.row][water.col] === 'water');
+  const isWater = cell => !!cell && terrain[cell.row][cell.col] === 'water';
+  return resolvePick(ground, isWater(ground), water, isWater(water));
 }
 
 // ---------- input: the original handlePieceClick / handleCellClick semantics ----------

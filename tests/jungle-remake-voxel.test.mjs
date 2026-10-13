@@ -104,12 +104,15 @@ test('cell ↔ world round-trips for every square, tolerating clicks off-centre'
   assert.deepEqual(cellToWorld(4, 3), { x: 0, z: 0 });
 });
 
-test('resolvePick prefers the river square the water-level ray lands on', () => {
+test('resolvePick: a solid tile top wins; the water-level hit counts only through the river cut', () => {
   const land = { row: 6, col: 1 }, water = { row: 5, col: 1 };
-  assert.deepEqual(resolvePick(land, water, true), water);
-  assert.deepEqual(resolvePick(land, { row: 6, col: 0 }, false), land);
-  assert.deepEqual(resolvePick(null, water, true), water);
-  assert.equal(resolvePick(null, null, false), null);
+  // ray hits the bank's tile top at y = 0 and would reach the river only further on: the bank wins
+  assert.deepEqual(resolvePick(land, false, water, true), land);
+  // ray falls through the river cut (y = 0 hit is over a water square): the water-level hit wins
+  assert.deepEqual(resolvePick(water, true, { row: 4, col: 1 }, true), { row: 4, col: 1 });
+  assert.deepEqual(resolvePick(land, false, { row: 6, col: 0 }, false), land);
+  assert.deepEqual(resolvePick(null, false, water, true), water);
+  assert.equal(resolvePick(null, false, null, false), null);
 });
 
 import { execFileSync } from 'node:child_process';
