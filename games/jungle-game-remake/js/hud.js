@@ -1,6 +1,6 @@
 /* DOM HUD: turn banner, side panels, captured trays, toasts, end overlay, rules modal.
    Copy is the original game's, verbatim. */
-import { ANIMALS, SIDE_NAME } from './rules.js';
+import { ANIMALS } from './rules.js';
 
 export function createHud({ onRestart, onSoundToggle }) {
   const $ = id => document.getElementById(id);
@@ -23,8 +23,6 @@ export function createHud({ onRestart, onSoundToggle }) {
   function setTurn(player) {
     turn = player;
     const isRed = player === 'red';
-    $('turnStatus').className = `status ${isRed ? 'red' : 'blue'}`;
-    $('turnText').textContent = `Lượt: ${SIDE_NAME[player]}`;
     for (const [id, mine] of [['redTurn', isRed], ['blueTurn', !isRed]]) {
       $(id).textContent = mine ? 'ĐANG ĐI' : 'CHỜ';
       $(id).classList.toggle('idle', !mine);
@@ -82,7 +80,12 @@ export function createHud({ onRestart, onSoundToggle }) {
   }
   const hideWin = () => $('overlay').classList.remove('show');
 
-  function setSound(muted) { $('soundBtn').textContent = muted ? '🔇 Âm: TẮT' : '🔊 Âm: BẬT'; }
+  function setSound(muted) {
+    const btn = $('soundBtn');
+    btn.textContent = muted ? '🔇' : '🔊';
+    btn.title = muted ? 'Âm: TẮT' : 'Âm: BẬT';
+    btn.setAttribute('aria-label', btn.title);
+  }
 
   return { setTurn, toast, setPortraits, setCurrent, showWin, hideWin, setSound };
 }

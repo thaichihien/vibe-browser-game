@@ -11,21 +11,13 @@
 </head>
 <body>
 <div class="app">
-  <header class="bar">
-    <div class="title">
-      <span class="logo">🦁</span>
-      <h1>CỜ THÚ <small>Rừng Xanh</small></h1>
-    </div>
-    <div class="status red" id="turnStatus"><span class="dot"></span><span id="turnText">Lượt: ĐỎ</span></div>
-    <div class="controls">
-      <button class="btn" id="soundBtn">🔊 Âm: BẬT</button>
-      <button class="btn" id="toggleRules">📖 Luật chơi</button>
-      <button class="btn primary" id="restartBtn">🔄 Chơi lại</button>
-    </div>
-  </header>
-
   <main class="stage" id="stage">
     <canvas id="view" aria-label="Bàn cờ thú"></canvas>
+    <div class="controls">
+      <button class="btn icon" id="soundBtn" title="Âm: BẬT" aria-label="Âm: BẬT">🔊</button>
+      <button class="btn icon" id="toggleRules" title="Luật chơi" aria-label="Luật chơi">📖</button>
+      <button class="btn icon primary" id="restartBtn" title="Chơi lại" aria-label="Chơi lại">🔄</button>
+    </div>
     <aside class="side red">
       <h2>🔴 ĐỎ</h2>
       <div class="turn-badge" id="redTurn">ĐANG ĐI</div>
