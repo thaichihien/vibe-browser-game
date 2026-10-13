@@ -14,13 +14,23 @@
   <main class="stage" id="stage">
     <canvas id="view" aria-label="Bàn cờ thú"></canvas>
     <div class="controls">
-      <button class="btn icon" id="soundBtn" title="Âm: BẬT" aria-label="Âm: BẬT">🔊</button>
+      <button class="btn icon" id="modeBtn" title="Chế độ: 2 người" aria-label="Chế độ: 2 người">👥</button>
+      <div class="audio">
+        <button class="btn icon" id="soundBtn" title="Âm thanh" aria-label="Âm thanh" aria-haspopup="dialog" aria-expanded="false">🔊</button>
+        <div class="audio-panel" id="audioPanel" role="dialog" aria-label="Âm thanh" hidden>
+          <label for="musicVol">🎵 Nhạc nền <output id="musicVolVal">60%</output></label>
+          <input type="range" id="musicVol" min="0" max="100" step="5" value="60">
+          <label for="sfxVol">🔔 Hiệu ứng <output id="sfxVolVal">100%</output></label>
+          <input type="range" id="sfxVol" min="0" max="100" step="5" value="100">
+          <button class="btn" id="muteBtn">🔇 Tắt tiếng</button>
+        </div>
+      </div>
       <button class="btn icon" id="toggleRules" title="Luật chơi" aria-label="Luật chơi">📖</button>
       <button class="btn icon primary" id="restartBtn" title="Chơi lại" aria-label="Chơi lại">🔄</button>
     </div>
     <aside class="side red" id="redSide">
       <header class="side-head">
-        <span class="crest">🐾</span>
+        <span class="crest" id="redCrest">🐾</span>
         <h2>ĐỎ</h2>
         <span class="count" id="redCount">8 quân</span>
       </header>
@@ -31,7 +41,7 @@
     </aside>
     <aside class="side blue" id="blueSide">
       <header class="side-head">
-        <span class="crest">🐾</span>
+        <span class="crest" id="blueCrest">🐾</span>
         <h2>XANH</h2>
         <span class="count" id="blueCount">8 quân</span>
       </header>
@@ -49,6 +59,25 @@
     <h2 id="overTitle">Chiến thắng!</h2>
     <p id="overReason"></p>
     <button class="btn primary" id="playAgainBtn">🔄 Chơi lại</button>
+  </div>
+</div>
+
+<div class="overlay" id="startMenu">
+  <div class="card start">
+    <button class="close" id="startClose" aria-label="Đóng" hidden>✕</button>
+    <div class="overlay-emoji">🦁</div>
+    <h2>Cờ Thú: Rừng Xanh</h2>
+    <p class="start-sub">Chọn cách chơi</p>
+    <button class="btn choice" data-mode="pvp">👥 2 người<small>Hai người chơi chung một máy</small></button>
+    <div class="choice">
+      <span>🤖 Đấu với máy<small>Bạn cầm quân 🔵 XANH, máy cầm 🔴 ĐỎ</small></span>
+      <div class="levels">
+        <button class="btn" data-mode="easy">Dễ</button>
+        <button class="btn" data-mode="normal">Thường</button>
+        <button class="btn" data-mode="hard">Khó</button>
+      </div>
+    </div>
+    <p class="start-note">🎲 Bên đi trước được bốc thăm ngẫu nhiên mỗi ván.</p>
   </div>
 </div>
 

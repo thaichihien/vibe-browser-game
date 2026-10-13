@@ -69,9 +69,10 @@ export function createGame() {
     restart, pieceAt, getValidMoves, canCapture, applyMove,
   };
 
-  function restart() {
+  // The original always opens with red; the remake draws the first side, so it is passed in.
+  function restart(first = 'red') {
     game.pieces = initialPieces.map((p, id) => ({ id, ...p }));
-    game.currentPlayer = 'red';
+    game.currentPlayer = first;
     game.gameOver = false;
     game.winner = null;
   }

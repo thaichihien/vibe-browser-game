@@ -243,6 +243,7 @@ export function createAnimator({ scene, camera, world, views, particles, sound, 
   async function playJump(v, to) {
     sound.move();
     await crouch(v);
+    sound.whoosh();
     const dist = v.pos.distanceTo(to);
     await hop(v, to, { height: 0.6 + dist * 0.28, ms: 520 + dist * 70, legs: false });
     dust(to, 18);
@@ -295,6 +296,7 @@ export function createAnimator({ scene, camera, world, views, particles, sound, 
 
     // impact
     sound.capture(ANIMALS[v.piece.type].rank);
+    sound.voice(v.piece.type);
     hitStop(90);
     flash(victim);
     gore(to, cap.inWater);
@@ -384,7 +386,7 @@ export function createAnimator({ scene, camera, world, views, particles, sound, 
     const target = new THREE.Vector3(v.pos.x, 0, v.pos.z).multiplyScalar(0.6);
     await tween(1200, k => { camRig.offset.copy(target).multiplyScalar(k); camRig.zoom = 1 + 0.35 * k; }, ease.inOut);
     hud.showWin(e.player, e.reason);
-    sound.win();
+    sound.win(e.player, e.piece.type);
   }
 
   async function play(events) {
@@ -420,6 +422,7 @@ export function createAnimator({ scene, camera, world, views, particles, sound, 
       await tween(380, e => { v.air = 3 * (1 - e); }, ease.in);
       v.air = 0;
       dust(v.pos, 5);
+      sound.plop(i);
       await squashLand(v, 0.2);
       v.busy = false;
     }));

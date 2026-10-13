@@ -1,15 +1,43 @@
-/* DOM HUD: turn banner, side panels, captured trays, toasts, end overlay, rules modal.
-   Copy is the original game's, verbatim. */
+/* DOM HUD: turn banner, side panels, captured trays, toasts, end overlay, rules modal, and the
+   start screen that picks 2 players or an AI level. Copy is the original game's, verbatim,
+   except for the start screen and the vs-AI lines. */
 import { ANIMALS } from './rules.js';
 
-export function createHud({ onRestart, onSoundToggle }) {
+const MODE_LABEL = { pvp: '2 người', easy: 'Đấu với máy (Dễ)', normal: 'Đấu với máy (Thường)', hard: 'Đấu với máy (Khó)' };
+
+export function createHud({ onRestart, onPlayAgain, onSoundToggle, onMusicVolume, onSfxVolume, onModeButton, onStart }) {
   const $ = id => document.getElementById(id);
   let turn = 'red';
+  let aiSide = null;            // the side the computer plays, or null for 2 players
   let toastTimer = 0;
 
   $('restartBtn').addEventListener('click', onRestart);
-  $('playAgainBtn').addEventListener('click', onRestart);
-  $('soundBtn').addEventListener('click', onSoundToggle);
+  $('playAgainBtn').addEventListener('click', onPlayAgain);
+  // Audio menu: the 🔊 button opens it; sliders report 0–1 while dragging, and the effects
+  // slider plays a sample when let go so the new level can be heard.
+  const panel = $('audioPanel');
+  const soundBtn = $('soundBtn');
+  function closePanel() {
+    panel.hidden = true;
+    soundBtn.setAttribute('aria-expanded', 'false');
+  }
+  soundBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    panel.hidden = !panel.hidden;
+    soundBtn.setAttribute('aria-expanded', String(!panel.hidden));
+  });
+  document.addEventListener('click', e => { if (!panel.hidden && !panel.contains(e.target)) closePanel(); });
+  $('muteBtn').addEventListener('click', onSoundToggle);
+  $('musicVol').addEventListener('input', e => {
+    $('musicVolVal').textContent = `${e.target.value}%`;
+    onMusicVolume(e.target.value / 100, false);
+  });
+  $('sfxVol').addEventListener('input', e => {
+    $('sfxVolVal').textContent = `${e.target.value}%`;
+    onSfxVolume(e.target.value / 100, false);
+  });
+  $('sfxVol').addEventListener('change', e => onSfxVolume(e.target.value / 100, true));
+  $('modeBtn').addEventListener('click', onModeButton);
 
   const rules = $('rulesModal');
   const closeRules = () => rules.classList.remove('show');
@@ -17,7 +45,39 @@ export function createHud({ onRestart, onSoundToggle }) {
   $('rulesClose').addEventListener('click', closeRules);
   $('rulesOk').addEventListener('click', closeRules);
   rules.addEventListener('click', e => { if (e.target === rules) closeRules(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeRules(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeRules(); closeStart(); closePanel(); } });
+
+  // Start screen. At boot and after a finished game it must be answered; opened from the mode
+  // button mid-game it can be dismissed to carry on with the game in progress.
+  const start = $('startMenu');
+  let startClosable = false;
+  function showStart(mode, closable) {
+    startClosable = closable;
+    $('startClose').hidden = !closable;
+    document.querySelectorAll('#startMenu [data-mode]').forEach(btn => {
+      btn.setAttribute('aria-pressed', String(btn.dataset.mode === mode));
+    });
+    start.classList.add('show');
+  }
+  const hideStart = () => start.classList.remove('show');
+  function closeStart() { if (startClosable) hideStart(); }
+  $('startClose').addEventListener('click', closeStart);
+  start.addEventListener('click', e => { if (e.target === start) closeStart(); });
+  document.querySelectorAll('#startMenu [data-mode]').forEach(btn => {
+    btn.addEventListener('click', () => { hideStart(); onStart(btn.dataset.mode); });
+  });
+
+  /** Reflect the mode: button face, and a robot crest on the side the AI plays. */
+  function setMode(mode, side) {
+    aiSide = mode === 'pvp' ? null : side;
+    const modeBtn = $('modeBtn');
+    modeBtn.textContent = aiSide ? '🤖' : '👥';
+    modeBtn.title = `Chế độ: ${MODE_LABEL[mode]}`;
+    modeBtn.setAttribute('aria-label', modeBtn.title);
+    for (const p of ['red', 'blue']) $(`${p}Crest`).textContent = aiSide === p ? '🤖' : '🐾';
+    setCurrent('red', null);
+    setCurrent('blue', null);
+  }
 
   function setTurn(player) {
     turn = player;
@@ -64,7 +124,8 @@ export function createHud({ onRestart, onSoundToggle }) {
       frame.textContent = '?';
       const hint = document.createElement('span');
       hint.className = 'hint';
-      hint.textContent = player === turn ? 'Chọn một quân' : 'Đang chờ lượt';
+      hint.textContent = player !== turn ? 'Đang chờ lượt'
+        : player === aiSide ? 'Máy đang nghĩ…' : 'Chọn một quân';
       text.appendChild(hint);
       box.append(frame, text);
       return;
@@ -95,7 +156,8 @@ export function createHud({ onRestart, onSoundToggle }) {
     const isRed = player === 'red';
     $('overEmoji').textContent = isRed ? '🔴' : '🔵';
     const title = $('overTitle');
-    title.textContent = `${isRed ? '🔴 ĐỎ' : '🔵 XANH'} chiến thắng! 🏆`;
+    title.textContent = !aiSide ? `${isRed ? '🔴 ĐỎ' : '🔵 XANH'} chiến thắng! 🏆`
+      : player === aiSide ? '🤖 Máy thắng rồi!' : '🏆 Bạn đã thắng máy!';
     title.className = isRed ? 'win-red' : 'win-blue';
     $('overReason').textContent = reason;
     $('overlay').classList.add('show');
@@ -103,11 +165,21 @@ export function createHud({ onRestart, onSoundToggle }) {
   const hideWin = () => $('overlay').classList.remove('show');
 
   function setSound(muted) {
-    const btn = $('soundBtn');
-    btn.textContent = muted ? '🔇' : '🔊';
-    btn.title = muted ? 'Âm: TẮT' : 'Âm: BẬT';
-    btn.setAttribute('aria-label', btn.title);
+    soundBtn.textContent = muted ? '🔇' : '🔊';
+    soundBtn.title = muted ? 'Âm thanh: TẮT' : 'Âm thanh';
+    soundBtn.setAttribute('aria-label', soundBtn.title);
+    $('muteBtn').textContent = muted ? '🔊 Bật tiếng' : '🔇 Tắt tiếng';
+    panel.classList.toggle('muted', muted);
   }
 
-  return { setTurn, setCounts, toast, setCurrent, showWin, hideWin, setSound };
+  /** Put the stored volumes (0–1) on the sliders. */
+  function setVolumes(music, sfx) {
+    for (const [id, v] of [['musicVol', music], ['sfxVol', sfx]]) {
+      const pct = Math.round(v * 100);
+      $(id).value = String(pct);
+      $(`${id}Val`).textContent = `${pct}%`;
+    }
+  }
+
+  return { setTurn, setCounts, toast, setCurrent, showWin, hideWin, setSound, setVolumes, setMode, showStart, hideStart };
 }

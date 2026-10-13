@@ -164,3 +164,12 @@ test('restart after a finished game restores the opening', () => {
   assert.equal(g.pieces.length, 16);
   assert.deepEqual(g.pieces.map(({ id, ...p }) => p), initialPieces);
 });
+
+test('restart can hand the first move to blue', () => {
+  const g = setup([], 'red');
+  g.restart('blue');
+  assert.equal(g.currentPlayer, 'blue');
+  assert.equal(g.pieces.length, 16);
+  const events = g.applyMove(find(g, 'blue', 'rat'), 5, 6);
+  assert.deepEqual(events.at(-1), { type: 'turn', player: 'red' });
+});
