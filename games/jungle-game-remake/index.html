@@ -18,15 +18,27 @@
       <button class="btn icon" id="toggleRules" title="Luật chơi" aria-label="Luật chơi">📖</button>
       <button class="btn icon primary" id="restartBtn" title="Chơi lại" aria-label="Chơi lại">🔄</button>
     </div>
-    <aside class="side red">
-      <h2>🔴 ĐỎ</h2>
-      <div class="turn-badge" id="redTurn">ĐANG ĐI</div>
-      <div class="current" id="redCurrent"></div>
+    <aside class="side red" id="redSide">
+      <header class="side-head">
+        <span class="crest">🐾</span>
+        <h2>ĐỎ</h2>
+        <span class="count" id="redCount">8 quân</span>
+      </header>
+      <div class="side-body">
+        <div class="turn-badge" id="redTurn">ĐANG ĐI</div>
+        <div class="current" id="redCurrent"></div>
+      </div>
     </aside>
-    <aside class="side blue">
-      <h2>🔵 XANH</h2>
-      <div class="turn-badge idle" id="blueTurn">CHỜ</div>
-      <div class="current" id="blueCurrent"></div>
+    <aside class="side blue" id="blueSide">
+      <header class="side-head">
+        <span class="crest">🐾</span>
+        <h2>XANH</h2>
+        <span class="count" id="blueCount">8 quân</span>
+      </header>
+      <div class="side-body">
+        <div class="turn-badge" id="blueTurn">CHỜ…</div>
+        <div class="current" id="blueCurrent"></div>
+      </div>
     </aside>
   </main>
 </div>

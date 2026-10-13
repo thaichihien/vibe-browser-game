@@ -44,33 +44,80 @@ body {
   image-rendering: pixelated; image-rendering: crisp-edges; cursor: pointer;
 }
 
+/* Player cards. A pixel border (stacked hard shadows, so the corners are notched without a
+   clip-path that would also clip the glow); striped team header; the side to move glows,
+   sits forward and runs an animated ribbon, the waiting side dims. */
 .side {
-  position: absolute; width: 196px; padding: 10px 12px;
-  background: var(--cream); border: 3px solid var(--ink);
-  box-shadow: 0 4px 0 var(--ink); clip-path: var(--step);
+  --team: var(--red); --team-d: var(--red-d);
+  position: absolute; width: 224px; background: var(--cream);
+  box-shadow:
+    0 -3px 0 var(--ink), 0 3px 0 var(--ink), -3px 0 0 var(--ink), 3px 0 0 var(--ink),
+    0 7px 0 rgba(43, 29, 20, .35);
+  transition: transform .25s steps(4), filter .25s, opacity .25s;
 }
+.side.blue { --team: var(--blue); --team-d: var(--blue-d); }
 /* The iso board is a diamond running bottom-right → top-left: its empty corners are
    top-right (beside red's home) and bottom-left (beside blue's). */
-.side.red { right: 14px; top: 68px; }       /* below the icon buttons */
-.side.blue { left: 14px; bottom: 14px; }
-.side h2 { margin: 0 0 6px; font-size: 18px; }
-.side h3 { margin: 8px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-.side.red h2 { color: var(--red-d); }
-.side.blue h2 { color: var(--blue-d); }
+.side.red { right: 17px; top: 72px; transform-origin: top right; }      /* below the icon buttons */
+.side.blue { left: 17px; bottom: 17px; transform-origin: bottom left; }
+
+.side-head {
+  display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+  color: var(--cream);
+  background: repeating-linear-gradient(135deg, var(--team) 0 8px, var(--team-d) 8px 12px);
+  border-bottom: 3px solid var(--ink);
+}
+.side-head h2 {
+  margin: 0; flex: 1; font-size: 22px; font-weight: 900; letter-spacing: 3px;
+  text-shadow: 2px 0 var(--ink), -2px 0 var(--ink), 0 2px var(--ink), 0 -2px var(--ink), 2px 2px var(--ink);
+}
+.crest {
+  display: grid; place-items: center; width: 28px; height: 28px; font-size: 16px;
+  background: var(--cream); box-shadow: 0 0 0 2px var(--ink);
+}
+.count {
+  padding: 2px 6px; font-size: 11px; font-weight: 900; color: var(--ink);
+  background: var(--cream); box-shadow: 0 0 0 2px var(--ink);
+}
+.side-body { padding: 8px 10px 10px; }
+
 .turn-badge {
-  display: inline-block; padding: 3px 10px; font-size: 12px; font-weight: 900; color: var(--cream);
-  background: var(--lime-d); border: 2px solid var(--ink);
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px;
+  font-size: 12px; font-weight: 900; letter-spacing: 1px; color: var(--cream);
+  background: var(--team); box-shadow: 0 0 0 2px var(--ink);
 }
-.turn-badge.idle { background: #b9b7ad; opacity: .7; }
-/* The animal the side is moving: portrait, name, strength. */
-.current { display: flex; align-items: center; gap: 10px; min-height: 64px; margin-top: 8px; }
-.current img {
-  width: 60px; height: 60px; image-rendering: pixelated; background: var(--paper);
-  border: 2px solid var(--ink); flex: none;
+.turn-badge::before { content: '▶'; animation: nudge .6s steps(2) infinite; }
+.turn-badge.idle { color: var(--ink); background: #e8e6dc; }
+.turn-badge.idle::before { content: '⏸'; animation: none; }
+@keyframes nudge { 50% { transform: translateX(3px); } }
+
+.side.active { transform: scale(1.04); animation: glow 1.2s steps(2) infinite; }
+.side.idle { filter: saturate(.45) brightness(.97); opacity: .82; }
+@keyframes glow {
+  50% {
+    box-shadow:
+      0 -3px 0 var(--ink), 0 3px 0 var(--ink), -3px 0 0 var(--ink), 3px 0 0 var(--ink),
+      0 -7px 0 var(--team), 0 7px 0 var(--team), -7px 0 0 var(--team), 7px 0 0 var(--team),
+      0 11px 0 rgba(43, 29, 20, .35);
+  }
 }
-.current b { display: block; font-size: 18px; }
-.current small { font-size: 12px; font-weight: 700; color: var(--lime-d); }
-.current .hint { font-size: 13px; font-weight: 700; opacity: .65; }
+
+/* The animal being moved: framed portrait, name, an 8-pip strength bar. */
+.current { display: flex; align-items: center; gap: 10px; min-height: 68px; margin-top: 8px; }
+.portrait {
+  display: grid; place-items: center; width: 64px; height: 64px; flex: none;
+  background: var(--paper);
+  box-shadow: 0 0 0 2px var(--ink), 0 0 0 5px var(--team), 0 0 0 7px var(--ink);
+  margin: 7px;
+}
+.portrait img { width: 60px; height: 60px; image-rendering: pixelated; }
+.portrait.empty { font-size: 26px; font-weight: 900; color: #b9b7ad; box-shadow: 0 0 0 2px #b9b7ad; }
+.current b { display: block; font-size: 18px; font-weight: 900; }
+.current .hint { font-size: 13px; font-weight: 800; opacity: .7; }
+.pips { display: flex; gap: 2px; margin-top: 4px; }
+.pips i { width: 9px; height: 9px; background: #e8e6dc; box-shadow: 0 0 0 1px var(--ink); }
+.pips i.on { background: var(--team); }
+.current small { display: block; margin-top: 2px; font-size: 11px; font-weight: 800; opacity: .7; }
 
 .toast {
   position: fixed; left: 50%; top: 14px; transform: translateX(-50%); z-index: 70;
@@ -107,12 +154,16 @@ body {
 @media (max-width: 760px), (max-height: 520px) {
   .controls { top: 8px; right: 8px; gap: 6px; }
   .btn.icon { width: 34px; height: 34px; font-size: 16px; }
-  .side { width: auto; max-width: 46%; padding: 6px 8px; }
-  .side.red { right: 8px; top: 52px; }
-  .side.blue { left: 8px; bottom: 8px; }
-  .side h2 { font-size: 14px; }
-  .side h3 { display: none; }
+  .side { width: 172px; }
+  .side.red { right: 11px; top: 54px; }
+  .side.blue { left: 11px; bottom: 11px; }
+  .side-head { padding: 4px 8px; gap: 6px; }
+  .side-head h2 { font-size: 16px; letter-spacing: 2px; }
+  .crest { width: 22px; height: 22px; font-size: 12px; }
+  .side-body { padding: 6px 8px 8px; }
   .current { min-height: 0; margin-top: 4px; gap: 6px; }
-  .current img { width: 36px; height: 36px; }
+  .portrait { width: 40px; height: 40px; margin: 6px; }
+  .portrait img { width: 36px; height: 36px; }
   .current b { font-size: 14px; }
+  .pips i { width: 6px; height: 6px; }
 }
