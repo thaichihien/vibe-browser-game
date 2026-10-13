@@ -139,15 +139,6 @@ export function createPixelRenderer(canvas) {
     renderer.render(quadScene, quadCam);
   }
 
-  /** Render a scene through the full pipeline at w×h and return a PNG data URL. */
-  function snapshot(scene, camera, w, h) {
-    setTargets(w, h);
-    render(scene, camera);
-    const url = renderer.domElement.toDataURL('image/png');
-    setTargets(size.w, size.h);
-    return url;
-  }
-
   const setScaleOverride = s => { scaleOverride = s; };
-  return { renderer, size, resize, render, snapshot, setScaleOverride };
+  return { renderer, size, resize, render, setScaleOverride };
 }

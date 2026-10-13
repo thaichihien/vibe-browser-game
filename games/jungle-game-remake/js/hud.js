@@ -4,7 +4,6 @@ import { ANIMALS } from './rules.js';
 
 export function createHud({ onRestart, onSoundToggle }) {
   const $ = id => document.getElementById(id);
-  let portraits = {};
   let turn = 'red';
   let toastTimer = 0;
 
@@ -53,9 +52,7 @@ export function createHud({ onRestart, onSoundToggle }) {
     }, 1800);
   }
 
-  function setPortraits(map) { portraits = map; }
-
-  /** Show the animal a side is moving (framed portrait, name, strength pips), or a prompt. */
+  /** Show the animal a side is moving (its emoji face, name, strength pips), or a prompt. */
   function setCurrent(player, piece) {
     const box = $(`${player}Current`);
     box.innerHTML = '';
@@ -73,10 +70,11 @@ export function createHud({ onRestart, onSoundToggle }) {
       return;
     }
     const a = ANIMALS[piece.type];
-    const img = document.createElement('img');
-    img.src = portraits[`${piece.type}:${piece.player}`] || '';
-    img.alt = a.name;
-    frame.appendChild(img);
+    const face = document.createElement('span');
+    face.className = 'face';
+    face.textContent = a.emoji;
+    face.setAttribute('aria-label', a.name);
+    frame.appendChild(face);
     const name = document.createElement('b');
     name.textContent = a.name;
     const pips = document.createElement('div');
@@ -111,5 +109,5 @@ export function createHud({ onRestart, onSoundToggle }) {
     btn.setAttribute('aria-label', btn.title);
   }
 
-  return { setTurn, setCounts, toast, setPortraits, setCurrent, showWin, hideWin, setSound };
+  return { setTurn, setCounts, toast, setCurrent, showWin, hideWin, setSound };
 }
