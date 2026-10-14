@@ -63,10 +63,10 @@ A single-file SPA styled as "ARCADE.SYS" (neon/cyberpunk). Its shape matters mor
 ### Games — `games/*.html`
 
 One file per game: inline `<style>`, markup, inline `<script>`, emoji for all art. No image,
-audio or font assets, and no network requests — with **five exceptions**:
+audio or font assets, and no network requests — with **six exceptions**:
 `games/magic-shooter.html` loads Three.js from a CDN (test its CDN-failure fallback when
-touching it), `games/jungle-game-remake/` (a folder game) loads Three.js 0.160.0 from jsDelivr
-through an import map, and its boot guard shows a fallback card when the CDN, WebGL or
+touching it), `games/jungle-game-remake/` and `games/warfield-chess/` (folder games) load Three.js 0.160.0 from jsDelivr
+through an import map, and each boot guard shows a fallback card when the CDN, WebGL or
 `file://` gets in the way (test that card when touching it), `games/grid-storm/` ships ~17 MB of background music in `music/*.mp3`,
 `games/farmer-dream.html` ships ~16 MB in `games/music/farmer-dream/`, and
 `games/tham-tu-mang/` **hotlinks photographs** from `picsum.photos` and `randomuser.me`
@@ -123,6 +123,11 @@ rule change in either file must be mirrored in the other, or that test fails. Th
 rule change must land. The remake's camera
 (yaw, pitch, zoom, pan, pixel scale) is the `VIEW` object in `js/scene.js`; open the game with
 `?debug` for a live panel that edits it and prints the values to paste back as defaults.
+
+`games/warfield-chess/` is standard chess in a DOM-free `js/rules.js` (+ `js/ai.js` in a worker),
+imported directly by `tests/warfield-chess-rules.test.mjs`, which checks it against published perft
+counts. Open it with `?debug` for the O overview key and `window.__wc`; add `&fast` to run
+animations 8× for automated playtests and `&fen=<FEN>` to start from any position.
 
 ### Docs — `docs/superpowers/`
 
