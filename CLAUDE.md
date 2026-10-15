@@ -63,7 +63,13 @@ A single-file SPA styled as "ARCADE.SYS" (neon/cyberpunk). Its shape matters mor
 ### Games — `games/*.html`
 
 One file per game: inline `<style>`, markup, inline `<script>`, emoji for all art. No image,
-audio or font assets, and no network requests — with **five exceptions**:
+audio or font assets, and no network requests — with **six exceptions**:
+`games/hu-tieu/` (a folder game, independent of the others) loads Three.js 0.160.0 from jsDelivr
+the same way and shares no code with any other game; its rules live DOM-free in `js/game.js`
+(tested by `tests/hu-tieu-game.test.mjs`) and `?debug` exposes `window.__hu` to step frames by
+hand, since a hidden tab gets no `requestAnimationFrame`, plus a look panel whose JSON pastes over
+`DEFAULTS` in `js/look.js` (lights, toon bands, post-shader colour, outline, pixel size). Its model
+textures are drawn procedurally in `js/textures.js`, so it ships no image files;
 `games/magic-shooter.html` loads Three.js from a CDN (test its CDN-failure fallback when
 touching it), `games/jungle-game-remake/` (a folder game) loads Three.js 0.160.0 from jsDelivr
 through an import map, and its boot guard shows a fallback card when the CDN, WebGL or
