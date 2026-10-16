@@ -1,5 +1,9 @@
-/* Hand-placed 12×12 pixel sprites for the order bubbles, in the same ink-outlined style as the
-   3D view. Each row is one string; '.' is transparent. Rendered once to data URLs. */
+/* Order-bubble icons. The food comes from the reference sheets in /reference, cut out to 64×64
+   PNGs in img/ (SPRITES); the rest — kho, nước, tiêu, trà — are hand-placed 12×12 pixel maps
+   in the same ink-outlined style. Each map row is one string; '.' is transparent. */
+
+// hủ tiếu shows as its bowl, mì as the yellow nest: the two bowls look alike at 30 px
+const SPRITES = new Set(['hu', 'mi', 'thit', 'tom', 'gan', 'trung', 'bam', 'muc', 'top', 'hanh', 'gia', 'ot']);
 
 const COLORS = {
   k: '#2a1f3d', w: '#fffdf6', s: '#d9d4c4', b: '#2f7be0', c: '#f7f2e6', C: '#cfc6b2',
@@ -21,60 +25,18 @@ const BOWL = [
 ];
 
 const MAPS = {
-  hu: ['............', '............', '...w..ww.w..', '..wswwswwsw.', '.wwswwwswwsw', ...BOWL],
-  mi: ['............', '............', '...y..yy.y..', '..yYyyYyyYy.', '.yyYyyyYyyYy', ...BOWL],
   kho: ['..........t.', '.........t..', '...o..oot.o.', '..oOooOtoOo.', '.ooOooto.oOo', ...BOWL],
   nuoc: [
     '.....kk.....', '....kAak....', '....kAak....', '...kAaaak...', '..kAaaaaak..', '..kAaaaaak..',
     '.kAaaaaaaak.', '.kAaaaaaaak.', '.kaaaaaaaak.', '..kaaaaaak..', '...kkkkkk...', '............',
   ],
-  tom: [
-    '............', '....kkkk....', '..kkrrrrkk..', '.krrRRRRrrk.', '.krRkkkkRrk.', 'krRk....kRk.',
-    'krRk.....k..', 'krRk..kk....', '.krRkkrRk...', '..krrrrRk...', '...kkkkk....', '............',
-  ],
-  thit: [
-    '............', '............', '...kkkkkkk..', '..kppppppPk.', '.kpppppppPk.', '.kppPppppPk.',
-    'kpppppppPk..', 'kppppppPPk..', 'kPPPPPPPk...', '.kkkkkkkk...', '............', '............',
-  ],
-  trung: [
-    '............', '............', '..kkk..kkk..', '.keeek.keek.', 'keEEek.keeek', 'keEEEk.keEek',
-    'keEEek.keEek', 'keeeek.keeek', '.keeek..kek.', '..kkk...kk..', '............', '............',
-  ],
-  gan: [
-    '............', '............', '....kkkkk...', '..kkggggGk..', '.kggggggGk..', '.kgGgggggk..',
-    'kgggggGggk..', 'kggggggGk...', '.kGGGGGGk...', '..kkkkkk....', '............', '............',
-  ],
-  bam: [
-    '............', '............', '...km.mk....', '..kmMmmMk...', '.kmmMmmmmk..', '.kMmmmMmmk..',
-    'kmmMmmmmMmk.', 'kmmmmMmmmmk.', '.kMmmmmMmk..', '..kkkkkkk...', '............', '............',
-  ],
-  muc: [
-    '............', '...kkkkkk...', '..kuuuuuuk..', '.kuUkkkkUuk.', '.kuk....kuk.', '.kuk....kuk.',
-    '.kuk....kuk.', '.kuk....kuk.', '.kuUkkkkUuk.', '..kuuuuuuk..', '...kkkkkk...', '............',
-  ],
-  top: [
-    '............', '............', '.kkkk..kkkk.', 'kffffk.kfffk', 'kfFffkkkffFk', 'kffFfkfkfffk',
-    '.kkkkkfFfkk.', '....kffFfk..', '....kfffFk..', '.....kkkk...', '............', '............',
-  ],
   tra: [
     '..kkkkkkkk..', '..klllllllk.', '..kiIiiIik..', '..kinnnnik..', '..knnnnnnk..', '..knNnnnnk..',
     '..knnnnNnk..', '..knnnnnnk..', '..knnNnnnk..', '..kNnnnnNk..', '..kkkkkkkk..', '............',
   ],
-  hanh: [
-    '............', '..kkk...kkk.', '.khHhk.khHhk', '.kH.Hk.kH.Hk', '.khHhk.khHhk', '..kkkkkk.kk.',
-    '....khHhk...', '....kH.Hk...', '....khHhk...', '.....kkk....', '............', '............',
-  ],
-  gia: [
-    '............', '..ZZ....ZZ..', '.kZZk..kZZk.', '..kzk..kzk..', '..kzk.kzk...', '...kzkkzk.ZZ',
-    '...kzkzk.kZZ', '....kzzk.kzk', '....kzzkkzk.', '.....kzzzk..', '......kkk...', '............',
-  ],
   tieu: [
     '....kkkk....', '...kxxxxk...', '...kxxxxk...', '..kkkkkkkk..', '..kllllllk..', '..kldddddk..',
     '..kldddddk..', '..kldddddk..', '..kldddddk..', '..kllllllk..', '..kkkkkkkk..', '............',
-  ],
-  ot: [
-    '..........h.', '.........hh.', '........khk.', '.......kxxk.', '......kxxxk.', '.....kxxXk..',
-    '....kxxXk...', '...kxxXk....', '..kxxXk.....', '.kxXkk......', '.kkk........', '............',
   ],
 };
 
@@ -95,4 +57,6 @@ export function icon(name) {
   return (cache[name] = c.toDataURL());
 }
 
-export const iconImg = (name, title = '') => `<img class="px" src="${icon(name)}" alt="${title}" title="${title}">`;
+export const iconImg = (name, title = '') => (SPRITES.has(name)
+  ? `<img class="px sprite" src="img/${name}.png" alt="${title}" title="${title}">`
+  : `<img class="px" src="${icon(name)}" alt="${title}" title="${title}">`);

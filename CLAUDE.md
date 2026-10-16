@@ -68,8 +68,12 @@ audio or font assets, and no network requests — with **six exceptions**:
 the same way and shares no code with any other game; its rules live DOM-free in `js/game.js`
 (tested by `tests/hu-tieu-game.test.mjs`) and `?debug` exposes `window.__hu` to step frames by
 hand, since a hidden tab gets no `requestAnimationFrame`, plus a look panel whose JSON pastes over
-`DEFAULTS` in `js/look.js` (lights, toon bands, post-shader colour, outline, pixel size). Its model
-textures are drawn procedurally in `js/textures.js`, so it ships no image files;
+`DEFAULTS` in `js/look.js` (lights, toon bands, post-shader colour, outline, pixel size), and a
+🧱 Models button (or `?debug&lib`) opening `js/library.js`: every model as a numbered card drawn at
+the game's pixel density, so feedback can say "#14 …"; add new models to its `CATALOG`. Its model
+textures are drawn procedurally in `js/textures.js`; its only image files are the order-bubble
+food icons in `img/*.png`, cut from the ingredient sheets in `/reference`, which the 3D food
+models and the `P` palette in `js/models.js` are also matched against;
 `games/magic-shooter.html` loads Three.js from a CDN (test its CDN-failure fallback when
 touching it), `games/jungle-game-remake/` (a folder game) loads Three.js 0.160.0 from jsDelivr
 through an import map, and its boot guard shows a fallback card when the CDN, WebGL or
@@ -94,6 +98,15 @@ treat a failed track as "skip to the next one", so the games still run if the fi
 missing. Single-file games keep their audio under `games/music/<slug>/` rather than a
 sibling folder, which would read as a folder game. `games/jungle-king.backup.html` is a
 leftover backup, not linked from the hub.
+
+**Never name a script after ad/tracking vocabulary** — `pixel.js`, `track*.js`, `analytics.js`,
+`ads.js`, `banner.js`, `beacon.js` and the like. Ad-blocker filter lists (EasyPrivacy etc.)
+block those names outright with `net::ERR_BLOCKED_BY_CLIENT`, and because one blocked import
+fails the whole ES-module graph, Chrome reports only `TypeError: Failed to fetch dynamically
+imported module: …/js/main.js` and the boot guard shows its misleading "CDN failed" card. It
+works in a clean browser and breaks for every player with a blocker, on Pages as well as
+locally. This bit both `jungle-game-remake` and `hu-tieu` (their `pixel.js` is now
+`renderer.js`). If you see that TypeError, check the Network tab for the blocked file first.
 
 Recurring house conventions across games: Web Audio synth for sound with a mute flag in
 `localStorage` under `<gameCamelCase>.muted` (`coCaNgua.muted`, `coThu.muted`,

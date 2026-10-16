@@ -95,33 +95,34 @@ const GEN = {
     }
   }),
 
-  /* the tô: white glaze with the classic blue — foot ring, a band of flowers and leaves on the
-     outside, a solid blue lip, and a thin line inside. Rows follow the lathe profile's v. */
-  bowl: () => make(96, 36, ({ w, px }) => {
-    const B = 0x2f7be0, BL = 0x8fb8f0;
-    px(0, 0, 0xfffbf0, w, 36);
-    px(0, 4, B, w, 1);                                            // foot ring
-    px(0, 8, B, w, 1);
-    for (let x = 0; x < w; x += 12) {                             // flowers
-      px(x + 4, 10, B, 3, 3); px(x + 5, 9, B, 1, 1); px(x + 5, 13, B, 1, 1); px(x + 3, 11, B, 1, 1); px(x + 7, 11, B, 1, 1);
-      px(x + 5, 11, 0xfffbf0, 1, 1);
-      px(x + 8, 13, BL, 3, 1); px(x + 10, 12, BL, 2, 1); px(x + 1, 13, BL, 2, 1); // leaves
-      px(x + 9, 14, B, 1, 1);
+  /* the tô, after the reference: white glaze, a blue edge on the rim, a dashed line just inside
+     it, a thin line under the lip and a band of blue lattice flowers round the foot. The lathe
+     maps profile point j to v = j/9 and the canvas is flipped, so point j sits at row 72 − 8j:
+     rows 0–24 inside, 24–32 rim top, 32–48 outside wall, 48–56 the band, 56–64 foot. */
+  bowl: () => make(96, 72, ({ w, px }) => {
+    const B = 0x2f6fd0, BL = 0x9cbcec, W = 0xfffbf0;
+    px(0, 0, W, w, 72);
+    for (let x = 0; x < w; x += 4) px(x, 21, B, 2, 1);            // dashed line inside the rim
+    px(0, 30, B, w, 2);                                           // the rim's blue edge
+    px(0, 38, B, w, 1);                                           // under the lip
+    px(0, 47, B, w, 1); px(0, 56, B, w, 1);                       // the band's borders
+    for (let x = 0; x < w; x += 8) {                              // lattice flowers
+      px(x + 3, 49, B, 2, 1); px(x + 2, 50, B, 4, 2); px(x + 3, 52, B, 2, 1); px(x + 3, 50, W, 2, 2);
+      px(x + 3, 51, BL, 1, 1);
+      px(x + 7, 51, BL, 1, 1); px(x, 53, BL, 1, 2); px(x + 6, 53, BL, 2, 1);
     }
-    px(0, 15, B, w, 1);
-    px(0, 16, B, w, 8);                                           // the lip
-    px(0, 18, 0x5d9cf0, w, 1);
-    px(0, 26, B, w, 1);                                           // inside line
-    for (let x = 0; x < w; x += 6) px(x, 33, BL, 2, 1);           // a ring in the well
+    px(0, 57, B, w, 6);                                           // foot
+    px(0, 59, BL, w, 1);
   }),
 
   broth: () => make(32, 32, ({ r, px }) => {
-    px(0, 0, 0xf2b54a, 32, 32);
-    for (let i = 0; i < 40; i++) px(Math.floor(r() * 32), Math.floor(r() * 32), 0xe09a32, 2, 1);
+    px(0, 0, 0xdcb45e, 32, 32);                                   // clear golden stock
+    for (let i = 0; i < 40; i++) px(Math.floor(r() * 32), Math.floor(r() * 32), 0xc49a48, 2, 1);
     for (let i = 0; i < 16; i++) {                                 // beads of fat
       const x = Math.floor(r() * 30), y = Math.floor(r() * 30);
-      px(x, y, 0xffe08a, 2, 2); px(x, y, 0xfff4c8, 1, 1);
+      px(x, y, 0xf0d690, 2, 2); px(x, y, 0xfff4d0, 1, 1);
     }
+    for (let i = 0; i < 8; i++) px(Math.floor(r() * 31), Math.floor(r() * 31), 0x5ca214, 1, 1);  // flecks of hành
     for (let i = 0; i < 6; i++) px(Math.floor(r() * 30), Math.floor(r() * 30), 0xc8402a, 1, 1);   // a fleck of chili oil
   }, 11),
 
@@ -186,29 +187,30 @@ const GEN = {
   }),
 
   /* food */
-  meat: () => make(16, 16, ({ r, px }) => {
-    px(0, 0, 0xffbfa3, 16, 16);
-    for (let i = 0; i < 10; i++) px(Math.floor(r() * 14), Math.floor(r() * 14), 0xffe2d4, 3, 1);
-    for (let i = 0; i < 8; i++) px(Math.floor(r() * 15), Math.floor(r() * 15), 0xe89a80, 1, 2);
-    px(0, 13, 0xd9735a, 16, 3); px(0, 12, 0xfff0e6, 16, 1);         // fat cap and rind
+  meat: () => make(16, 16, ({ r, px }) => {                    // boiled lean pork: grey-pink grain
+    px(0, 0, 0xc58774, 16, 16);
+    for (let i = 0; i < 12; i++) px(Math.floor(r() * 13), Math.floor(r() * 15), 0xe3b8a4, 4, 1);
+    for (let i = 0; i < 10; i++) px(Math.floor(r() * 13), Math.floor(r() * 15), 0xad6a5b, 3, 1);
+    px(0, 0, 0xd19b87, 16, 1);
   }, 19),
   liver: () => make(16, 16, ({ r, px }) => {
-    px(0, 0, 0x8a3328, 16, 16);
-    for (let i = 0; i < 12; i++) px(Math.floor(r() * 15), Math.floor(r() * 15), 0xa8483a, 2, 1);
-    for (let i = 0; i < 4; i++) px(Math.floor(r() * 15), Math.floor(r() * 15), 0xd88070, 1, 1);
+    px(0, 0, 0x935141, 16, 16);
+    for (let i = 0; i < 12; i++) px(Math.floor(r() * 15), Math.floor(r() * 15), 0x87493c, 2, 1);
+    for (let i = 0; i < 6; i++) px(Math.floor(r() * 15), Math.floor(r() * 15), 0xc07356, 1, 1);
+    px(5, 6, 0x512b25, 1, 1); px(10, 9, 0x512b25, 1, 1);             // the little pores
   }, 23),
-  shrimp: () => make(16, 8, ({ px }) => {
-    px(0, 0, 0xff6a2a, 16, 8);
-    for (let x = 0; x < 16; x += 3) { px(x, 0, 0xffd6a6, 1, 8); px(x + 1, 0, 0xff8a4a, 1, 8); }
-    px(0, 0, 0xffe2c4, 16, 2);
+  shrimp: () => make(16, 8, ({ px }) => {                       // shell bands round the body
+    px(0, 0, 0xf66c2c, 16, 8);
+    for (let x = 0; x < 16; x += 4) { px(x, 0, 0xfa9a59, 1, 8); px(x + 1, 0, 0xfbbe92, 1, 8); px(x + 3, 0, 0xbe320f, 1, 8); }
   }),
   squid: () => make(16, 8, ({ r, px }) => {
-    px(0, 0, 0xfff6e2, 16, 8);
-    for (let i = 0; i < 10; i++) px(Math.floor(r() * 16), Math.floor(r() * 8), 0xf2b8c0, 1, 1);
+    px(0, 0, 0xf3ecea, 16, 8);
+    for (let i = 0; i < 10; i++) px(Math.floor(r() * 16), Math.floor(r() * 8), 0xe6d4d2, 2, 1);
+    px(0, 7, 0xc89b97, 16, 1);
   }, 29),
   crackling: () => make(16, 16, ({ r, px }) => {
-    px(0, 0, 0xffbf3f, 16, 16);
-    for (let i = 0; i < 14; i++) { const x = Math.floor(r() * 14), y = Math.floor(r() * 14); px(x, y, 0xfff0a0, 2, 1); px(x, y + 1, 0xd88a20, 2, 1); }
+    px(0, 0, 0xd88a3a, 16, 16);                                   // golden-brown; the post pass adds orange
+    for (let i = 0; i < 14; i++) { const x = Math.floor(r() * 14), y = Math.floor(r() * 14); px(x, y, 0xf1b766, 2, 1); px(x, y + 1, 0xa85a20, 2, 1); }
   }, 31),
   noodle: (base) => make(32, 32, ({ px }) => {
     px(0, 0, base, 32, 32);

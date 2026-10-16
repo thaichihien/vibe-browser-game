@@ -31,6 +31,8 @@ body {
   image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none;
 }
 img.px { image-rendering: pixelated; width: 24px; height: 24px; display: block; }
+/* the reference sprites are 64 px drawn at 20–30: let the browser average, or they shimmer */
+img.px.sprite { image-rendering: auto; object-fit: contain; }
 
 /* ---------------------------------------------------------------- buttons & panels */
 .btn {
@@ -113,6 +115,7 @@ img.px { image-rendering: pixelated; width: 24px; height: 24px; display: block; 
   font-weight: 900; font-size: 13px; color: var(--ink);
   background: conic-gradient(var(--c, #f7c843) calc(var(--k) * 360deg), #4a3f55 0);
 }
+.timer[hidden] { display: none; }
 .timer.cooking { --c: #f7c843; }
 .timer.ready { --c: var(--green); }
 .timer.mushy { --c: var(--red); background: var(--red); color: #fff; animation: blink .4s steps(2) infinite; }
@@ -227,3 +230,49 @@ img.px { image-rendering: pixelated; width: 24px; height: 24px; display: block; 
 .look-panel output { text-align: right; font-variant-numeric: tabular-nums; }
 .look-panel textarea { width: 100%; margin-top: 8px; font: 11px monospace; resize: vertical; }
 .look-panel .btns { display: flex; gap: 6px; margin-top: 4px; }
+
+/* ?debug model library (js/library.js) */
+.lib {
+  position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column;
+  background: #241b33; color: var(--cream); font-size: 13px; font-weight: 700;
+}
+.lib[hidden] { display: none; }
+.lib header {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 16px;
+  background: var(--ink); border-bottom: 3px solid #000;
+}
+.lib header b { font-size: 16px; }
+.lib header .sub { opacity: .6; margin-right: auto; }
+.lib header select { font: inherit; }
+.lib button {
+  font: inherit; cursor: pointer; color: var(--ink); background: var(--yellow); border: 2px solid #000; padding: 2px 10px;
+}
+.lib button.on { background: var(--green); color: #fff; }
+.lib-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 42%) 1fr; }
+.lib-focus { display: flex; flex-direction: column; min-height: 0; border-right: 3px solid #000; }
+.lib-stage {
+  flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden; cursor: grab; touch-action: none;
+  background: repeating-conic-gradient(#2e2440 0 25%, #282036 0 50%) 0 0 / 24px 24px;
+}
+.lib-stage:active { cursor: grabbing; }
+.lib-stage canvas, .lib-card canvas { image-rendering: pixelated; display: block; }
+.lib-info { padding: 10px 16px 12px; display: grid; gap: 6px; }
+.lib-id { color: var(--yellow); font-size: 18px; }
+.lib-name { font-size: 16px; }
+.lib-code { font: 12px monospace; opacity: .75; }
+.lib-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.lib-hint { margin: 0; opacity: .5; font-size: 12px; }
+.lib-grid { overflow: auto; padding: 8px 16px 24px; display: flex; flex-wrap: wrap; align-items: flex-end; align-content: flex-start; gap: 10px; }
+.lib-grid h3 { flex-basis: 100%; margin: 12px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; opacity: .55; }
+.lib .lib-card {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px;
+  background: #2e2440; color: var(--cream); border: 2px solid #000;
+}
+.lib .lib-card:hover { border-color: var(--teal); }
+.lib .lib-card.on { border-color: var(--yellow); background: #3a2e52; }
+.lib-card span { font-size: 12px; white-space: nowrap; }
+.lib-card b { color: var(--yellow); }
+@media (max-width: 760px) {
+  .lib-body { grid-template-columns: 1fr; grid-template-rows: 45% 1fr; }
+  .lib-focus { border-right: 0; border-bottom: 3px solid #000; }
+}

@@ -32,8 +32,9 @@ function set(path, v) {
 }
 const decimals = step => (String(step).split('.')[1] || '').length;
 
-/** Build the panel. `onChange(path)` lets main.js react (resize on pixelRows, bands, …). */
-export function createLookPanel(onChange) {
+/** Build the panel. `onChange(path)` lets main.js react (resize on pixelRows, bands, …);
+    `onLibrary()` opens the model library. */
+export function createLookPanel(onChange, onLibrary) {
   const panel = document.createElement('div');
   panel.className = 'look-panel';
   panel.innerHTML = `<header><b>🎨 Look</b><button data-act="fold">–</button></header><div class="body"></div>`;
@@ -67,7 +68,7 @@ export function createLookPanel(onChange) {
   body.appendChild(json);
   const btns = document.createElement('div');
   btns.className = 'btns';
-  btns.innerHTML = `<button data-act="copy">📋 Copy</button><button data-act="reset">↺ Reset</button>`;
+  btns.innerHTML = `<button data-act="copy">📋 Copy</button><button data-act="reset">↺ Reset</button><button data-act="lib">🧱 Models</button>`;
   body.appendChild(btns);
 
   function dump() {
@@ -86,6 +87,7 @@ export function createLookPanel(onChange) {
       setTimeout(() => { e.target.textContent = '📋 Copy'; }, 1200);
     }
     if (act === 'reset') { resetLook(); paintAll(); onChange('*'); }
+    if (act === 'lib') onLibrary();
   });
   // keep game input (Escape, clicks) from leaking out of the panel
   panel.addEventListener('pointerdown', e => e.stopPropagation());

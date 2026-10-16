@@ -74,9 +74,10 @@ export function createPixel(canvas) {
 
   const size = { w: 1, h: 1, scale: 3 };
 
-  function resize(cssW, cssH) {
+  /** `scale` forces CSS pixels per art pixel (the ?debug model library); else LOOK.pixelRows. */
+  function resize(cssW, cssH, scale) {
     // aim for LOOK.pixelRows rendered rows: big chunky pixels, as in the references
-    size.scale = Math.max(1, Math.min(6, Math.round(cssH / LOOK.pixelRows)));
+    size.scale = scale ?? Math.max(1, Math.min(6, Math.round(cssH / LOOK.pixelRows)));
     size.w = Math.max(1, Math.floor(cssW / size.scale));
     size.h = Math.max(1, Math.floor(cssH / size.scale));
     renderer.setSize(size.w, size.h, false);

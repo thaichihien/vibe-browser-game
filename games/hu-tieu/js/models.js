@@ -9,12 +9,19 @@ export const P = {
   steel: 0xcfdbe8, steelD: 0x93a5bb, steelL: 0xf8fcff,
   wood: 0xe08a45, woodD: 0xa85a2a, woodL: 0xf7b46a,
   ceramic: 0xfffbf0, blue: 0x2f7be0,
-  broth: 0xf2b54a, brothD: 0xd08a2c, water: 0xcdeaf2,
-  hu: 0xfffcf2, mi: 0xffd447, kho: 0xd9913a,
-  thit: 0xffbfa3, thitD: 0xd9735a, tom: 0xff6a2a, tomL: 0xffd6a6,
-  egg: 0xfffbf0, yolk: 0xffc81f, gan: 0x8a3328, bam: 0xd09a6c, muc: 0xfff6e2, top: 0xffbf3f,
-  hanh: 0x46c94e, hanhL: 0xa6ee6a, hanhW: 0xf4fbe6, gia: 0xfbf7dc, giaH: 0xf2e27a,
-  tieu: 0x2b2230, ot: 0xff2e2e, otD: 0xc4141c, phi: 0xc77a2e,
+  // food colours are sampled from the reference sheets in /reference (img/*.png are cut from them)
+  broth: 0xdcb45e, brothD: 0xb8893a, water: 0xcdeaf2,
+  hu: 0xfffcf2, mi: 0xf5c138, kho: 0xd9913a,
+  thit: 0xc58774, thitL: 0xe3b8a4, thitD: 0xad6a5b,
+  tom: 0xf66c2c, tomM: 0xfa9a59, tomL: 0xfbbe92, tomD: 0xbe320f,
+  egg: 0xf8f0d6, eggD: 0xd8c8a0, yolk: 0xf2c84a,
+  gan: 0x935141, ganD: 0x6e3a2e,
+  bam: 0xd8a090, bamL: 0xecc0b0, bamD: 0xb07e72,   // a touch pinker: the post pass saturates
+  muc: 0xf3ecea, mucP: 0xe6d4d2, mucT: 0xa8707e,
+  top: 0xd57021, topL: 0xf1a94d, topD: 0xb64e14,
+  hanh: 0x38780d, hanhL: 0x5ca214, hanhB: 0x95d02d, hanhW: 0xf4fbe6,
+  gia: 0xf7f2eb, giaH: 0xe1c793,
+  tieu: 0x2b2230, ot: 0xe0200c, otD: 0xa80a06, otS: 0xf5a843, phi: 0xc77a2e,
   tea: 0xd8722a, ice: 0xeefbff, glass: 0xdff5fb,
   red: 0xf0453a, redD: 0xb82a22, yellow: 0xffd23f, green: 0x3fc26a, cream: 0xfff6dc,
   teal: 0x22b5c4, tealD: 0x15899a,
@@ -90,66 +97,109 @@ export const tcyl = (rt, rb, h, look, x, y, z, seg = 18, opts) =>
   at(tmesh(new THREE.CylinderGeometry(rt, rb, h, seg, 1, !!opts?.open), look, opts), x, y, z);
 const S = {                              // texture specs used across the models
   steel: ['steel', [], [1, 1]],
-  meat: ['meat'], liver: ['liver'], shrimp: ['shrimp', [], [3, 1]], squid: ['squid', [], [3, 1]], crackle: ['crackling'],
+  meat: ['meat'], liver: ['liver'], shrimp: ['shrimp', [], [4, 1]], squid: ['squid', [], [3, 1]], crackle: ['crackling'],
 };
 
 /* ------------------------------------------------------------------ food pieces */
 
-/** One serving of a topping as small pieces, roughly within radius 0.8 around the origin. */
+/** One serving of a topping as small pieces, roughly within radius 0.8 around the origin.
+    Shapes and colours follow the reference sheets in /reference. */
 export function toppingPiece(kind, seed = 1) {
   const r = rng(seed);
   const g = new THREE.Group();
   const jitter = s => (r() - 0.5) * s;
   switch (kind) {
-    case 'thit':                     // lát thịt nạc luộc: pale pink slices with a darker edge
-      for (let i = 0; i < 3; i++) {
-        const s = group(tbox(1.0, 0.14, 0.62, S.meat));
-        s.position.set(i * 0.28 - 0.3, 0.07 + i * 0.07, jitter(0.2));
-        s.rotation.y = 0.4 + jitter(0.4);
+    case 'thit':                     // thịt nạc luộc: long grey-pink slices fanned out
+      for (let i = 0; i < 4; i++) {
+        const s = tbox(1.25, 0.09, 0.34, S.meat, i * 0.12 - 0.18, 0.06 + i * 0.07, i * 0.27 - 0.4);
+        s.rotation.y = 0.5 - i * 0.12 + jitter(0.1);
+        s.rotation.x = 0.18;                      // each slice leans on the one below: the gaps show
         g.add(s);
       }
       break;
-    case 'tom':                      // tôm luộc cong, đỏ cam
-      for (let i = 0; i < 2; i++) {
-        const t = tmesh(new THREE.TorusGeometry(0.36, 0.15, 6, 10, Math.PI * 1.35), S.shrimp);
-        t.rotation.x = -Math.PI / 2;
-        t.rotation.z = i * 2.4 + jitter(0.5);
-        t.position.set(i * 0.6 - 0.3, 0.16, jitter(0.3));
-        g.add(t, ball(0.1, P.tomL, t.position.x + 0.2, 0.28, t.position.z));
-      }
-      break;
-    case 'trung':                    // trứng cút bóc vỏ, bổ đôi
-      for (let i = 0; i < 2; i++) {
-        const e = ball(0.3, P.egg, i * 0.62 - 0.31, 0.18, jitter(0.2), 10);
-        e.scale.y = 0.85;
-        g.add(e, at(cyl(0.15, 0.15, 0.05, P.yolk, 0, 0, 0, 10), e.position.x, 0.42, e.position.z));
-      }
-      break;
-    case 'gan':                      // gan heo thái lát, nâu sẫm
-      for (let i = 0; i < 3; i++) {
-        const s = tbox(0.7, 0.16, 0.5, S.liver, i * 0.3 - 0.3, 0.08 + i * 0.06, jitter(0.3));
-        s.rotation.y = -0.5 + jitter(0.5);
-        g.add(s);
-      }
-      break;
-    case 'bam':                      // thịt bằm xào, vụn
-      for (let i = 0; i < 9; i++) g.add(box(0.24, 0.2, 0.24, i % 3 ? P.bam : 0x9a7356, jitter(1.0), 0.1 + r() * 0.2, jitter(0.8)));
-      break;
-    case 'muc':                      // mực khoanh trắng
-      for (let i = 0; i < 3; i++) {
-        const t = tmesh(new THREE.TorusGeometry(0.24, 0.09, 6, 10), S.squid);
-        t.rotation.x = -Math.PI / 2 + jitter(0.5);
-        t.position.set(i * 0.4 - 0.4, 0.1 + i * 0.04, jitter(0.4));
+    case 'tom':                      // tôm luộc: a curled, segmented C with a tail fan
+      {
+        const t = shrimp();
+        t.rotation.y = jitter(0.8);
+        t.scale.setScalar(1.25);
         g.add(t);
       }
       break;
-    case 'top':                      // tóp mỡ chiên vàng giòn
-      for (let i = 0; i < 4; i++) {
-        const c = tbox(0.3, 0.24, 0.26, S.crackle, jitter(0.9), 0.12, jitter(0.7));
-        c.rotation.y = r() * 2;
+    case 'trung':                    // trứng cút: one whole, one halved to show the yolk
+      {
+        const whole = ball(0.3, P.egg, -0.26, 0.24, jitter(0.15), 10);
+        whole.scale.set(1, 0.85, 1.25);
+        whole.rotation.y = 0.5;
+        const half = new THREE.Group();
+        half.add(mesh(new THREE.SphereGeometry(0.3, 10, 4, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), P.eggD));
+        half.add(cyl(0.3, 0.3, 0.04, P.egg, 0, 0, 0, 12), cyl(0.16, 0.16, 0.06, P.yolk, 0, 0.02, 0, 10));
+        half.scale.set(1, 1, 1.25);
+        half.rotation.y = -0.4;
+        half.position.set(0.32, 0.3, jitter(0.15));
+        g.add(whole, half);
+      }
+      break;
+    case 'gan':                      // gan heo: dark brown leaf-shaped wedges, overlapping
+      for (let i = 0; i < 3; i++) {
+        const s = tmesh(new THREE.SphereGeometry(0.5, 10, 4), S.liver);
+        s.scale.set(1.25, 0.16, 0.6);            // a flat leaf, as the slices lie in the reference
+        s.rotation.y = 0.3 - i * 0.3 + jitter(0.2);
+        s.position.set(i * 0.2 - 0.2, 0.08 + i * 0.08, i * 0.22 - 0.22);
+        g.add(s);
+      }
+      break;
+    case 'bam':                      // thịt bằm: a bumpy pink heap of little lumps
+      for (let i = 0; i < 16; i++) {
+        const a = i * 2.4, d = Math.sqrt(i / 16) * 0.62;
+        g.add(ball(0.15 + r() * 0.05, [P.bam, P.bamL, P.bamD][i % 3], Math.cos(a) * d, 0.12 + (0.62 - d) * 0.35 + r() * 0.05, Math.sin(a) * d, 6));
+      }
+      break;
+    case 'muc':                      // mực: thick white rings with a purple tangle of tentacles
+      for (let i = 0; i < 2; i++) {
+        const t = tmesh(new THREE.TorusGeometry(0.25, 0.11, 6, 12), S.squid);
+        t.rotation.x = -Math.PI / 2 + jitter(0.4);
+        t.position.set(i * 0.5 - 0.35, 0.12 + i * 0.06, i * 0.3 - 0.2 + jitter(0.1));
+        g.add(t);
+      }
+      {
+        const legs = group(ball(0.17, P.mucP, 0, 0.14, 0, 7));
+        for (let k = 0; k < 5; k++) {             // tentacles fanning out from the head
+          const leg = box(0.55, 0.07, 0.08, P.mucT, 0, 0, 0);
+          leg.geometry.translate(0.27, 0, 0);
+          leg.rotation.set(0, -0.2 + k * 0.32, -0.25);
+          leg.position.y = 0.12;
+          legs.add(leg);
+        }
+        legs.position.set(0.5, 0.04, 0.35);
+        g.add(legs);
+      }
+      break;
+    case 'top':                      // tóp mỡ: golden fried nuggets
+      for (let i = 0; i < 9; i++) {           // rough nuggets heaped in a little mound
+        const a = i * 2.4, d = Math.sqrt(i / 9) * 0.6;
+        const c = at(tmesh(new THREE.DodecahedronGeometry(0.17 + r() * 0.05), S.crackle), Math.cos(a) * d, 0.15 + (0.6 - d) * 0.3, Math.sin(a) * d);
+        c.rotation.set(r() * 3, r() * 3, r() * 3);
         g.add(c);
       }
       break;
+  }
+  return g;
+}
+
+/** One boiled shrimp lying on its side: a fat striped C, a round head end and a tail fan. */
+function shrimp() {
+  const g = new THREE.Group();
+  const body = tmesh(new THREE.TorusGeometry(0.32, 0.17, 6, 12, Math.PI * 1.45), S.shrimp);
+  body.rotation.x = -Math.PI / 2;
+  body.position.y = 0.17;
+  const head = ball(0.21, P.tom, 0.32, 0.19, 0, 8);
+  head.scale.y = 0.85;
+  g.add(body, head, ball(0.1, P.tomL, 0.2, 0.3, 0.05, 6));
+  const end = Math.PI * 1.45;                   // the torus arc ends here; the fan spreads past it
+  for (const k of [-1, 1]) {
+    const fin = box(0.3, 0.06, 0.13, P.tomD, Math.cos(end) * 0.34 + 0.05, 0.12, -Math.sin(end) * 0.34 + k * 0.07);
+    fin.rotation.y = end - Math.PI / 2 + k * 0.45;
+    g.add(fin);
   }
   return g;
 }
@@ -181,7 +231,7 @@ export function scallionRings(n, spread, seed) {
   const r = rng(seed);
   const g = new THREE.Group();
   for (let i = 0; i < n; i++) {
-    const ring = cyl(0.17, 0.17, 0.1, i % 3 ? P.hanh : (i % 2 ? P.hanhL : P.hanhW), (r() - 0.5) * spread, 0.05 + r() * 0.1, (r() - 0.5) * spread, 6);
+    const ring = cyl(0.17, 0.17, 0.1, [P.hanh, P.hanhL, P.hanh, P.hanhB][i % 4], (r() - 0.5) * spread, 0.05 + r() * 0.1, (r() - 0.5) * spread, 6);
     ring.rotation.set((r() - 0.5) * 0.6, 0, (r() - 0.5) * 0.6);
     g.add(ring);
   }
@@ -207,7 +257,12 @@ export function chiliSlices(n, spread, seed) {
   const g = new THREE.Group();
   for (let i = 0; i < n; i++) {
     const x = (r() - 0.5) * spread, z = (r() - 0.5) * spread;
-    g.add(cyl(0.16, 0.16, 0.08, i % 2 ? P.ot : P.otD, x, 0.05, z, 7), box(0.06, 0.09, 0.06, P.yellow, x, 0.08, z));
+    const slice = group(cyl(0.17, 0.17, 0.08, i % 3 ? P.ot : P.otD, 0, 0, 0, 8), cyl(0.1, 0.1, 0.09, 0xf9c27a, 0, 0.01, 0, 6),
+      box(0.05, 0.1, 0.05, P.otS, 0.03, 0.03, 0), box(0.05, 0.1, 0.05, P.otS, -0.04, 0.03, 0.03));
+    slice.scale.z = 0.75;
+    slice.rotation.y = r() * 3;
+    slice.position.set(x, 0.05, z);
+    g.add(slice);
   }
   return g;
 }
@@ -236,9 +291,9 @@ const BOWL_PROFILE = [
 export function makeBowl() {
   const g = new THREE.Group();
   g.add(tmesh(new THREE.LatheGeometry(BOWL_PROFILE, 24), ['bowl', [], [2, 1]], { side: THREE.DoubleSide }));
-  const rim = torus(1.95, 0.08, P.blue, Math.PI * 2, 24);
+  const rim = torus(1.97, 0.07, P.ceramic, Math.PI * 2, 24);
   rim.rotation.x = Math.PI / 2;
-  rim.position.y = 1.5;
+  rim.position.y = 1.53;
   g.add(rim);
   return g;
 }
@@ -271,8 +326,10 @@ export function bowlContents(b, seed = 3) {
   if (b.style) top.add(friedShallots(seed + 5));
   top.add(extras(b, seed + 9));
   g.add(top);
-  if (b.style === 'kho') {             // khô comes with its broth in a little side bowl
-    const side = group(tcyl(0.75, 0.5, 0.65, ['bowl', [], [1, 1]], 0, 0.32, 0, 14), tcyl(0.66, 0.66, 0.05, [P.broth, ['broth'], P.broth], 0, 0.6, 0, 14));
+  if (b.style === 'kho') {             // khô comes with its broth in a chén: a small tô, filled
+    const chen = makeBowl();
+    chen.scale.setScalar(0.42);
+    const side = group(chen, tcyl(0.72, 0.72, 0.05, [P.broth, ['broth'], P.broth], 0, 0.5, 0, 16));
     side.position.set(2.3, -0.02, 1.4);
     g.add(side);
   }
@@ -314,7 +371,7 @@ export function makeNoodleTray(kind) {
     if (kind === 'mi') {
       const nest = tmesh(new THREE.TorusGeometry(0.5, 0.28, 6, 12), ['noodle', [P.mi], [3, 1]]);
       nest.rotation.x = -Math.PI / 2;
-      n.add(nest, ball(0.35, 0xe8b93c, 0, 0.1, 0, 8));
+      n.add(nest, ball(0.35, 0xe19c1a, 0, 0.1, 0, 8), strands(0xfcdc5c, 1.1, 40 + i));
     } else {
       n.add(strands(P.hu, 1.2, 20 + i));
       const heap = tmesh(new THREE.SphereGeometry(0.6, 8, 6), ['noodle', [P.hu], [2, 1]]);
@@ -465,29 +522,82 @@ export function makeMoney(amount) {
   return g;
 }
 
-/** Thớt gỗ tròn: the round wooden board with a bunch of hành lá and a cleaver. */
+/** Thớt gỗ tròn: the round wooden board with a bunch of hành lá and a cleaver. The bunch lies
+    along x, green tips at −x and white roots at +x; setChop() poses the knife and the cut. */
+const BOARD_TOP = 0.7;
+const ROOT_X = 1.1, GREEN_LEN = 2.9;           // greens run from ROOT_X back to ROOT_X − GREEN_LEN
+const STROKES = 8;                              // knife strikes per bunch
 export function makeBoard() {
   const g = new THREE.Group();
   g.add(tcyl(2.7, 2.7, 0.7, [['wood', [P.woodD], [3, 0.4]], ['boardTop'], P.woodD], 0, 0.35, 0, 24));
   const bunch = new THREE.Group();
   bunch.name = 'bunch';
+  bunch.rotation.y = 0.5;                       // diagonal: from the camera the upright blade then shows its face, not its edge
+  // the greens hang off the root end, so scaling this group in x shortens them from the tips
+  const greens = new THREE.Group();
+  greens.name = 'greens';
+  greens.position.x = ROOT_X;
+  const lay = m => { m.rotation.z = Math.PI / 2; return m; };
   for (let i = 0; i < 7; i++) {
-    const stalk = group(
-      cyl(0.13, 0.13, 3.0, i % 2 ? P.hanh : P.hanhL, 0, 0, 0, 6),
-      cyl(0.17, 0.17, 0.9, P.hanhW, 0, -1.9, 0, 6),
-    );
-    stalk.rotation.z = Math.PI / 2;
-    stalk.rotation.y = 0.15;
-    stalk.position.set(-0.3, 0.95 + (i % 2) * 0.12, -0.9 + i * 0.22);
-    bunch.add(stalk);
+    const y = BOARD_TOP + 0.14 + (i % 2) * 0.1, z = -0.7 + i * 0.2;
+    greens.add(lay(cyl(0.12, 0.12, GREEN_LEN, i % 2 ? P.hanh : P.hanhL, -GREEN_LEN / 2, y, z, 6)));
+    bunch.add(lay(cyl(0.16, 0.16, 0.8, P.hanhW, ROOT_X + 0.4, y, z, 6)), box(0.1, 0.12, 0.2, 0xd8c8a0, ROOT_X + 0.84, y, z));
   }
+  bunch.add(greens);
+  // slices already cut, lying where the greens were; setChop() shows those behind the knife
+  const cut = new THREE.Group();
+  cut.name = 'cut';
+  const r = rng(61);
+  for (let i = 0; i < 30; i++) {
+    const x = ROOT_X - GREEN_LEN * ((i + 0.5) / 30) + (r() - 0.5) * 0.2;
+    const ring = cyl(0.12, 0.12, 0.08, [P.hanh, P.hanhL, P.hanhB][i % 3], x, BOARD_TOP + 0.04 + r() * 0.05, (r() - 0.5) * 1.5, 6);
+    ring.rotation.set((r() - 0.5) * 0.5, 0, (r() - 0.5) * 0.5);
+    ring.userData.x = x;
+    ring.visible = false;
+    cut.add(ring);
+  }
+  bunch.add(cut);
   g.add(bunch);
-  const knife = group(tbox(2.2, 0.12, 1.1, S.steel, 0, 0, 0), box(2.2, 0.13, 0.12, 0x6f7883, 0, 0, -0.5), tbox(1.3, 0.3, 0.35, ['wood', [P.woodD]], 1.6, 0.05, 0.35));
+  // dao phay: a tall thin blade standing on its edge (origin), the wooden handle toward the cook
+  const knife = group(
+    tbox(0.06, 0.75, 1.5, S.steel, 0, 0.375, 0),
+    box(0.08, 0.06, 1.5, 0x6f7883, 0, 0.75, 0),               // the spine
+    box(0.065, 0.06, 1.5, P.steelL, 0, 0.03, 0),               // the honed edge
+    tbox(0.22, 0.24, 1.0, ['wood', [P.woodD]], 0, 0.6, 1.2),
+  );
   knife.name = 'knife';
-  knife.position.set(0.9, 1.2, 1.25);
-  knife.rotation.y = -0.3;
   g.add(knife);
+  setChop(g, null);
   return g;
+}
+
+/** Pose the board for chop time `t` (seconds into CHOP_TIME `total`), or the resting state for null:
+    the knife strikes STROKES times, each strike taking one slice off the tips of the bunch. */
+export function setChop(board, t, total = 1.3) {
+  const bunch = board.getObjectByName('bunch');
+  const greens = board.getObjectByName('greens');
+  const cut = board.getObjectByName('cut');
+  const knife = board.getObjectByName('knife');
+  if (t == null) {
+    greens.scale.x = 1;
+    cut.children.forEach(c => { c.visible = false; });
+    knife.position.set(0.2, BOARD_TOP + 0.03, 1.75);         // lying flat at the front of the board
+    knife.rotation.set(0, -0.35, Math.PI / 2);
+    return;
+  }
+  const strokes = Math.min(STROKES - 1e-6, (t / total) * (STROKES + 0.4));
+  const n = Math.floor(strokes), u = strokes - n;             // stroke index, and how far through it
+  const done = Math.min(STROKES, u >= 0.2 ? n + 1 : n);      // the slice falls the moment the edge lands
+  const at = k => ROOT_X - GREEN_LEN * (1 - k / STROKES);     // cut line after k slices
+  greens.scale.x = Math.max(0.001, 1 - done / STROKES);   // never 0: a singular matrix
+  const tip = at(done);
+  cut.children.forEach(c => { c.visible = c.userData.x < tip; });
+  // down fast, rest on the board, lift back up while sliding to the next cut line
+  const lift = u < 0.2 ? 0.75 * (1 - (u / 0.2) ** 2) : u < 0.35 ? 0 : 0.75 * ((u - 0.35) / 0.65);
+  const x = u < 0.35 ? at(n + 1) : at(n + 1) + (at(n + 2) - at(n + 1)) * ((u - 0.35) / 0.65);
+  const p = new THREE.Vector3(Math.min(x, at(STROKES)), BOARD_TOP + lift, -0.05).applyEuler(bunch.rotation);
+  knife.position.copy(p);
+  knife.rotation.set(-lift * 0.25, bunch.rotation.y, 0);       // the handle end rises on the backswing
 }
 
 /** A small steel dish of chopped hành; its 'fill' group holds the rings. */

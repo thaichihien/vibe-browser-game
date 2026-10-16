@@ -312,10 +312,7 @@ export function syncStall(st, s, dt, time, hoverHit) {
 
   // the thớt: the cleaver chops while chopT runs; the dish fills with the chopped pile
   const sc = s.scallion;
-  const knife = st.board.getObjectByName('knife');
-  const chopping = sc.chopT != null;
-  knife.position.y = chopping ? 1.2 + Math.abs(Math.sin(time * 22)) * 1.1 : 1.2;
-  knife.position.x = chopping ? 0.9 - (sc.chopT / CHOP_TIME) * 1.6 : 0.9;
+  M.setChop(st.board, sc.chopT, CHOP_TIME);
   const fill = st.extras.hanh.getObjectByName('fill');
   if (fill.userData.pile !== sc.pile) {
     fill.clear();

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createPixel } from './pixel.js';
+import { createPixel } from './renderer.js';
 import { buildStall, makeCamera, syncStall, anchors as makeAnchors } from './stall.js';
 import { createHud } from './hud.js';
 import { Sound } from './audio.js';
@@ -276,10 +276,14 @@ setBands(LOOK.bands);
 
 // ?debug: drive the game by hand (a hidden tab gets no animation frames), and tune the look
 if (new URLSearchParams(location.search).has('debug')) {
+  // the model library draws at the game's density: world units and CSS px per art pixel
+  const density = () => ({ wpp: (camera.top - camera.bottom) / pixel.size.h, scale: pixel.size.scale });
+  const library = () => import('./library.js').then(({ openLibrary }) => openLibrary(density));
   import('./debug.js').then(({ createLookPanel }) => createLookPanel(path => {
     if (path === '*' || path.startsWith('bands')) setBands(LOOK.bands);
     if (path === '*' || path === 'pixelRows') resize();
-  }));
+  }, library));
+  if (new URLSearchParams(location.search).has('lib')) library();
   window.__hu = {
     G, get game() { return game; },
     start(i) { startDay(i); show('intro', false); paused = false; },

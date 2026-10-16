@@ -3,16 +3,16 @@
 
 export const DEFAULTS = {
   sky: 1.75,            // hemisphere (sky) light — the overall fill
-  sun: 1.35,            // directional sun — highlights and cast shadows
-  bands: [120, 200, 255], // toon shading steps 0–255: shadow side, mid, lit side
-  brightness: 1.0,      // post: multiply every colour
-  contrast: 1.0,        // post: push away from (>1) or toward (<1) mid-grey
-  saturation: 1.3,      // post: 1 = as lit, >1 = more colourful
+  sun: 1.4,             // directional sun — highlights and cast shadows
+  bands: [135, 200, 255], // toon shading steps 0–255: shadow side, mid, lit side
+  brightness: 0.96,     // post: multiply every colour
+  contrast: 1.03,       // post: push away from (>1) or toward (<1) mid-grey
+  saturation: 1.33,     // post: 1 = as lit, >1 = more colourful
   colorLevels: 14,      // post: steps per colour channel (fewer = more posterised)
-  dither: 0.6,          // post: strength of the 4×4 ordered dither
-  outline: 0.78,        // post: how dark the ink line is (0 = none, 1 = solid ink)
-  outlineDepth: 0.006,  // post: depth jump that counts as an edge (smaller = more lines)
-  pixelRows: 300,       // rendered rows on screen — larger = smaller pixels
+  dither: 0.53,         // post: strength of the 4×4 ordered dither
+  outline: 0.91,        // post: how dark the ink line is (0 = none, 1 = solid ink)
+  outlineDepth: 0.0015, // post: depth jump that counts as an edge (smaller = more lines)
+  pixelRows: 370,       // rendered rows on screen — larger = smaller pixels
 };
 
 const KEY = 'huTieu.look';
