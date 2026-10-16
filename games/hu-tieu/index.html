@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quán Hủ Tiếu Nam Vang</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<main class="stage" id="stage">
+  <canvas id="view" aria-label="Quầy hủ tiếu"></canvas>
+  <div class="pins" id="pins"></div>
+  <div class="hover-tag" id="hoverTag" hidden></div>
+  <div class="pile-tag" id="pileTag" hidden></div>
+
+  <header class="topbar">
+    <div class="panel day" id="dayBadge">Ngày 1</div>
+    <div class="panel money">
+      <div class="money-bar"><i id="moneyFill"></i>
+        <span class="star" id="star0">★</span><span class="star" id="star1">★</span><span class="star" id="star2">★</span>
+      </div>
+      <div class="money-row"><b id="moneyText">0đ</b><small id="goalText"></small></div>
+    </div>
+    <div class="panel cust" title="Khách còn lại">🧑 <b id="custText">0/0</b></div>
+    <div class="buttons">
+      <button class="btn icon" id="soundBtn" aria-label="Âm thanh">🔊</button>
+      <button class="btn icon" id="rulesBtn" aria-label="Cách chơi">📖</button>
+      <button class="btn icon" id="menuBtn" aria-label="Menu">☰</button>
+    </div>
+  </header>
+</main>
+
+<div class="overlay" id="menu">
+  <div class="card menu-card">
+    <button class="close" id="menuClose" aria-label="Đóng" hidden>✕</button>
+    <div class="logo"><span>🍜</span><h1>Quán Hủ Tiếu<br><em>Nam Vang</em></h1></div>
+    <p class="sub">Một xe hủ tiếu bên lề đường Sài Gòn. Trụng sợi, chan nước lèo, xếp topping — đừng để khách chờ lâu!</p>
+    <div class="levels" id="levels"></div>
+    <button class="btn" id="menuRules">📖 Cách chơi</button>
+  </div>
+</div>
+
+<div class="overlay" id="intro">
+  <div class="card intro-card">
+    <h2 id="introDay">Ngày 1</h2>
+    <p class="goal" id="introGoal"></p>
+    <div class="menu-list" id="introMenu"></div>
+    <p class="tip" id="introTip"></p>
+    <button class="btn primary" id="introGo">Mở quán! 🔥</button>
+  </div>
+</div>
+
+<div class="overlay" id="result">
+  <div class="card result-card">
+    <div class="stars" id="resStars"></div>
+    <h2 id="resTitle">Hết ngày rồi!</h2>
+    <div class="earned" id="resMoney">0đ</div>
+    <ul class="detail" id="resDetail"></ul>
+    <p class="note" id="resNote"></p>
+    <div class="row">
+      <button class="btn" id="resMenuBtn">☰ Chọn ngày</button>
+      <button class="btn" id="retryBtn">🔄 Bán lại</button>
+      <button class="btn primary" id="nextBtn">Ngày tiếp ▶</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="rules">
+  <div class="card rules-card">
+    <h3>📖 Cách nấu một tô hủ tiếu</h3>
+    <ol>
+      <li><b>Trụng sợi:</b> bấm khay <i>hủ tiếu</i> (sợi trắng) hoặc <i>mì</i> (vắt vàng) — sợi vào vợt trong nồi nước sôi.</li>
+      <li><b>Vớt ra tô:</b> khi vợt nhấc lên và viền trắng sáng (✓), bấm vợt. Để quá lâu sợi sẽ <b>nhũn</b> — bấm để bỏ.</li>
+      <li><b>Nước hay khô:</b> bấm <i>nồi nước lèo</i> để chan nước, hoặc <i>chai sốt</i> để làm hủ tiếu khô (kèm chén nước lèo riêng).</li>
+      <li><b>Topping:</b> bấm khay thịt nạc, tôm, trứng cút, gan, thịt bằm, mực, tóp mỡ.</li>
+      <li><b>Hành lá &amp; giá:</b> tô nào cũng có — trừ khi khách dặn <i>không hành</i> / <i>không giá</i> (icon bị gạch). Hành phải <b>cắt trên thớt</b> trước: bấm thớt, mỗi lần cắt đủ cho 4 tô.</li>
+      <li><b>Tiêu &amp; ớt:</b> chỉ rắc tiêu, bỏ ớt khi khách gọi.</li>
+      <li><b>Phục vụ:</b> bấm vào tô đã đúng món — tô tự đến khách đang gọi món đó.</li>
+      <li><b>Thu tiền:</b> bấm xấp tiền trên quầy. Khách vui (còn kiên nhẫn) sẽ để lại tip.</li>
+    </ol>
+    <p>💡 Bấm vào một tô chưa xong để <b>chọn</b> nó — nguyên liệu tiếp theo sẽ vào đúng tô đó. Làm sai thì chọn tô rồi bấm <b>thùng rác</b>.</p>
+    <p>🧊 Trà đá: bấm bình trà để rót, rót xong bấm ly để mời khách.</p>
+    <button class="btn primary" id="rulesOk">Đã hiểu 👍</button>
+  </div>
+</div>
+
+<div class="overlay show" id="boot">
+  <div class="card"><p>Đang nhóm lửa… 🔥</p></div>
+</div>
+<div class="overlay" id="bootCard" hidden>
+  <div class="card">
+    <h2>Không mở được quán</h2>
+    <p id="bootReason"></p>
+    <button class="btn primary" onclick="location.reload()">🔄 Thử lại</button>
+  </div>
+</div>
+
+<script>
+  // Three.js comes from a CDN and ES modules do not load over file://; either way say why.
+  window.__bootFail = function (kind) {
+    var card = document.getElementById('bootCard');
+    if (card.classList.contains('show')) return;
+    var why = {
+      cdn: 'Không tải được bộ máy 3D (Three.js) — kiểm tra kết nối mạng rồi tải lại trang.',
+      webgl: 'Trình duyệt này không hỗ trợ WebGL nên không vẽ được quầy hủ tiếu.',
+      file: 'Trò chơi cần chạy qua máy chủ web (ví dụ: npx http-server) — mở trực tiếp file sẽ không tải được.'
+    };
+    document.getElementById('bootReason').textContent = why[kind] || why.cdn;
+    var boot = document.getElementById('boot');
+    if (boot) boot.remove();
+    card.hidden = false;
+    card.classList.add('show');
+  };
+  if (location.protocol === 'file:') window.__bootFail('file');
+</script>
+<script type="module">
+  if (location.protocol !== 'file:') {
+    import('./js/main.js').catch(function (err) {
+      console.error(err);
+      window.__bootFail('cdn');
+    });
+  }
+</script>
+</body>
+</html>
