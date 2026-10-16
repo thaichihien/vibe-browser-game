@@ -19,6 +19,7 @@ Một bộ sưu tập mini game viết bằng HTML/CSS/JavaScript thuần và vi
 - `survive-through-night.html` - Sinh tồn qua đêm và giữ lửa luôn cháy.
 - `magic-shooter.html` - Bắn súng 3D góc nhìn thứ nhất với 20 loại đạn phép thuật.
 - `games/jungle-game-remake/` - Cờ Thú làm lại: diorama pixel art isometric (Three.js), luật chơi giữ nguyên, chơi 2 người hoặc đấu máy (Dễ / Thường / Khó).
+- `games/warfield-chess/` - Cờ vua 3D kiểu Total War (Three.js): mỗi quân là một đơn vị quân đội, bạn chỉ nhìn thấy những gì đơn vị đang chọn nhìn thấy qua màn sương; bản đồ nhỏ chỉ hiện quân mình. Có chế độ "Review camp" để xem thử từng mô hình. Cần chạy qua server (ES modules).
 - `last-quarter/` - Bạn là nhân vật trong 3 máy arcade khác nhau: nghe theo người chơi vừa đủ để máy không bị dẹp.
 - `grid-storm/` - Bản mở rộng của Grid Survival: sau 20 giây lưới nở ra 9×9, các sự kiện bão đạn lần lượt đổ xuống, và mỗi lượt chơi kiếm ⚡ để mua 30 skin và 20 hiệu ứng.
 - `quan-an/` - Quán ăn nhìn từ trên xuống: chạy ca phục vụ 3,5 phút, làm hết nhiệm vụ để sang tên quán, rồi mua bàn ghế, nhân viên và công thức bằng giá Việt Nam thật.

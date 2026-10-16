@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Warfield Chess</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%94%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<main class="stage" id="stage">
+  <canvas id="view" aria-label="Battlefield"></canvas>
+
+  <div class="turn" id="turnBadge" hidden>Your orders</div>
+
+  <div class="hints" id="hints" hidden>
+    <button class="hint" id="hintV" title="Switch between over-the-shoulder and through-their-eyes"><kbd>V</kbd> Camera</button>
+    <button class="hint" id="hintSpace" title="Toggle between looking around and the field map"><kbd>Space</kbd> <span id="hintSpaceText">Field map</span></button>
+    <button class="hint" id="hintEsc" title="Pause: settings, rules, surrender"><kbd>Esc</kbd> Pause</button>
+  </div>
+  <div class="crosshair" id="crosshair" hidden></div>
+
+  <section class="panel unit-card" id="unitCard" hidden>
+    <div class="unit-head">
+      <span class="glyph" id="unitGlyph">♚</span>
+      <div>
+        <h2 id="unitName">King</h2>
+        <p class="sub" id="unitSub">King · e1</p>
+      </div>
+    </div>
+    <p class="rule" id="unitRule"></p>
+    <p class="sight" id="unitSight"></p>
+  </section>
+
+  <ol class="dispatch" id="dispatch" aria-live="polite" hidden></ol>
+
+  <section class="panel field" id="field" hidden>
+    <header>
+      <h3>Field map</h3>
+      <span class="hint">Only your own troops are marked</span>
+    </header>
+    <div class="board-wrap">
+      <div class="ranks" id="ranks"></div>
+      <div class="board" id="board"><div class="eye" id="eye"></div></div>
+      <div class="files" id="files"></div>
+    </div>
+    <div class="orders empty" id="orders">
+      <span id="ordersText">Pick a square to give orders</span>
+      <button class="btn gold" id="marchBtn">⚔ March</button>
+      <button class="btn" id="cancelBtn" aria-label="Cancel orders">✕</button>
+    </div>
+    <p class="keys">Click a square to give orders · Tab next unit · <kbd>Space</kbd> back to looking</p>
+  </section>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <section class="panel camp" id="campBar" hidden>
+    <button class="btn" id="campPrev" aria-label="Previous unit">◀</button>
+    <div class="camp-label"><strong id="campName">Pawn</strong><span id="campSub">Red</span></div>
+    <button class="btn" id="campNext" aria-label="Next unit">▶</button>
+    <button class="btn" id="campView">👁 Unit view</button>
+    <button class="btn" id="campMist">🌫 Mist: off</button>
+    <div class="anim-bar" role="group" aria-label="Animation debug">
+      <span class="anim-label">Animation</span>
+      <button class="btn" id="animWalk" title="Toggle the walk cycle (1)">🚶 Walk</button>
+      <button class="btn" id="animAttack" title="Toggle the attack (2)">⚔ Attack</button>
+      <button class="btn" id="animDie" title="Play the death, then respawn (3)">💀 Die</button>
+      <label class="anim-all"><input type="checkbox" id="animAll"> all units</label>
+    </div>
+  </section>
+</main>
+
+<div class="overlay show" id="startMenu">
+  <div class="card start">
+    <div class="crest">⚔</div>
+    <h1>Warfield Chess</h1>
+    <p class="tag">Command from the saddle. See only what your soldiers see.</p>
+    <div class="choice">
+      <span>🛡 Take the field<small>You lead <b class="red">Red</b> and move first. The enemy general hides in the mist.</small></span>
+      <div class="levels">
+        <button class="btn" data-level="recruit">Recruit</button>
+        <button class="btn gold" data-level="captain">Captain</button>
+        <button class="btn" data-level="warlord">Warlord</button>
+      </div>
+    </div>
+    <button class="btn choice wide" id="campBtn">🏕 Review camp<small>Playtest: inspect every unit model and how its view looks</small></button>
+    <button class="btn link" id="startRules">📜 How to command</button>
+  </div>
+</div>
+
+<div class="overlay" id="pauseModal" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+  <div class="card pause">
+    <h2 id="pauseTitle">⏸ Paused</h2>
+    <p class="pause-sub" id="pauseSub">The armies hold their ground.</p>
+    <div class="pause-list">
+      <button class="btn gold" id="resumeBtn">▶ Resume</button>
+      <button class="btn" id="pauseSettings">⚙ Settings</button>
+      <button class="btn" id="pauseRules">📜 How to command</button>
+      <button class="btn" id="pauseSound">🔊 Sound: on</button>
+      <button class="btn danger" id="pauseSurrender">🏳 Surrender</button>
+      <button class="btn" id="pauseMenu">🏠 Main menu</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="rulesModal">
+  <div class="card rules">
+    <button class="close" id="rulesClose" aria-label="Close">✕</button>
+    <h2>📜 How to command</h2>
+    <p>This is chess — every rule is standard — but you fight it from the ground.</p>
+    <ul>
+      <li><b>Your view is your unit's view.</b> Pick a unit and the camera rides with it — over its shoulder, or through its eyes (⚙ Settings). Move the mouse to look around. Press <b>Space</b> to bring back the cursor and give orders on the field map, <b>V</b> to switch camera, <b>Esc</b> to pause. Morning mist hides everything beyond a unit's sight, and trees, rocks and bushes hide the rest.</li>
+      <li><b>Height is sight.</b> A Rook sees over the mist from its tower deck; Pawns down in the grass see least.</li>
+      <li><b>The field map</b> shows only your own troops. Click one of them to switch to it. Click any other square to give orders — they are checked against the rules, and a refused order tells you why (which can itself reveal what is hiding out there).</li>
+      <li>Click the square again or press <b>⚔ March</b> to commit. Promotion is always to a Queen.</li>
+      <li>You hear when your troops fall and when your King is threatened — nothing more.</li>
+    </ul>
+    <button class="btn gold" id="rulesOk">To the field</button>
+  </div>
+</div>
+
+<div class="overlay" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="card settings">
+    <button class="close" id="settingsClose" aria-label="Close">✕</button>
+    <h2 id="settingsTitle">⚙ Settings</h2>
+
+    <fieldset>
+      <legend>Camera</legend>
+      <label class="choice-row"><input type="radio" name="pov" value="shoulder"> <span><b>Over the shoulder</b><small>Just behind and above the unit you command.</small></span></label>
+      <label class="choice-row"><input type="radio" name="pov" value="eyes"> <span><b>Through their eyes</b><small>From the eyes of one figure: the middle front-row Pawn, the lead Knight, the Bishop himself, the Rook's front archer, the Queen, the King.</small></span></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Graphics</legend>
+      <label class="toggle-row"><span>Outlines &amp; colour grading <kbd>G</kbd></span><input type="checkbox" id="setFx"></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Sound</legend>
+      <label class="range-row" for="setSfx"><span>Effects</span><input type="range" id="setSfx" min="0" max="100" step="5"><output id="setSfxVal"></output></label>
+      <label class="range-row" for="setAmb"><span>Wind &amp; birds</span><input type="range" id="setAmb" min="0" max="100" step="5"><output id="setAmbVal"></output></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Interface</legend>
+      <label class="toggle-row"><span>Unit info (top left)</span><input type="checkbox" id="setCard"></label>
+      <label class="toggle-row"><span>Battle dispatches (bottom left)</span><input type="checkbox" id="setLog"></label>
+    </fieldset>
+
+    <button class="btn gold" id="settingsDone">Done</button>
+  </div>
+</div>
+
+<div class="overlay" id="surrenderModal" role="dialog" aria-modal="true" aria-labelledby="surrenderTitle">
+  <div class="card">
+    <button class="close" id="surrenderClose" aria-label="Close">✕</button>
+    <div class="crest">🏳</div>
+    <h2 id="surrenderTitle">Yield the field?</h2>
+    <p>Your army lowers its banners and the battle is lost. The mist will lift to show where the enemy stood.</p>
+    <div class="row">
+      <button class="btn gold" id="keepFighting">⚔ Keep fighting</button>
+      <button class="btn danger" id="confirmSurrender">🏳 Surrender</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay corner" id="endCard" role="status">
+  <div class="card">
+    <div class="end-head"><span class="crest" id="endCrest">🏆</span><h2 id="endTitle">Victory</h2></div>
+    <p id="endReason"></p>
+    <div class="row">
+      <button class="btn gold" id="againBtn">⚔ Fight again</button>
+      <button class="btn" id="endMenuBtn">🏳 Main menu</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay show" id="bootCard" hidden>
+  <div class="card">
+    <div class="crest">🌫</div>
+    <h2>The field cannot be drawn</h2>
+    <p id="bootReason"></p>
+    <button class="btn gold" onclick="location.reload()">🔄 Try again</button>
+  </div>
+</div>
+
+<script>
+  // Boot guard. Three.js comes from a CDN and ES modules do not load over file://; either way
+  // the player should see why, not an empty page.
+  window.__bootFail = function (kind) {
+    var card = document.getElementById('bootCard');
+    if (!card.hidden) return;
+    var why = {
+      cdn: 'The 3D engine (Three.js) could not be loaded — check your connection and reload.',
+      webgl: 'This browser does not support WebGL, so the battlefield cannot be drawn.',
+      file: 'This game must be served over HTTP (for example: npx http-server) — opening the file directly cannot load it.'
+    };
+    document.getElementById('bootReason').textContent = why[kind] || why.cdn;
+    card.hidden = false;
+  };
+  if (location.protocol === 'file:') window.__bootFail('file');
+</script>
+<script type="module">
+  if (location.protocol !== 'file:') {
+    import('./js/main.js').catch(function (err) {
+      console.error(err);
+      window.__bootFail('cdn');
+    });
+  }
+</script>
+</body>
+</html>
